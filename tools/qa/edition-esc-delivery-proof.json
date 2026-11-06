@@ -1,0 +1,27 @@
+{
+  "revision": "d340972de9491d4f13349f6d7e3162986ea93632",
+  "previousRevision": "ac07af4eba4d78885e1dcd115d3978996d67aa8c",
+  "publicReadback": "PASS",
+  "assets": [
+    {
+      "name": "launcher-df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b.zip",
+      "sizeBytes": 972,
+      "sha256": "df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b"
+    },
+    {
+      "name": "library-867cf017b40fe0154c049ad2df0da849d0a933f913405df8edc8764053496a9d.zip",
+      "sizeBytes": 520620,
+      "sha256": "867cf017b40fe0154c049ad2df0da849d0a933f913405df8edc8764053496a9d"
+    },
+    {
+      "name": "minecraft-rust-edition-windows-x64-080c7e9294fee836bfe9be3fdd3bf900e993c9cad980cec065bc5af56ac4f445.zip",
+      "sizeBytes": 36377030,
+      "sha256": "080c7e9294fee836bfe9be3fdd3bf900e993c9cad980cec065bc5af56ac4f445"
+    },
+    {
+      "name": "pack-manifest.json",
+      "sizeBytes": 145039,
+      "sha256": "54fd668f22fc3a09210419ef1b69df5f3d0cd462185ecf70562a041b8f2ce016"
+    }
+  ]
+}
