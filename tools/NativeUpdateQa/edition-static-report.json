@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "launcherSourceRevision": "34e2a0b0253b53996b6a80089823c9f125ea36a3",
+  "launcherAssemblySha256": "eae6b1d982fe8b981ce3d8cb3304a07629378aecdfc69810329d3bbc5c3217fa",
+  "oldRevision": "94deaa18c9e93ef32004ff2f6cdec45f275a90db",
+  "newRevision": "ac07af4eba4d78885e1dcd115d3978996d67aa8c",
+  "oldManifestSha256": "12cfaed764e922a3ad89d71acbc3f5b22d0a9423e03304b7de49379c952f9341",
+  "newManifestSha256": "451f4249429339392e647cee7400b4ee24506f3bf5556f48fc7e5c8be604c48e",
+  "oldAssetSha256": "c915911672e8c1af13a020d6682af2fffaa5b4258ec929649c23affb2effe902",
+  "newAssetSha256": "886b72d7157bf4e983ea0bbcca3bc2f2fd0978d4032fca0ce766f05c36d0ca31",
+  "managedFileCount": 458,
+  "transferFallback": "PASS",
+  "interruptedRequests": 3,
+  "interruptedBytes": 3,
+  "persistentPendingAndOfflineRefusal": "PASS",
+  "retry": "PASS",
+  "retryPayloadBytes": 36359713,
+  "unchangedPayloadFiles": 457,
+  "idempotence": "PASS",
+  "repeatPayloadBytes": 0,
+  "personalSentinelsPreserved": 5,
+  "fixtureRemoved": true
+}
