@@ -1,0 +1,9 @@
+Rust programming language logo © Rust Foundation.
+Source: https://github.com/rust-lang/rust-artwork/blob/7b54b6689dc310db2f301d7bcda847f016bd447c/logo/rust-logo.svg
+Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0).
+License: https://creativecommons.org/licenses/by/4.0/
+Trademark policy: https://rustfoundation.org/policy/rust-trademark-policy/
+
+The original logo was rasterized for PNG and Windows ICO. The artwork's shape and colors were preserved.
+The logo identifies the Rust programming language used to build the game.
+Minecraft Rust Edition is an unofficial fan project, unaffiliated with the Rust Project or Rust Foundation.

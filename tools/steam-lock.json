@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "https://github.com/MarkZamore/e4steam",
+    "commit": "832be7c5c478f28dbb31378d94e40a1ea5f401a6",
+    "tree": "6a920f8b179cf584c66a9e0624d756d049af8263",
+    "path": "source/native",
+    "overlaySourceSha256": "bfaf867a08a538bcc28676c40d4ed2bc6ae21ac23b50661816553d66c7cfc6f1"
+  },
+  "dll": {
+    "name": "steam_api64.dll",
+    "sizeBytes": 317080,
+    "sha256": "eb17909a76668cf9ae0b92a618a34a50f6c73d3a6787cb4dd8ce36a8b10bfb75",
+    "steamworksSdkVersion": "1.64",
+    "steamworksSysVersion": "0.13.0"
+  }
+}

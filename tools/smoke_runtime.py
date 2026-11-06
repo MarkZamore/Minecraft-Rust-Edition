@@ -1,0 +1,208 @@
+"""Create, save and reopen one technical world in the actual Windows client."""
+
+import argparse
+import json
+import os
+import pathlib
+import subprocess
+import time
+
+from stage_runtime import file_info
+
+
+WORLD = "RustEditionSmoke"
+PLAYER = "RustEditionQA"
+
+
+def check_window_title(pid, expected):
+    # Inspect only the game launched by this test. The bootstrap is its direct parent.
+    script = (
+        f"$p=Get-CimInstance Win32_Process -Filter 'ParentProcessId={pid:d}' | "
+        "Where-Object Name -eq 'horizon-client.exe'; "
+        "if ($p) { (Get-Process -Id $p.ProcessId -ErrorAction Stop).MainWindowTitle }"
+    )
+    result = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+        capture_output=True, text=True, timeout=20, check=True,
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    if result.stdout.strip() != expected:
+        raise RuntimeError(f"Expected window title {expected!r}, got {result.stdout.strip()!r}")
+
+
+def run_client(executable, controller, resources, qa, index, action, standalone=None,
+               expected_title=None):
+    game = qa / "game"
+    game.mkdir(exist_ok=True)
+    endpoint = qa / f"control-{index}.json"
+    if endpoint.exists():
+        raise ValueError("Use a fresh smoke run directory")
+    environment = dict(os.environ, HORIZON_NO_DISCORD="1")
+    arguments = [str(executable), "--resources", str(resources), "--home", str(game), "--name", PLAYER]
+    if standalone:
+        bootstrap, minecraft, java, cache = standalone
+        for name in tuple(environment):
+            if name.upper().startswith("LANMINECRAFT_"):
+                del environment[name]
+        arguments = [str(bootstrap), "--minecraft-dir", str(minecraft), "--java-home", str(java)]
+        environment["LANMINECRAFT_NATIVE_CACHE"] = str(cache)
+    arguments.extend(["--game-dir", str(game), "--control-socket", str(endpoint)])
+    with (qa / f"client-{index}.log").open("wb") as output:
+        process = subprocess.Popen(arguments, cwd=game, env=environment, stdout=output, stderr=output)
+
+        def control(*args, timeout=120):
+            result = subprocess.run(
+                [str(controller), "--socket", str(endpoint), *args],
+                cwd=game, capture_output=True, text=True, timeout=timeout, check=True,
+            )
+            reply = json.loads(result.stdout)
+            if isinstance(reply, dict) and "error" in reply:
+                raise RuntimeError(reply["error"])
+            return reply
+
+        try:
+            deadline = time.monotonic() + (360 if standalone else 90)
+            while not endpoint.is_file():
+                if process.poll() is not None:
+                    raise RuntimeError(f"Native client exited before ready, code {process.returncode}")
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("Native client did not create its control endpoint")
+                time.sleep(0.25)
+            control("wait-for", "screen", "title", "--timeout", "90")
+            if expected_title is not None:
+                check_window_title(process.pid, expected_title)
+            result = action(control)
+            control("quit", timeout=20)
+            if process.wait(timeout=45) != 0:
+                raise RuntimeError(f"Native client exited with {process.returncode}")
+            return result
+        finally:
+            if process.poll() is None:
+                if standalone:
+                    subprocess.run(
+                        ["taskkill.exe", "/PID", str(process.pid), "/T", "/F"],
+                        capture_output=True, timeout=15,
+                    )
+                else:
+                    process.kill()
+                process.wait(timeout=15)
+
+
+def smoke(executable, controller, resources, qa, standalone=None, expected_title=None, expect_cold=False):
+    preview = qa / "preview.png"
+
+    def create(control):
+        control("options", "mods")
+        mods = control("ui")
+        if {widget["id"] for widget in mods["widgets"]} != {"open-mod-folder", "done"}:
+            raise RuntimeError("The native Mods page has entries outside the expected empty inventory")
+        control("click", "done")
+        control("open", WORLD, "137248", "creative")
+        photograph(control, preview)
+        control("save")
+        return control("state"), mods
+
+    def reopen(control):
+        worlds = control("worlds")
+        saved = qa / "game" / "saves" / WORLD / "level.dat"
+        if not saved.is_file() or saved.stat().st_size == 0:
+            raise RuntimeError("Native client did not create a saved world")
+        control("open", WORLD)
+        control("wait-for", "loaded", "--timeout", "90")
+        return worlds, control("state")
+
+    (first, mods) = run_client(executable, controller, resources, qa, 1, create, standalone, expected_title)
+    cache_receipt = standalone[3] / "resources.json" if standalone else None
+    first_receipt = file_info(cache_receipt) if cache_receipt else None
+    worlds, reopened = run_client(executable, controller, resources, qa, 2, reopen, standalone, expected_title)
+    if any(first[key] != reopened[key] for key in ("dimension", "gamemode")) or any(
+        abs(a - b) > 1.0 for a, b in zip(first["player"]["position"], reopened["player"]["position"])
+    ):
+        raise RuntimeError("The reopened world did not retain the saved player state")
+    report = {
+        "schemaVersion": 1,
+        "client": file_info(executable),
+        "preview": file_info(preview),
+        "modsPage": mods,
+        "firstState": first,
+        "worldsOnReopen": worlds,
+        "reopenedState": reopened,
+    }
+    if standalone:
+        marker = "Prepared Horizon native-client resources"
+        cold = marker in (qa / "client-1.log").read_text(encoding="utf-8", errors="replace")
+        warm = marker not in (qa / "client-2.log").read_text(encoding="utf-8", errors="replace")
+        if not warm or file_info(cache_receipt) != first_receipt:
+            raise RuntimeError("The second standalone launch did not reuse the prepared resources")
+        if expect_cold and not cold:
+            raise RuntimeError("The first standalone launch did not exercise cold preparation")
+        if expected_title and any((standalone[3] / name).exists() for name in ("preparation", "process-temp")):
+            raise RuntimeError("The standalone bootstrap left a temporary work directory")
+        if not (qa / "game/logs/latest.log").is_file():
+            raise RuntimeError("The native client did not keep its log in the chosen game folder")
+        report["bootstrap"] = file_info(standalone[0])
+        report["cacheEntries"] = sorted(entry.name for entry in standalone[3].iterdir())
+        report["cacheReuse"] = {"coldPrepared": cold, "secondLaunchReused": True, "receipt": first_receipt}
+    if expected_title is not None:
+        report["windowTitle"] = expected_title
+    (qa / "smoke.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def photograph(control, preview):
+    control("wait-for", "loaded", "--timeout", "90")
+    control("command", "gamemode spectator")
+    control("command", "time set noon")
+    control("command", "weather clear")
+    control("tp", "26.5", "94", "-8.5")
+    control("look", "-20", "29")
+    control("key", "f1", "tap")
+    control("wait-for", "loaded", "--timeout", "90")
+    control("screenshot", str(preview))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--client", required=True, type=pathlib.Path)
+    parser.add_argument("--controller", required=True, type=pathlib.Path)
+    parser.add_argument("--resources", type=pathlib.Path)
+    parser.add_argument("--qa", required=True, type=pathlib.Path)
+    parser.add_argument("--refresh-preview", action="store_true")
+    parser.add_argument("--bootstrap", type=pathlib.Path)
+    parser.add_argument("--minecraft", type=pathlib.Path)
+    parser.add_argument("--java", type=pathlib.Path)
+    parser.add_argument("--cache", type=pathlib.Path)
+    parser.add_argument("--expect-title")
+    parser.add_argument("--expect-cold", action="store_true")
+    args = parser.parse_args()
+    standalone_paths = (args.bootstrap, args.minecraft, args.java, args.cache)
+    if any(standalone_paths) and not all(standalone_paths):
+        parser.error("Standalone smoke requires bootstrap, Minecraft, Java and cache paths")
+    if bool(args.bootstrap) == bool(args.resources):
+        parser.error("Supply either prepared resources or the standalone bootstrap")
+    if (args.expect_title or args.expect_cold) and not args.bootstrap:
+        parser.error("Window title or cold preparation verification requires the standalone bootstrap")
+    standalone = tuple(path.resolve() for path in standalone_paths) if args.bootstrap else None
+    qa = args.qa.resolve()
+    try:
+        executable = args.client.resolve(strict=True)
+        controller = args.controller.resolve(strict=True)
+        resources = args.resources.resolve(strict=True) if args.resources else None
+        if args.refresh_preview:
+            report = json.loads((qa / "smoke.json").read_text(encoding="utf-8"))
+            if report["client"] != file_info(executable):
+                raise ValueError("The previous smoke evidence belongs to a different client")
+
+            def take_preview(control):
+                control("open", WORLD)
+                photograph(control, qa / "scenic-preview.png")
+
+            run_client(executable, controller, resources, qa, 3, take_preview, standalone, args.expect_title)
+        else:
+            qa.mkdir()
+            smoke(executable, controller, resources, qa, standalone, args.expect_title, args.expect_cold)
+    except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
+        parser.exit(1, f"{error}\n")
+
+
+if __name__ == "__main__":
+    main()

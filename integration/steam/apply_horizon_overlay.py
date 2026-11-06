@@ -1,0 +1,547 @@
+#!/usr/bin/env python3
+"""Apply the LANMinecraft integration to one independently verified Horizon source tree."""
+
+import argparse
+import hashlib
+import json
+import os
+import struct
+import sys
+import tarfile
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+COMMIT = "66f3981f522b24c250b21523a70080965b940424"
+SOURCE_SHA = "3e3f5bf9df5f86b3c72a950f0869f09d1178814ac101d5f9af849b5d70c0fef4"
+SOURCE_SIZE = 44_596_081
+TRANSPORT_COMMIT = "832be7c5c478f28dbb31378d94e40a1ea5f401a6"
+TRANSPORT_SHA = "bfaf867a08a538bcc28676c40d4ed2bc6ae21ac23b50661816553d66c7cfc6f1"
+STEAM_DLL_SIZE = 317_080
+STEAM_DLL_SHA = "eb17909a76668cf9ae0b92a618a34a50f6c73d3a6787cb4dd8ce36a8b10bfb75"
+PREFIX = f"horizon-{COMMIT[:7]}/"
+CLIENT = "crates/horizon-client/"
+CLIENT_LIB = "crates/horizon-client-lib/"
+TRANSPORT = "crates/lanmc-steam-native/"
+SOURCE_PATHS = {
+    "Cargo.toml",
+    "Cargo.lock",
+    CLIENT_LIB + "Cargo.toml",
+    CLIENT + "build.rs",
+    *(CLIENT + "src/" + path for path in (
+        "entry.rs", "lib.rs", "client_lib.rs", "game.rs", "game/no_resources.rs",
+        "game/split/windows.rs", "game/integrated.rs", "game/lan.rs",
+        "game/remote.rs", "game/screens.rs", "game/friends.rs", "game/dedicated.rs", "lan/mod.rs",
+        "lan/conn.rs", "lan/discovery.rs", "multiplayer.rs",
+    )),
+}
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def digest(path):
+    with path.open("rb") as data:
+        return hashlib.file_digest(data, "sha256").hexdigest()
+
+
+def locked_inputs(archive):
+    if archive.stat().st_size != SOURCE_SIZE or digest(archive) != SOURCE_SHA:
+        raise ValueError("Horizon source archive does not match the reviewed Nightly")
+    result = {}
+    with tarfile.open(archive, "r|gz") as stream:
+        for entry in stream:
+            name = entry.name.removeprefix(PREFIX)
+            if name not in SOURCE_PATHS:
+                continue
+            if not entry.isfile() or name in result:
+                raise ValueError(f"Invalid source archive entry {entry.name}")
+            result[name] = stream.extractfile(entry).read()
+    if result.keys() != SOURCE_PATHS:
+        raise ValueError("Missing locked Horizon source files")
+    return result
+
+
+def edit(files, path, old, new, count=1):
+    old, new = old.encode("utf-8"), new.encode("utf-8")
+    original = files[path]
+    if original.count(old) != count:
+        raise ValueError(f"Exact overlay anchor missing or ambiguous in {path}")
+    files[path] = original.replace(old, new, count)
+
+
+def changes(inputs, transport):
+    patched = dict(inputs)
+    patched["Cargo.lock"] = (HERE / "horizon-cargo.lock").read_bytes()
+
+    def src(path, old, new, count=1):
+        edit(patched, CLIENT + "src/" + path, old, new, count)
+
+    edit(patched, "Cargo.toml",
+         '    "crates/horizon-client",\n',
+         '    "crates/horizon-client",\n    "crates/lanmc-steam-native",\n')
+    edit(patched, CLIENT_LIB + "Cargo.toml",
+         "[dependencies]\n",
+         '[dependencies]\nlanmc_steam_native = { path = "../lanmc-steam-native" }\n')
+    src("lib.rs", "pub mod entry;", "pub mod entry;\nmod lanmc_skins;\nmod lanmc_presentation;")
+    edit(patched, CLIENT + "build.rs", 'let ico = format!("{dir}/../../packaging/icons/horizon.ico");',
+         'let ico = format!("{dir}/../../packaging/icons/rust-edition.ico");')
+    edit(patched, CLIENT + "build.rs",
+         "//! Embeds Horizon's icon (`packaging/icons/horizon.ico`) in the Windows executables, as icon",
+         "//! Embeds the pack icon (`packaging/icons/rust-edition.ico`) in the Windows executables, as icon")
+    for path, count in (("game.rs", 2), ("game/no_resources.rs", 1)):
+        src(path, '.with_title("Horizon")\n            .with_window_icon(horizon_client::window::icon())',
+            '.with_title(crate::lanmc_presentation::title("Horizon"))\n'
+            '            .with_window_icon(crate::lanmc_presentation::icon())', count=count)
+    src("game/split/windows.rs", ".with_window_icon(horizon_client::window::icon())",
+        ".with_window_icon(crate::lanmc_presentation::icon())")
+    src("game/split/windows.rs", '.with_title(format!("Horizon {key}"))',
+        '.with_title(crate::lanmc_presentation::title(format!("Horizon {key}")))')
+    src("game/split/windows.rs", '.with_title("Horizon")',
+        '.with_title(crate::lanmc_presentation::title("Horizon"))')
+    src("game/split/windows.rs", "    pub(super) fn title(&self, k: usize) -> String {",
+        """    pub(super) fn title(&self, k: usize) -> String {
+        if let Some(name) = crate::lanmc_presentation::name() {
+            return name.to_owned();
+        }""")
+    src("client_lib.rs", "pub mod lan;", "pub mod lan;\npub mod lanmc_steam;")
+    src("entry.rs", '        crash::install(home.clone(), side);',
+        '''        crash::install(home.clone(), side);
+        if side == "client" {
+            if let Err(error) = crate::lanmc_steam::init() {
+                log::error!("LANMinecraft Steam startup failed: {error}");
+                eprintln!("LANMinecraft Steam startup failed: {error}");
+                std::process::exit(1);
+            }
+        }''')
+    src("game.rs", "        split::launcher::read_now();",
+        '''        if let Some(name) = crate::lanmc_steam::owner_name() {
+            o.player_name = Some(name.to_owned());
+        }
+        split::launcher::read_now();''')
+    src("lan/mod.rs",
+        '''    pub listen: bool,
+    /// Ops bypass a full server''',
+        '''    pub listen: bool,
+    /// Only the integrated world in launcher-managed Steam mode.
+    pub lanmc_steam: bool,
+    /// Ops bypass a full server''')
+    src("lan/mod.rs", "            bind: None,\n            port,",
+        "            bind: None,\n            lanmc_steam: false,\n            port,")
+    src("game/dedicated.rs", "            listen: true,",
+        "            listen: true,\n            lanmc_steam: false,")
+    src("game/integrated.rs", "            owner: offline_uuid(&player),",
+        "            owner: crate::lanmc_steam::owner_uuid(&player).unwrap_or_else(|| offline_uuid(&player)),")
+    src("game/integrated.rs",
+        '''        let player = auth
+            .as_ref()
+            .map_or_else(|| self.options.player_name(), |a| a.name.clone());''',
+        '''        let player = crate::lanmc_steam::owner_name().map(str::to_owned).unwrap_or_else(|| {
+            auth.as_ref().map_or_else(|| self.options.player_name(), |a| a.name.clone())
+        });''')
+    src("game/integrated.rs", "            online: horizon_client::lan::OnlineMode::lan(),",
+        '''            lanmc_steam: crate::lanmc_steam::active(),
+            online: (!crate::lanmc_steam::active())
+                .then(horizon_client::lan::OnlineMode::lan).flatten(),''')
+    src("game/integrated.rs",
+        '''        let listener = Lan::bind(None, settings.port).map_err(|e| e.to_string())?;
+        let port = listener.local_addr().map_err(|e| e.to_string())?.port();
+        log::info!("Published LAN server on port {port}");''',
+        '''        let listener = Lan::bind(crate::lanmc_steam::bind_address(), settings.port)
+            .map_err(|e| e.to_string())?;
+        let port = listener.local_addr().map_err(|e| e.to_string())?.port();
+        crate::lanmc_steam::publish(port, &self.level.name)?;
+        if crate::lanmc_steam::active() {
+            log::info!("Requested Steam publication of the integrated world");
+        } else {
+            log::info!("Published LAN server on port {port}");
+        }''')
+    src("game/integrated.rs", "        s.pending = Some(Publish::Close);",
+        "        crate::lanmc_steam::unpublish();\n        s.pending = Some(Publish::Close);")
+    src("game/integrated.rs", "        self.native_lifecycle.begin_close();",
+        "        self.native_lifecycle.begin_close();\n        crate::lanmc_steam::unpublish();")
+    src("game/integrated.rs", "host.hub.lan.listen_on(listener, true)",
+        "host.hub.lan.listen_on(listener, !crate::lanmc_steam::active())")
+    src("game/lan.rs",
+        '''        self.system_message(Text::translate(
+            "menu.multiplayerOptions.publish.started.lan",
+            &[Text::literal(port.to_string())],
+        ));''',
+        '''        if !crate::lanmc_steam::active() {
+            self.system_message(Text::translate(
+                "menu.multiplayerOptions.publish.started.lan",
+                &[Text::literal(port.to_string())],
+            ));
+        }''')
+    src("game/friends.rs",
+        '''    pub(super) fn friends_start(&mut self) -> Result<()> {
+        if self.friends.is_some() {''',
+        '''    pub(super) fn friends_start(&mut self) -> Result<()> {
+        if crate::lanmc_steam::active() {
+            return Err(crate::lanmc_steam::steam_only_label().into());
+        }
+        if self.friends.is_some() {''')
+    src("game/friends.rs",
+        """    pub(super) fn tick_friends(&mut self) {""",
+        """    pub(super) fn tick_friends(&mut self) {
+        if let Some(message) = crate::lanmc_steam::sharing_notice() {
+            self.system_message(Text::literal(message));
+        }""")
+    src("game/screens.rs", "            10 => self.screen = Screen::Friends,",
+        '''            10 if crate::lanmc_steam::active() => {
+                if self.lan_port().is_some() {
+                    self.lan_close(true);
+                } else if let Err(error) = self.lan_open(super::lan::LanSettings {
+                    port: 0,
+                    guest_commands: false,
+                    force_game_mode: true,
+                }) {
+                    self.system_message(horizon_client::text::Text::literal(error.to_string()));
+                }
+            }
+            10 => self.screen = Screen::Friends,''')
+    src("game/screens.rs", "Text::literal(horizon_client::friends_screen::title())",
+        """if crate::lanmc_steam::active() {
+                        Text::literal(crate::lanmc_steam::share_label(self.lan_port().is_some()))
+                    } else {
+                        Text::literal(horizon_client::friends_screen::title())
+                    }""")
+    src("lan/conn.rs", "    if !valid_name(&hello.name) {",
+        """    let portable = if shared.config.lanmc_steam {
+        if c.is_memory() {
+            crate::lanmc_steam::owner_uuid(&hello.name).map(|uuid| (uuid, hello.name.clone()))
+        } else {
+            let Some(profile) = crate::lanmc_steam::claim_guest(address) else {
+                let text = "This world requires an authenticated Steam connection";
+                login_disconnect(&mut c, &translatable("disconnect.genericReason", &[text]));
+                return Ok(());
+            };
+            Some(profile)
+        }
+    } else {
+        None
+    };
+    if portable.is_none() && !valid_name(&hello.name) {""")
+    src("lan/conn.rs", "    let (mut name, mut address) = (hello.name.clone(), address);",
+        """    let mut name = portable.as_ref().map_or_else(|| hello.name.clone(), |(_, name)| name.clone());
+    let mut address = address;""")
+    src("lan/conn.rs", "    let (uuid, properties) = match (online, forwarding) {",
+        """    let (uuid, properties) = if let Some((uuid, _)) = portable {
+        (uuid, Vec::new())
+    } else { match (online, forwarding) {""")
+    src("lan/conn.rs",
+        """        (None, None) => (offline_uuid(&hello.name), Vec::new()),
+    };""",
+        """        (None, None) => (offline_uuid(&hello.name), Vec::new()),
+    }};""")
+    src("lan/discovery.rs", "    games.push(LanGame { motd, address });",
+        "    games.push(LanGame { motd, address, steam_host: None });")
+    src("lan/discovery.rs", "    pub address: String,\n}",
+        "    pub address: String,\n    pub steam_host: Option<String>,\n}")
+    src("lan/discovery.rs",
+        '''        if !cfg!(test)
+            && !super::test_loopback()''',
+        '''        if !cfg!(test)
+            && !crate::lanmc_steam::active()
+            && !super::test_loopback()''')
+    src("lan/discovery.rs",
+        '''    pub fn games(&self) -> Vec<LanGame> {
+        self.inner.games.lock().unwrap().clone()
+    }''',
+        '''    pub fn games(&self) -> Vec<LanGame> {
+        if crate::lanmc_steam::active() {
+            return crate::lanmc_steam::worlds().into_iter().map(|offer| LanGame {
+                motd: offer.title,
+                address: crate::lanmc_steam::address(offer.lobby_id),
+                steam_host: Some(offer.host),
+            }).collect();
+        }
+        self.inner.games.lock().unwrap().clone()
+    }''')
+    src("multiplayer.rs",
+        '''                            let game = &games[k];''',
+        '''                            let game = &games[k];
+                            if let Some(host) = &game.steam_host {
+                                batch.text(atlas, &game.motd, cx + 35.0, cy + 1.0, u32::MAX, false);
+                                batch.text(atlas, host, cx + 35.0, cy + 12.0, gray, false);
+                                continue;
+                            }''')
+    src("multiplayer.rs",
+        '''                            let label = crate::lang::get_or(
+                                "lanServer.scanning",
+                                "Scanning for games on your local network",
+                            );''',
+        '''                            let label = if crate::lanmc_steam::active() {
+                                crate::lanmc_steam::scan_label().to_owned()
+                            } else {
+                                crate::lang::get_or(
+                                    "lanServer.scanning",
+                                    "Scanning for games on your local network",
+                                )
+                            };''')
+    src("multiplayer.rs", '''                                &[&lan_narration(&games[k].motd).plain()],''',
+        '''                                &[&match &games[k].steam_host {
+                                    Some(host) => format!("{} {host}", games[k].motd),
+                                    None => lan_narration(&games[k].motd).plain(),
+                                }],''')
+    src("multiplayer.rs", '                motd: "LAN".into(),\n                address: address.into(),',
+        '                motd: "LAN".into(),\n                address: address.into(),\n                steam_host: None,')
+    src("game/remote.rs",
+        '''    ) -> Result<()> {
+        self.reset_tutorial();
+        self.perf.world_opening();''',
+        '''    ) -> Result<()> {
+        let steam_endpoint = if lan { crate::lanmc_steam::join(address)? } else { None };
+        let is_portable = steam_endpoint.is_some() || (local.is_some() && crate::lanmc_steam::owner_uuid(name).is_some());
+        let steam_address = steam_endpoint.map(|endpoint| endpoint.to_string());
+        let address = steam_address.as_deref().unwrap_or(address);
+        self.reset_tutorial();
+        self.perf.world_opening();''')
+    src("game/remote.rs",
+        '''        let auth = self.auth();
+        let name = auth.as_ref().map_or(name, |a| a.name.as_str());''',
+        '''        let auth = if is_portable { None } else { self.auth() };
+        let name = if is_portable {
+            crate::lanmc_steam::owner_name().unwrap_or(name)
+        } else {
+            auth.as_ref().map_or(name, |a| a.name.as_str())
+        };''')
+    src("game/remote.rs",
+        '''                    horizon_protocol::crypto::offline_uuid(name),''',
+        '''                    if is_portable {
+                        crate::lanmc_steam::owner_uuid(name)
+                            .unwrap_or_else(|| horizon_protocol::crypto::offline_uuid(name))
+                    } else {
+                        horizon_protocol::crypto::offline_uuid(name)
+                    },''')
+    src("game/remote.rs", "pub(super) struct Remote {",
+        "pub(super) struct Remote {\n    lanmc_portable: bool,")
+    src("game/remote.rs", "        self.remote = Some(Remote {",
+        "        self.remote = Some(Remote {\n            lanmc_portable: is_portable,")
+    src("game/remote.rs",
+        '''        let mut capes: HashMap<u128, String> = HashMap::new();
+        for (uuid, textures) in entries {''',
+        '''        let mut capes: HashMap<u128, String> = HashMap::new();
+        let portable_skins: Vec<_> = if r.lanmc_portable {
+            r.level_players.values().copied().chain(std::iter::once(local))
+                .filter_map(|uuid| crate::lanmc_skins::selected(uuid).map(|skin| (uuid, skin)))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        for (uuid, textures) in entries {''')
+    src("game/remote.rs",
+        '''        // An offline name's skin from the launcher, where neither the server''',
+        '''        for (uuid, skin) in portable_skins {
+            if !self.skin_slots.contains(&skin.location)
+                || !self.gui.atlas.sprites.contains_key(&skin.location)
+            {
+                self.store_skin(skin.location.clone(), skin.rgba.as_ref().clone());
+            }
+            resolved.retain(|(other, _)| *other != uuid);
+            slim.remove(&uuid);
+            if skin.slim {
+                slim.insert(uuid);
+            }
+            resolved.push((uuid, skin.location));
+        }
+        // An offline name's skin from the launcher, where neither the server''')
+    for file in ("lanmc_steam.rs", "lanmc_skins.rs", "lanmc_presentation.rs"):
+        patched[CLIENT + "src/" + file] = (HERE / file).read_bytes()
+    artwork = artwork_inputs()
+    patched[CLIENT + "src/lanmc_rust_logo.png"] = artwork["rust-logo.png"]
+    patched["packaging/icons/rust-edition.ico"] = artwork["rust-edition.ico"]
+    steam_files = {path.relative_to(transport).as_posix(): path.read_bytes()
+                   for path in transport_inputs(transport)}
+    if tree_sha(index(steam_files)) != TRANSPORT_SHA:
+        raise ValueError("Shared Steam transport does not match the reviewed source pin")
+    patched.update((TRANSPORT + name, data) for name, data in steam_files.items())
+    return patched
+
+
+def artwork_inputs():
+    folder = HERE / "rust-logo"
+    lock = json.loads((folder / "artwork-lock.json").read_text(encoding="utf-8"))
+    names = {"rust-logo.svg", "rust-logo.png", "rust-edition.ico"}
+    if lock["files"].keys() != names:
+        raise ValueError("Unexpected Rust logo asset list")
+    result = {name: (folder / name).read_bytes() for name in names}
+    for name, data in result.items():
+        if lock["files"][name] != {"sha256": sha(data), "sizeBytes": len(data)}:
+            raise ValueError(f"Rust logo file does not match its pin {name}")
+    svg = result["rust-logo.svg"]
+    if hashlib.sha1(f"blob {len(svg)}".encode("ascii") + bytes(1) + svg).hexdigest() != lock["gitBlob"]:
+        raise ValueError("Rust logo does not match the pinned official Git blob")
+    return result
+
+
+def transport_inputs(transport):
+    paths = [transport / "Cargo.toml", *(transport / "src").rglob("*.rs")]
+    if len(paths) < 2:
+        raise ValueError("The shared lanmc_steam_native crate is missing")
+    for path in paths:
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"Invalid shared Steam transport source {path.name}")
+    return sorted(paths)
+
+
+def index(files):
+    return {path: sha(data) for path, data in sorted(files.items())}
+
+
+def tree_sha(files):
+    return sha("".join(f"{value}  {path}\n" for path, value in sorted(files.items())).encode("utf-8"))
+
+
+def recipe_sha():
+    return tree_sha(index({name: (HERE / name).read_bytes() for name in (
+        Path(__file__).name, "lanmc_steam.rs", "lanmc_skins.rs", "lanmc_presentation.rs",
+        "horizon-cargo.lock", "rust-logo/artwork-lock.json", "rust-logo/render.py",
+        "rust-logo/NOTICE.txt", "rust-logo/rust-logo.svg", "rust-logo/rust-logo.png",
+        "rust-logo/rust-edition.ico",
+    )}))
+
+
+def staged_path(source, name):
+    path = source / name
+    if path.resolve() != path.absolute():
+        raise ValueError(f"Linked source path {name}")
+    return path
+
+
+def apply_or_validate(source, originals, patched, apply):
+    for name, output in patched.items():
+        path = staged_path(source, name)
+        expected = originals.get(name) if apply else output
+        if expected is None:
+            if path.exists():
+                raise ValueError(f"Unexpected source file already present {name}")
+        elif not path.is_file() or path.read_bytes() != expected:
+            raise ValueError(f"Source tree does not match the expected bytes {name}")
+    if apply:
+        for name, data in patched.items():
+            path = staged_path(source, name)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+
+
+def verify_build_tree(source, archive, patched):
+    expected = set(patched)
+    with tarfile.open(archive, "r|gz") as stream:
+        for entry in stream:
+            if entry.isdir():
+                continue
+            name = entry.name.removeprefix(PREFIX)
+            if name == "CLAUDE.md" and entry.issym() and entry.linkname == "AGENTS.md":
+                # Windows' tar extraction materializes this author docs link as a copy.
+                alias = staged_path(source, name)
+                if alias.read_bytes() != staged_path(source, "AGENTS.md").read_bytes():
+                    raise ValueError("The source documentation alias differs from its target")
+                expected.add(name)
+                continue
+            if not entry.isfile() or not entry.name.startswith(PREFIX):
+                raise ValueError(f"Unexpected source archive entry {entry.name}")
+            if name not in patched:
+                path = staged_path(source, name)
+                if path.stat().st_size != entry.size or digest(path) != hashlib.file_digest(
+                    stream.extractfile(entry), "sha256"
+                ).hexdigest():
+                    raise ValueError(f"Unexpected source change outside the overlay {name}")
+            expected.add(name)
+    actual = {path.relative_to(source).as_posix()
+              for path in source.rglob("*") if path.is_file() or path.is_symlink()}
+    if actual != expected:
+        unexpected = ", ".join(sorted(actual - expected)[:5])
+        missing = ", ".join(sorted(expected - actual)[:5])
+        raise ValueError(f"Source file set changed (extra: {unexpected}; missing: {missing})")
+
+
+def verify_pe_icon(client, ico):
+    with client.open("rb") as file:
+        file.seek(60)
+        pe = struct.unpack("<I", file.read(4))[0]
+        file.seek(pe + 4)
+        coff = file.read(20)
+        section_count = struct.unpack_from("<H", coff, 2)[0]
+        optional_size = struct.unpack_from("<H", coff, 16)[0]
+        file.seek(pe + 24 + optional_size)
+        sections = [file.read(40) for _ in range(section_count)]
+        resources = [section for section in sections if section[:8].rstrip(bytes(1)) == b".rsrc"]
+        if len(resources) != 1:
+            raise ValueError("The client has no unambiguous Windows resource section")
+        size, offset = struct.unpack_from("<II", resources[0], 16)
+        if not size or size > 16 * 1024 * 1024 or offset + size > client.stat().st_size:
+            raise ValueError("The client has an invalid Windows resource section")
+        file.seek(offset)
+        data = file.read(size)
+    count = struct.unpack_from("<H", ico, 4)[0]
+    for index in range(count):
+        size, offset = struct.unpack_from("<II", ico, 6 + index * 16 + 8)
+        if ico[offset:offset + size] not in data:
+            raise ValueError("A pinned Rust logo frame is missing from the Windows PE icon")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-archive", type=Path, required=True)
+    parser.add_argument("--steam-transport", type=Path, required=True)
+    parser.add_argument("--source", type=Path)
+    parser.add_argument("--check", action="store_true")
+    parser.add_argument("--receipt", type=Path)
+    parser.add_argument("--client", type=Path)
+    parser.add_argument("--steam-dll", type=Path)
+    args = parser.parse_args()
+    if args.check and (args.source or args.receipt or args.client or args.steam_dll):
+        parser.error("--check computes overlay output without a staged checkout")
+    if not args.check and args.source is None:
+        parser.error("--source is required to apply the overlay or verify a completed build")
+    if (args.receipt is not None) != (args.client is not None and args.steam_dll is not None):
+        parser.error("--receipt requires both --client and --steam-dll")
+    original = locked_inputs(args.source_archive)
+    patched = changes(original, args.steam_transport.resolve())
+    if args.source is not None:
+        apply_or_validate(args.source.resolve(strict=True), original, patched, args.receipt is None)
+    evidence = {
+        "schemaVersion": 1,
+        "upstreamCommit": COMMIT,
+        "upstreamSourceSha256": SOURCE_SHA,
+        "recipeSha256": recipe_sha(),
+        "steamTransportCommit": TRANSPORT_COMMIT,
+        "steamTransportSourceSha256": TRANSPORT_SHA,
+        "patchedFiles": index(patched),
+    }
+    if args.receipt:
+        verify_build_tree(args.source.resolve(strict=True), args.source_archive, patched)
+        for path, name, prefix in (
+            (args.client, "horizon-client.exe", "client"),
+            (args.steam_dll, "steam_api64.dll", "steamDll"),
+        ):
+            if path.name.lower() != name or path.is_symlink():
+                raise ValueError(f"Expected regular binary {name}")
+            with path.open("rb") as file:
+                header = file.read(64)
+                if len(header) != 64 or not header.startswith(b"MZ"):
+                    raise ValueError(f"Expected PE binary {name}")
+                file.seek(struct.unpack_from("<I", header, 60)[0])
+                if file.read(6) != struct.pack("<4sH", b"PE" + bytes(2), 0x8664):
+                    raise ValueError(f"Expected x64 PE binary {name}")
+            evidence[prefix + "Sha256"] = digest(path)
+            evidence[prefix + "SizeBytes"] = path.stat().st_size
+        if (evidence["steamDllSizeBytes"], evidence["steamDllSha256"]) != (STEAM_DLL_SIZE, STEAM_DLL_SHA):
+            raise ValueError("Steam DLL does not match the reviewed Valve redistributable")
+        verify_pe_icon(args.client, patched["packaging/icons/rust-edition.ico"])
+        receipt = args.receipt.absolute()
+        temp = receipt.with_suffix(receipt.suffix + ".tmp")
+        with temp.open("x", encoding="utf-8", newline="\n") as file:
+            json.dump(evidence, file, indent=2, ensure_ascii=True)
+            file.write("\n")
+        os.replace(temp, receipt)
+    print(json.dumps(evidence, ensure_ascii=True))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (ValueError, OSError, tarfile.TarError) as error:
+        print(f"Horizon overlay: {error}", file=sys.stderr)
+        sys.exit(1)

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "project": "horizon-rust/horizon",
+  "commit": "66f3981f522b24c250b21523a70080965b940424",
+  "releaseId": 435504457,
+  "signedTag": "nightly",
+  "mirrorTag": "upstream-horizon-nightly-2026-11-05-66f3981",
+  "version": "nightly-2026-11-05-66f3981",
+  "displayVersion": "Nightly 2026-11-05",
+  "publishedAt": "2026-11-05T17:24:59Z",
+  "ed25519Key": "MU4oiIQcCxkZvbwSjjXs7SySCuM6ywRQ3nGaJYZG0gw=",
+  "minecraftVersion": "26.3",
+  "javaMajorVersion": 25,
+  "assets": {
+    "horizon-windows-x64.zip": {
+      "id": 714201488,
+      "sizeBytes": 40474460,
+      "sha256": "0e3157a74c56249573f42624d64bc87774324dec1cd20ba6518c784b7293eda0"
+    },
+    "horizon-source.tar.gz": {
+      "id": 714201612,
+      "sizeBytes": 44596081,
+      "sha256": "3e3f5bf9df5f86b3c72a950f0869f09d1178814ac101d5f9af849b5d70c0fef4"
+    }
+  }
+}

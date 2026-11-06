@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/rust-lang/rust-artwork",
+  "commit": "7b54b6689dc310db2f301d7bcda847f016bd447c",
+  "gitBlob": "62424d8ffd763e38983edac61971770e945ee5bb",
+  "url": "https://raw.githubusercontent.com/rust-lang/rust-artwork/7b54b6689dc310db2f301d7bcda847f016bd447c/logo/rust-logo.svg",
+  "copyrightHolder": "Rust Foundation",
+  "license": "CC-BY-4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "rasterizer": {
+    "CairoSVG": "2.9.1",
+    "Cairo": "1.18.6"
+  },
+  "files": {
+    "rust-logo.svg": {
+      "sha256": "9a9549ea02d34dec3a610b8299f1b8121c7b10b14a44d3baec46ba15e9a06ca2",
+      "sizeBytes": 3297
+    },
+    "rust-logo.png": {
+      "sha256": "991b45c4e73266811508d506a9369db8477b6a38306a16a8d4ae96958c3aa74d",
+      "sizeBytes": 2385
+    },
+    "rust-edition.ico": {
+      "sha256": "6a6e317ffb1b26995f3eab7ee58944be7369076610cb7ce3aa2edf341e0468d3",
+      "sizeBytes": 5169
+    }
+  }
+}

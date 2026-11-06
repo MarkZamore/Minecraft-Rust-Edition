@@ -1,0 +1,7 @@
+* text=auto eol=lf
+/tools/upstream/SHA256SUMS -text
+/tools/upstream/SHA256SUMS.sig -text
+/library/preview.jpg binary
+/integration/steam/rust-logo/rust-logo.svg -text
+/integration/steam/rust-logo/*.png binary
+/integration/steam/rust-logo/*.ico binary

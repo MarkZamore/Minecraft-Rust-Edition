@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "upstreamCommit": "66f3981f522b24c250b21523a70080965b940424",
+  "client": {
+    "sizeBytes": 86267392,
+    "sha256": "189ff15c4f896829b0f4aac9fd00cd3185df92941f409c8d8bbc62c1be607be0"
+  },
+  "bootstrap": {
+    "sizeBytes": 2681856,
+    "sha256": "bf70ed10aed71c00490404a12ddf47d82a1f9f5e31c4f1cd98510787a071694f"
+  },
+  "platform": "Windows x64, Intel Arc B390 Vulkan",
+  "checks": {
+    "coldPreparation": "PASS",
+    "warmReceiptReuse": "PASS",
+    "cleanSaveAndReopen": "PASS",
+    "nativeModsPageEmpty": "PASS",
+    "signedUpstreamInputs": "PASS",
+    "nativePayloadUnchanged": "PASS",
+    "windowsNativeIconResources": "PASS",
+    "liveSteamTwoAccounts": "NOT RUN"
+  },
+  "windowTitle": "Minecraft Rust Edition",
+  "preparedReceipt": {
+    "sizeBytes": 3564115,
+    "sha256": "5b1983ddedb711fef8fb85dc380736b139d0f8e89b18d7b34c3e20dd21495d26"
+  },
+  "sourceScreenshot": {
+    "sizeBytes": 2880345,
+    "sha256": "6531c87d8102af938c9f1e6bc5833d9e4244d3b258bd1a3cd14b6bb63ed24763"
+  },
+  "libraryPreview": {
+    "sizeBytes": 520374,
+    "sha256": "ebe5844590fcfef0f844d77587524a5d072ddff75e55b793153be8ee3b8bfb33"
+  },
+  "observedManagedDirectories": [
+    "game/saves",
+    "game/logs",
+    "game/config",
+    "cache/resources",
+    "cache/process-home/AppData/Local",
+    "cache/java-tool-home"
+  ]
+}
