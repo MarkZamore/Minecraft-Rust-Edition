@@ -34,6 +34,7 @@ const JAVA_PREFIX: &str = "jdk-25.0.4.1+1";
 struct Options {
     game: Option<PathBuf>,
     minecraft: Option<PathBuf>,
+    server: Option<PathBuf>,
     java: Option<PathBuf>,
     socket: Option<OsString>,
     world: Option<OsString>,
@@ -99,6 +100,7 @@ fn run() -> Result<i32> {
         native,
         &cache,
         options.minecraft.map(std::path::absolute).transpose()?,
+        options.server.map(std::path::absolute).transpose()?,
         options.java.map(std::path::absolute).transpose()?,
     )?;
     let presentation: Value =
@@ -167,7 +169,7 @@ fn options() -> Result<Option<Options>> {
         let name = arg.to_str().context("Invalid option")?;
         if name == "--help" {
             println!(
-                "launch-rust-edition [--game-dir DIR] [--minecraft-dir DIR] [--java-home DIR]"
+                "launch-rust-edition [--game-dir DIR] [--minecraft-dir DIR] [--server-jar PATH] [--java-home DIR]"
             );
             return Ok(None);
         }
@@ -177,6 +179,7 @@ fn options() -> Result<Option<Options>> {
         match name {
             "--game-dir" => result.game = Some(PathBuf::from(value)),
             "--minecraft-dir" => result.minecraft = Some(PathBuf::from(value)),
+            "--server-jar" => result.server = Some(PathBuf::from(value)),
             "--java-home" => result.java = Some(PathBuf::from(value)),
             "--control-socket" => result.socket = Some(value),
             "--quickPlaySingleplayer" => result.world = Some(value),
@@ -226,6 +229,7 @@ fn prepare(
     native: &Path,
     cache: &Path,
     minecraft: Option<PathBuf>,
+    server: Option<PathBuf>,
     java: Option<PathBuf>,
 ) -> Result<PathBuf> {
     let preparer = child(native, "horizon-prepare.exe")?;
@@ -247,6 +251,10 @@ fn prepare(
         && !old.files.is_empty()
         && verify_inventory(&resources, &old.files)?
     {
+        if server.is_some() {
+            let input = find_minecraft(&pins, minecraft)?;
+            server_jar(cache, &input.manifest, &pins, server)?;
+        }
         prepared_data::reconcile(&resources, &old.files)?;
         eprintln!(
             "Verified {} cached Horizon resource files in {:.2}s",
@@ -257,7 +265,7 @@ fn prepare(
     }
 
     let input = find_minecraft(&pins, minecraft)?;
-    let server = server_jar(cache, &input.manifest, &pins.server_sha1)?;
+    let server = server_jar(cache, &input.manifest, &pins, server)?;
     let jdk = java_home(cache, java, pins.java_major)?;
     let scratch = child(cache, "preparation")?;
     remove_tree(&scratch)?;
@@ -372,7 +380,13 @@ fn find_minecraft(pins: &Pins, explicit: Option<PathBuf>) -> Result<Minecraft> {
     )
 }
 
-fn server_jar(cache: &Path, manifest: &Path, expected: &str) -> Result<PathBuf> {
+fn server_jar(
+    cache: &Path,
+    manifest: &Path,
+    pins: &Pins,
+    explicit: Option<PathBuf>,
+) -> Result<PathBuf> {
+    let expected = pins.server_sha1.as_str();
     let version: Value = serde_json::from_reader(File::open(manifest)?)?;
     let entry = &version["downloads"]["server"];
     let size = entry["size"]
@@ -386,7 +400,27 @@ fn server_jar(cache: &Path, manifest: &Path, expected: &str) -> Result<PathBuf> 
             && entry["sha1"].as_str() == Some(expected),
         "Mojang server does not match Horizon's pin"
     );
-    download::<Sha1>(&url, size, expected, &child(cache, "server.jar")?)
+    if let Some(path) = explicit {
+        ensure!(
+            verified_file::<Sha1>(&path, size, expected)?,
+            "--server-jar does not match Minecraft {}: {}",
+            pins.version,
+            path.display()
+        );
+        return Ok(path);
+    }
+
+    let cached = child(cache, "server.jar")?;
+    for candidate in [
+        cached.clone(),
+        manifest.with_file_name("server.jar"),
+        manifest.with_file_name(format!("{}-server.jar", pins.version)),
+    ] {
+        if verified_file::<Sha1>(&candidate, size, expected)? {
+            return Ok(candidate);
+        }
+    }
+    download::<Sha1>(&url, size, expected, &cached)
 }
 
 fn java_home(cache: &Path, explicit: Option<PathBuf>, major: u32) -> Result<PathBuf> {
@@ -420,12 +454,10 @@ fn java_home(cache: &Path, explicit: Option<PathBuf>, major: u32) -> Result<Path
             return Ok(candidate);
         }
     }
-    let archive = download::<Sha256>(
-        JAVA_URL,
-        JAVA_SIZE,
-        JAVA_HASH,
-        &child(cache, "java-25.zip")?,
-    )?;
+    let archive = child(cache, "java-25.zip")?;
+    if !verified_file::<Sha256>(&archive, JAVA_SIZE, JAVA_HASH)? {
+        download::<Sha256>(JAVA_URL, JAVA_SIZE, JAVA_HASH, &archive)?;
+    }
     let staging = child(cache, "java-25-stage")?;
     remove_tree(&staging)?;
     create_unlinked_dir(&staging)?;
@@ -489,10 +521,11 @@ fn is_java(home: &Path, major: u32, profile: &Path, temp: &Path) -> bool {
         })
 }
 
+fn verified_file<D: Digest>(path: &Path, size: u64, expected: &str) -> Result<bool> {
+    Ok(path.is_file() && path.metadata()?.len() == size && hash::<D>(path)? == expected)
+}
+
 fn download<D: Digest>(url: &str, size: u64, expected: &str, target: &Path) -> Result<PathBuf> {
-    if target.is_file() && target.metadata()?.len() == size && hash::<D>(target)? == expected {
-        return Ok(target.to_owned());
-    }
     let partial = target.with_extension("part");
     ensure_unlinked(&partial)?;
     let result = (|| {
@@ -699,6 +732,86 @@ fn remove_tree(path: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const SERVER_BYTES: &[u8] = b"verified server";
+
+    fn with_server_fixture(
+        name: &str,
+        test: impl FnOnce(&Path, &Path, &Pins) -> Result<()>,
+    ) -> Result<()> {
+        let root = env::temp_dir().join(format!("lanmc-{name}-{}", std::process::id()));
+        fs::create_dir(&root)?;
+        let result = (|| {
+            let cache = root.join("cache");
+            fs::create_dir(&cache)?;
+            let server_sha1 = format!("{:x}", Sha1::digest(SERVER_BYTES));
+            let manifest = root.join("26.3.json");
+            let version = serde_json::json!({
+                "downloads": { "server": {
+                    "sha1": server_sha1,
+                    "size": SERVER_BYTES.len(),
+                    "url": format!("https://piston-data.mojang.com/v1/objects/{server_sha1}/server.jar")
+                } }
+            });
+            serde_json::to_writer(File::create(&manifest)?, &version)?;
+            let pins = Pins {
+                version: "26.3".into(),
+                manifest_sha1: hash::<Sha1>(&manifest)?,
+                accepted_manifest_sha1: Vec::new(),
+                client_sha1: String::new(),
+                server_sha1,
+                java_major: 25,
+            };
+            test(&cache, &manifest, &pins)
+        })();
+        fs::remove_dir_all(root)?;
+        result
+    }
+
+    #[test]
+    fn server_selection_reuses_verified_cache_and_local_siblings() -> Result<()> {
+        with_server_fixture("server-reuse", |cache, manifest, pins| {
+            let cached = cache.join("server.jar");
+            let local = manifest.with_file_name("server.jar");
+            let versioned = manifest.with_file_name("26.3-server.jar");
+            fs::write(&cached, SERVER_BYTES)?;
+            fs::write(&local, SERVER_BYTES)?;
+            assert_eq!(server_jar(cache, manifest, pins, None)?, cached);
+
+            fs::write(&cached, b"corrupt! server")?;
+            assert_eq!(server_jar(cache, manifest, pins, None)?, local);
+
+            fs::write(&local, b"corrupt! server")?;
+            fs::write(&versioned, SERVER_BYTES)?;
+            assert_eq!(server_jar(cache, manifest, pins, None)?, versioned);
+            assert_eq!(fs::read(&cached)?, b"corrupt! server");
+            assert_eq!(fs::read(&local)?, b"corrupt! server");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn explicit_server_selection_never_falls_back() -> Result<()> {
+        with_server_fixture("server-explicit", |cache, manifest, pins| {
+            fs::write(cache.join("server.jar"), SERVER_BYTES)?;
+            let explicit = manifest.with_file_name("my server.jar");
+            for contents in [None, Some(b"short".as_slice()), Some(b"corrupt! server")] {
+                if let Some(contents) = contents {
+                    fs::write(&explicit, contents)?;
+                }
+                let error = server_jar(cache, manifest, pins, Some(explicit.clone()))
+                    .expect_err("An invalid explicit server must never fall back");
+                assert!(error.to_string().contains("--server-jar"));
+            }
+
+            fs::write(&explicit, SERVER_BYTES)?;
+            assert_eq!(
+                server_jar(cache, manifest, pins, Some(explicit.clone()))?,
+                explicit
+            );
+            Ok(())
+        })
+    }
 
     #[test]
     fn warm_resources_reject_changed_bytes_and_paths() -> Result<()> {

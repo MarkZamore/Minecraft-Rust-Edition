@@ -26,7 +26,10 @@ Check(previous.Id == "minecraft-9" && target.Id == previous.Id && previous.Relat
 Check(previous.Files.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(target.Files.Keys)
     && target.Files.Keys.Where(path => target.Files[path] != previous.Files[path]).SequenceEqual([bootstrap]),
     "The Edition update should replace only its native bootstrap.");
-var targetAsset = target.Asset;
+var previousAsset = previous.AssetFor(bootstrap);
+var targetAsset = target.AssetFor(bootstrap);
+previous.VerifyAssets();
+target.VerifyAssets();
 var json = new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true };
 var started = DateTimeOffset.UtcNow;
 Directory.CreateDirectory(output);
@@ -55,7 +58,7 @@ var report = new Dictionary<string, object?>
     ["newRevision"] = target.Revision,
     ["oldManifestSha256"] = Hash(previous.Manifest),
     ["newManifestSha256"] = Hash(target.Manifest),
-    ["oldAssetSha256"] = previous.Asset.Sha256,
+    ["oldAssetSha256"] = previousAsset.Sha256,
     ["newAssetSha256"] = targetAsset.Sha256,
     ["managedFileCount"] = target.Files.Count
 };
@@ -136,8 +139,8 @@ try
     await instances.PrepareAsync(pack);
     foreach (var (relative, contents) in sentinels)
         Check(File.ReadAllText(Path.Combine(game, relative)) == contents, "A personal sentinel changed: " + relative);
-    Check(Hash(previous.AssetPath) == previous.Asset.Sha256 && Hash(target.AssetPath) == targetAsset.Sha256,
-        "An input archive was modified by the test.");
+    previous.VerifyAssets();
+    target.VerifyAssets();
     report["idempotence"] = "PASS";
     report["repeatPayloadBytes"] = repeated.BytesDownloaded;
     report["personalSentinelsPreserved"] = sentinels.Count;
@@ -228,11 +231,26 @@ static void DeleteFixture(string directory)
 }
 
 sealed record ManagedFile(string Path, long SizeBytes, string Sha256);
-sealed record PayloadAsset(string Name, long SizeBytes, string Sha256);
-sealed record Release(string Manifest, string Id, string RelativePath, string Revision, PayloadAsset Asset,
+sealed record PayloadAsset(string Name, long SizeBytes, string Sha256, string[] Covers);
+sealed record Release(string Manifest, string Id, string RelativePath, string Revision,
+    IReadOnlyDictionary<string, PayloadAsset> Assets,
     IReadOnlyDictionary<string, ManagedFile> Files)
 {
-    public string AssetPath => Path.Combine(Path.GetDirectoryName(Manifest)!, "assets", Asset.Name);
+    public string AssetPath(PayloadAsset asset) => Path.Combine(Path.GetDirectoryName(Manifest)!, "assets", asset.Name);
+
+    public PayloadAsset AssetFor(string path) =>
+        Assets.Values.Single(asset => asset.Covers.Contains(path, StringComparer.Ordinal));
+
+    public void VerifyAssets()
+    {
+        foreach (var asset in Assets.Values)
+        {
+            var path = AssetPath(asset);
+            using var stream = File.OpenRead(path);
+            if (stream.Length != asset.SizeBytes || Convert.ToHexStringLower(SHA256.HashData(stream)) != asset.Sha256)
+                throw new InvalidDataException("Wrong input archive bytes: " + asset.Name);
+        }
+    }
 
     public static Release Read(string dist)
     {
@@ -240,11 +258,14 @@ sealed record Release(string Manifest, string Id, string RelativePath, string Re
         using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
         var value = doc.RootElement;
         var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        var asset = value.GetProperty("assets").EnumerateArray().Single().Deserialize<PayloadAsset>(json)!;
+        var assets = value.GetProperty("assets").Deserialize<PayloadAsset[]>(json)!
+            .ToDictionary(asset => asset.Name, StringComparer.Ordinal);
+        if (assets.Keys.Any(name => name is "" or "." or ".." || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0))
+            throw new InvalidDataException("Invalid fixture asset name.");
         var files = value.GetProperty("files").Deserialize<ManagedFile[]>(json)!
             .ToDictionary(file => file.Path, StringComparer.Ordinal);
         return new(path, value.GetProperty("packId").GetString()!, value.GetProperty("relativePath").GetString()!,
-            value.GetProperty("revision").GetString()!, asset, files);
+            value.GetProperty("revision").GetString()!, assets, files);
     }
 }
 
@@ -268,12 +289,13 @@ sealed class ReleaseHandler(Release release, PackSyncSource source) : HttpMessag
         var name = Uri.UnescapeDataString(uri.AbsolutePath[path.Length..]);
         if (name == PortablePackSyncService.PackManifestAssetName)
             return Ok(File.OpenRead(Release.Manifest));
-        if (name != Release.Asset.Name)
+        if (!Release.Assets.TryGetValue(name, out var asset))
             throw new InvalidOperationException("Unexpected asset in the local release fixture.");
+        var assetPath = Release.AssetPath(asset);
         Interlocked.Increment(ref PayloadRequests);
-        if (!InterruptPayload) return Ok(File.OpenRead(Release.AssetPath));
+        if (!InterruptPayload) return Ok(File.OpenRead(assetPath));
         Interlocked.Increment(ref InterruptedRequests);
-        return Ok(new InterruptedStream(Release.AssetPath, bytes => Interlocked.Add(ref InterruptedBytes, bytes)));
+        return Ok(new InterruptedStream(assetPath, bytes => Interlocked.Add(ref InterruptedBytes, bytes)));
     }
 
     private static Task<HttpResponseMessage> Ok(Stream stream) =>

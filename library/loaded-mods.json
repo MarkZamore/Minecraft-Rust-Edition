@@ -104,7 +104,7 @@
     "native/exporters/server/dev/horizonlab/parity/VanillaStructureBlockExporter.class": "d2cc6c600e0e25428b3cdc1249abbb935792798c929a222de121a8e3727504d6",
     "native/horizon-client.exe": "3e677bd8522635f72e367756024ede1e50ee6ac7807edb5282155c03b3b14c9c",
     "native/horizon-prepare.exe": "007836f4354d51241314f564d0ac184ca70fa2d39ea4c56a2a699162f9707d48",
-    "native/launch-rust-edition.exe": "eb90ce18a028f8c7d18f96cb61d7de3de5b9d9ac7b542e1fdb8d4e2f44e6a04b",
+    "native/launch-rust-edition.exe": "eae0fed81b35b489d8669aac5175123b473c532eefd5770b72a0cf371149cbb2",
     "native/mods/horizon/src/test/java/dev/horizonlab/parity/ElderCurseTranscript.java": "ed9abda5bb2015f09c763719e7114c9ce821ced4553e6d4d16e45fea4eae018b",
     "native/mods/horizon/src/test/java/dev/horizonlab/parity/EntityTranscript.java": "5c747ae4a15c7fa61bebbe13b404679b6a7131382898f51c51a0e01f1978a05c",
     "native/mods/horizon/src/test/java/dev/horizonlab/parity/GoatVoiceTranscript.java": "565aaafdd0959a3ba7c92bb33b6fd758b2178cf609fa6ae17be1dce25790e861",
