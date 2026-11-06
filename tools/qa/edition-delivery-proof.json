@@ -1,0 +1,20 @@
+{
+  "revision": "94deaa18c9e93ef32004ff2f6cdec45f275a90db",
+  "assets": [
+    {
+      "name": "pack-manifest.json",
+      "size": 144357,
+      "sha256": "12cfaed764e922a3ad89d71acbc3f5b22d0a9423e03304b7de49379c952f9341"
+    },
+    {
+      "name": "library-c7a3e751b04766751000acef77b2b77725690fd75fb6a2e682132ca480583fd1.zip",
+      "size": 520619,
+      "sha256": "c7a3e751b04766751000acef77b2b77725690fd75fb6a2e682132ca480583fd1"
+    },
+    {
+      "name": "minecraft-rust-edition-windows-x64-c915911672e8c1af13a020d6682af2fffaa5b4258ec929649c23affb2effe902.zip",
+      "size": 36310831,
+      "sha256": "c915911672e8c1af13a020d6682af2fffaa5b4258ec929649c23affb2effe902"
+    }
+  ]
+}

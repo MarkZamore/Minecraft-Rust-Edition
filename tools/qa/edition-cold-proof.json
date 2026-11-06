@@ -1,0 +1,26 @@
+{
+  "launcherRelease": 448,
+  "launcherSha256": "f00564868050d909aabd88366b6562eb0da421887936d832c9ebcbd961a5ee47",
+  "catalogCommit": "c06105358e634e13b071424da4109d43536825be",
+  "catalogEntries": 9,
+  "packId": "minecraft-9",
+  "packName": "Minecraft Rust Edition",
+  "packRevision": "94deaa18c9e93ef32004ff2f6cdec45f275a90db",
+  "minecraftVersion": "26.3",
+  "modCount": 0,
+  "nativeProject": {
+    "name": "Horizon",
+    "version": "Nightly 2026-11-05",
+    "revision": "66f3981f522b24c250b21523a70080965b940424",
+    "websiteUrl": "https://github.com/horizon-rust/horizon"
+  },
+  "previewSha256": "ebe5844590fcfef0f844d77587524a5d072ddff75e55b793153be8ee3b8bfb33",
+  "requiredLauncherFeatures": [
+    "native-runtime-v1",
+    "native-steam-v1",
+    "minecraft-26-world-layout-v1"
+  ],
+  "windowsUiVerification": "Library opened; the user stopped Computer Use before visual verification of the card.",
+  "shutdownWarning": "Invalid launch pack folder",
+  "liveTwoAccountSteam": "NOT RUN"
+}
