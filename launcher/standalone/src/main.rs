@@ -112,6 +112,26 @@ fn run() -> Result<i32> {
     );
     let mut client = tool(&native.join("horizon-client.exe"), native);
     client.env("LANMINECRAFT_BUILD_NAME", title);
+    if let Some(config) = presentation.get("instanceConfig") {
+        let files = config
+            .as_object()
+            .context("Invalid pack configuration paths")?;
+        for (key, value) in files {
+            ensure!(
+                key.ends_with("_CONFIG")
+                    && key
+                        .bytes()
+                        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == b'_'),
+                "Invalid pack configuration key"
+            );
+            let path = Path::new(
+                value
+                    .as_str()
+                    .context("Missing relative pack configuration path")?,
+            );
+            client.env(key, child_path(&game, path)?);
+        }
+    }
     client
         .args(["--resources"])
         .arg(&resources)
