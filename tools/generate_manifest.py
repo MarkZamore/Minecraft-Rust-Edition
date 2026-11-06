@@ -11,7 +11,8 @@ import tempfile
 import zipfile
 
 from stage_runtime import (
-    LIBRARY_SOURCES, LOCK, ROOT, file_info, read_json, safe_path, verify_file, verify_overlay, verify_pe,
+    CONTROL_FILES, LIBRARY_SOURCES, LOCK, ROOT, file_info, read_json, safe_path,
+    verify_file, verify_overlay, verify_pe,
 )
 
 
@@ -27,7 +28,7 @@ def inventory(candidate):
     native = candidate / "native"
     if not native.is_dir() or native.is_symlink() or native.is_junction():
         raise ValueError("A regular native payload directory is required")
-    paths = {"portable-pack.json": candidate / "portable-pack.json"}
+    paths = {name: candidate / name for name in ("portable-pack.json", *CONTROL_FILES)}
     for entry in native.rglob("*"):
         if entry.is_symlink() or entry.is_junction():
             raise ValueError(f"Distribution cannot contain links: {entry.name}")
@@ -74,6 +75,8 @@ def describe_candidate(candidate):
     )
     for name in LIBRARY_SOURCES:
         verify_file(candidate / "library" / name, file_info(ROOT / "library" / name))
+    for name in CONTROL_FILES:
+        verify_file(candidate / name, file_info(ROOT / name))
     distribution = {
         "schemaVersion": 1,
         "upstreamCommit": upstream["commit"],
@@ -107,7 +110,7 @@ def observed_inventory(candidate, report_path):
     }
 
 
-def zip_payload(out, candidate, covers):
+def zip_payload(out, candidate, covers, prefix):
     temporary = out / "runtime.tmp"
     with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for relative in covers:
@@ -117,7 +120,7 @@ def zip_payload(out, candidate, covers):
             entry.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(entry, (candidate / relative).read_bytes(), compresslevel=9)
     details = file_info(temporary)
-    name = f"minecraft-rust-edition-windows-x64-{details['sha256']}.zip"
+    name = f"{prefix}-{details['sha256']}.zip"
     temporary.rename(out / name)
     return {"name": name, "kind": "zipRoot", **details, "covers": covers}
 
@@ -142,7 +145,12 @@ def stage_release(candidate, out, revision, library_tool):
     files = distribution["files"]
     assets_dir = out / "assets"
     assets_dir.mkdir(parents=True)
-    assets = [zip_payload(assets_dir, candidate, list(files))]
+    preset = CONTROL_FILES[0]
+    assets = [
+        zip_payload(assets_dir, candidate, [name for name in files if name != preset],
+                    "minecraft-rust-edition-windows-x64"),
+        zip_payload(assets_dir, candidate, [preset], "launcher"),
+    ]
     library = library_tool.stage_library(candidate, out, revision)
     mod_count = len(read_json(candidate / "library/loaded-mods.json")["mods"])
     library_tool.verify_library(out, library)

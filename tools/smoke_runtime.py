@@ -37,13 +37,13 @@ def run_client(executable, controller, resources, qa, index, action, standalone=
     endpoint = qa / f"control-{index}.json"
     if endpoint.exists():
         raise ValueError("Use a fresh smoke run directory")
-    environment = dict(os.environ, HORIZON_NO_DISCORD="1")
+    environment = dict(os.environ, HORIZON_NO_DISCORD="1", HORIZON_TEST_LOOPBACK="1")
+    for name in tuple(environment):
+        if name.upper().startswith("LANMINECRAFT_"):
+            del environment[name]
     arguments = [str(executable), "--resources", str(resources), "--home", str(game), "--name", PLAYER]
     if standalone:
         bootstrap, minecraft, java, cache = standalone
-        for name in tuple(environment):
-            if name.upper().startswith("LANMINECRAFT_"):
-                del environment[name]
         arguments = [str(bootstrap), "--minecraft-dir", str(minecraft), "--java-home", str(java)]
         environment["LANMINECRAFT_NATIVE_CACHE"] = str(cache)
     arguments.extend(["--game-dir", str(game), "--control-socket", str(endpoint)])
@@ -53,7 +53,7 @@ def run_client(executable, controller, resources, qa, index, action, standalone=
         def control(*args, timeout=120):
             result = subprocess.run(
                 [str(controller), "--socket", str(endpoint), *args],
-                cwd=game, capture_output=True, text=True, timeout=timeout, check=True,
+                cwd=game, capture_output=True, encoding="utf-8", timeout=timeout, check=True,
             )
             reply = json.loads(result.stdout)
             if isinstance(reply, dict) and "error" in reply:
@@ -88,8 +88,62 @@ def run_client(executable, controller, resources, qa, index, action, standalone=
                 process.wait(timeout=15)
 
 
+def check_pause_menu(control):
+    def button(screen, labels):
+        return next((widget for widget in screen["widgets"] if widget.get("label") in labels), None)
+
+    def rendered_pause():
+        deadline = time.monotonic() + 5
+        screen = control("ui")
+        while screen["screen"] == "paused" and not screen["widgets"] and time.monotonic() < deadline:
+            time.sleep(0.05)
+            screen = control("ui")
+        return screen
+
+    open_labels = {"Open to LAN", "Открыть для сети"}
+    report_labels = {"Player Reporting", "Жалобы"}
+    # The general loaded condition can be true before the integrated
+    # connection finishes its own level-loading overlay.
+    deadline = time.monotonic() + 90
+    while (server := control("status").get("server")) and not server["loaded"]:
+        if time.monotonic() >= deadline:
+            raise TimeoutError("The integrated connection did not finish loading")
+        time.sleep(0.1)
+    control("key", "esc", "tap")
+    control("wait-for", "screen", "paused", "--timeout", "5")
+    before = rendered_pause()
+    opened = button(before, open_labels)
+    if before["screen"] != "paused" or not opened or not opened["enabled"]:
+        raise RuntimeError(f"The pause menu does not offer Open to LAN: {before!r}")
+    if any(widget.get("label", "").startswith(("World Settings", "World Options", "Настройки мира"))
+           for widget in before["widgets"]):
+        raise RuntimeError("The pause menu still offers World Settings")
+    if control("click", opened["id"])["screen"] != "paused":
+        raise RuntimeError("Opening to LAN left the pause menu")
+    after = rendered_pause()
+    reports = button(after, report_labels)
+    if after["screen"] != "paused" or not reports or not reports["enabled"]:
+        raise RuntimeError("Opening to LAN did not directly replace the pause button")
+    if reports["bounds"] != opened["bounds"] or button(after, open_labels):
+        raise RuntimeError("Player Reporting did not replace the same pause slot")
+    control("click", reports["id"])
+    if control("ui")["screen"] != "social":
+        raise RuntimeError("Player Reporting did not open the social screen")
+    control("key", "esc", "tap")
+    control("resume")
+    return {"before": opened["label"], "after": reports["label"], "loopback": "PASS"}
+
+
+def set_test_language(game, code):
+    game.mkdir(exist_ok=True)
+    options = game / "options.txt"
+    lines = options.read_text(encoding="utf-8").splitlines() if options.is_file() else []
+    lines = [line for line in lines if not line.startswith("lang:")]
+    options.write_text("\n".join([*lines, f"lang:{code}"]) + "\n", encoding="utf-8")
+
+
 def smoke(executable, controller, resources, qa, standalone=None, expected_title=None,
-          expect_cold=False, reuse_world=False):
+          expect_cold=False, reuse_world=False, check_pause=False):
     suffix = "-update" if reuse_world else ""
     first_index = 3 if reuse_world else 1
     second_index = first_index + 1
@@ -97,6 +151,8 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
     saved = qa / "game" / "saves" / WORLD / "level.dat"
     if reuse_world and not saved.is_file():
         raise ValueError("No technical world from the previous smoke run")
+    if check_pause:
+        set_test_language(qa / "game", "en_us")
 
     def create(control):
         control("options", "mods")
@@ -156,6 +212,22 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         report["cacheReuse"] = {"coldPrepared": cold, "secondLaunchReused": True, "receipt": first_receipt}
     if expected_title is not None:
         report["windowTitle"] = expected_title
+    if check_pause:
+        # The production bootstrap sanitizes HORIZON_* settings. Exercise the
+        # exact same client directly so this test can restrict LAN to loopback.
+        def check_reopened_pause(control):
+            control("open", WORLD)
+            control("wait-for", "loaded", "--timeout", "90")
+            result = check_pause_menu(control)
+            if (result["before"], result["after"]) != ("Открыть для сети", "Жалобы"):
+                raise RuntimeError("The Russian pause menu labels differ")
+            return result
+
+        set_test_language(qa / "game", "ru_ru")
+        prepared = standalone[3] / "resources" if standalone else resources
+        report["pauseMenu"] = run_client(
+            executable, controller, prepared, qa, second_index + 1, check_reopened_pause,
+        )
     (qa / f"smoke{suffix}.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
     )
@@ -187,6 +259,7 @@ def main():
     parser.add_argument("--cache", type=pathlib.Path)
     parser.add_argument("--expect-title")
     parser.add_argument("--expect-cold", action="store_true")
+    parser.add_argument("--check-pause-menu", action="store_true")
     args = parser.parse_args()
     standalone_paths = (args.bootstrap, args.minecraft, args.java, args.cache)
     if any(standalone_paths) and not all(standalone_paths):
@@ -216,7 +289,7 @@ def main():
         else:
             qa.mkdir(exist_ok=args.reuse_world)
             smoke(executable, controller, resources, qa, standalone, args.expect_title,
-                  args.expect_cold, args.reuse_world)
+                  args.expect_cold, args.reuse_world, args.check_pause_menu)
     except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
         parser.exit(1, f"{error}\n")
 

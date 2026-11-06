@@ -1,0 +1,134 @@
+{
+  "bootstrap": {
+    "sizeBytes": 2835968,
+    "sha256": "eb90ce18a028f8c7d18f96cb61d7de3de5b9d9ac7b542e1fdb8d4e2f44e6a04b"
+  },
+  "client": {
+    "sizeBytes": 86248960,
+    "sha256": "7119f1eea8e46435b0157ce7644a6a27d14623572398b9a5952bbac13813440f"
+  },
+  "resourceReceipt": {
+    "sizeBytes": 3564115,
+    "sha256": "2006688a9227636ff42513bdbabdfa74e065ffe4620020b25956b5c5a4ea5dd7",
+    "lastWriteNs": 1793939647410346800
+  },
+  "resourceIndex": {
+    "sizeBytes": 5778,
+    "sha256": "3fa325bb6cf9f673ecd11db2028fbee15c22ba9f061eab4fab8835d016d86c43",
+    "lastWriteNs": 1793939607359598800
+  },
+  "conditions": "Ordinary menu startup, no control socket or Steam profile. Timings use process logs.",
+  "phase": "passed",
+  "generated": {
+    "cacheVerified": {
+      "wallMilliseconds": 32891.0,
+      "reported": [
+        "28178",
+        "32.74"
+      ]
+    },
+    "loadingScreen": {
+      "wallMilliseconds": 34797.0,
+      "reported": [
+        "1257"
+      ]
+    },
+    "titleArtwork": {
+      "wallMilliseconds": 35031.0,
+      "reported": [
+        "1477"
+      ]
+    },
+    "firstFrame": {
+      "wallMilliseconds": 38672.0,
+      "reported": [
+        "561"
+      ]
+    },
+    "archiveWritten": {
+      "wallMilliseconds": 148125.0,
+      "reported": [
+        "83033"
+      ]
+    }
+  },
+  "archive": {
+    "sizeBytes": 120417344,
+    "sha256": "1121e39a757ff65495d46570bff217dbfccf0555fd51f0c7d1d4f25522296fd8",
+    "lastWriteNs": 1793945533268325700
+  },
+  "reused": {
+    "cacheVerified": {
+      "wallMilliseconds": 26859.0,
+      "reported": [
+        "28178",
+        "26.71"
+      ]
+    },
+    "titleArtwork": {
+      "wallMilliseconds": 27500.0,
+      "reported": [
+        "593"
+      ]
+    },
+    "loadingScreen": {
+      "wallMilliseconds": 27672.0,
+      "reported": [
+        "772"
+      ]
+    },
+    "firstFrame": {
+      "wallMilliseconds": 28031.0,
+      "reported": [
+        "77"
+      ]
+    }
+  },
+  "repaired": {
+    "archiveRejected": {
+      "wallMilliseconds": 5328.0,
+      "reported": []
+    },
+    "cacheVerified": {
+      "wallMilliseconds": 5344.0,
+      "reported": [
+        "28178",
+        "5.34"
+      ]
+    },
+    "loadingScreen": {
+      "wallMilliseconds": 5891.0,
+      "reported": [
+        "503"
+      ]
+    },
+    "titleArtwork": {
+      "wallMilliseconds": 6078.0,
+      "reported": [
+        "689"
+      ]
+    },
+    "firstFrame": {
+      "wallMilliseconds": 6844.0,
+      "reported": [
+        "78"
+      ]
+    },
+    "archiveWritten": {
+      "wallMilliseconds": 10281.0,
+      "reported": [
+        "3239"
+      ]
+    }
+  },
+  "tampered": {
+    "sizeBytes": 120417344,
+    "sha256": "4c213c2abd66a58fc7cf5f9312cf119fa41d6e22177bd7689527f4234244c2b6",
+    "lastWriteNs": 1793945562484000300
+  },
+  "restored": {
+    "sizeBytes": 120417344,
+    "sha256": "1121e39a757ff65495d46570bff217dbfccf0555fd51f0c7d1d4f25522296fd8",
+    "lastWriteNs": 1793945572492876700
+  }
+}

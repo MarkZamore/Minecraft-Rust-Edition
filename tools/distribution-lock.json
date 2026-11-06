@@ -7,13 +7,21 @@
   },
   "library/loaded-mods.json": {
     "sizeBytes": 71960,
-    "sha256": "3dd98395d32fce75574f56289fa060ca7e9f00f1eba640a4efc2a8b37fa1ac92"
+    "sha256": "1917f3570b15307d08aaf6d01b6fcad2a33ad76529b60f2352d0ddab3b101717"
   },
   "tools/overlay-receipt.json": {
-    "sizeBytes": 3975,
-    "sha256": "4f39f72473aa62c3281b689eaafa72d761cc83363f09b6f9936c3cbca129195f"
+    "sizeBytes": 4095,
+    "sha256": "ed006a6010970d4c581df8aed12a4d34f763170a470a67cbd4da6f1e01fbf4c3"
   },
   "files": {
+    "configureddefaults/options.txt": {
+      "sizeBytes": 13,
+      "sha256": "0ef9efdb16b9eac1205e8169b66832702bd02cf51d5717176d83e56972f9db27"
+    },
+    "launcher/controls-preset.txt": {
+      "sizeBytes": 2582,
+      "sha256": "969b87fe9c5063c2e0bc5dfd5bccfe3dea24bf15c8b2114085927268caa75cb8"
+    },
     "native/LICENSE": {
       "sizeBytes": 1120,
       "sha256": "06b767be20580df3cd9ad6231aa9e775451d21bdf7f594fddb94523b7e363fb9"
@@ -391,16 +399,16 @@
       "sha256": "d2cc6c600e0e25428b3cdc1249abbb935792798c929a222de121a8e3727504d6"
     },
     "native/horizon-client.exe": {
-      "sizeBytes": 86267392,
-      "sha256": "189ff15c4f896829b0f4aac9fd00cd3185df92941f409c8d8bbc62c1be607be0"
+      "sizeBytes": 86248960,
+      "sha256": "3e677bd8522635f72e367756024ede1e50ee6ac7807edb5282155c03b3b14c9c"
     },
     "native/horizon-prepare.exe": {
       "sizeBytes": 2275328,
       "sha256": "007836f4354d51241314f564d0ac184ca70fa2d39ea4c56a2a699162f9707d48"
     },
     "native/launch-rust-edition.exe": {
-      "sizeBytes": 2778112,
-      "sha256": "acfcaef091099862d10f84b0ee178f72285fb17dd487935a1498940250304866"
+      "sizeBytes": 2835968,
+      "sha256": "eb90ce18a028f8c7d18f96cb61d7de3de5b9d9ac7b542e1fdb8d4e2f44e6a04b"
     },
     "native/mods/horizon/src/test/java/dev/horizonlab/parity/ElderCurseTranscript.java": {
       "sizeBytes": 2076,

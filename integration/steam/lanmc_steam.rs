@@ -19,6 +19,7 @@ struct Identity {
 }
 
 static STATE: OnceLock<Identity> = OnceLock::new();
+static NOTICE: Mutex<(bool, Option<String>)> = Mutex::new((false, None));
 
 pub fn init() -> Result<(), String> {
     let Some(id) = std::env::var_os("LANMINECRAFT_STEAM_ID") else {
@@ -88,8 +89,19 @@ pub fn bind_address() -> Option<IpAddr> {
 pub fn publish(port: u16, world: &str) -> Result<(), String> {
     if let Some(state) = STATE.get() {
         state.bridge.publish(port, world, &state.name)?;
+        *NOTICE.lock().unwrap() = (false, None);
     }
     Ok(())
+}
+
+pub fn is_published() -> bool {
+    STATE.get().is_some_and(|state| state.bridge.is_published())
+}
+
+pub fn publication_failed() -> bool {
+    STATE.get().is_some_and(|state| {
+        !state.bridge.is_published() && state.bridge.last_error().is_some()
+    })
 }
 
 pub fn unpublish() {
@@ -129,9 +141,8 @@ pub fn claim_guest(address: SocketAddr) -> Option<(u128, String)> {
 }
 
 pub fn sharing_notice() -> Option<String> {
-    static SEEN: Mutex<(bool, Option<String>)> = Mutex::new((false, None));
     let state = STATE.get()?;
-    let mut seen = SEEN.lock().ok()?;
+    let mut seen = NOTICE.lock().ok()?;
     let published = state.bridge.is_published();
     let error = state.bridge.last_error();
     let message = if error.is_some() && error != seen.1 {
@@ -162,21 +173,13 @@ fn opened_label() -> &'static str {
 
 pub fn steam_only_label() -> &'static str {
     label(
-        "Use the Steam friends button in the pause menu to share this world",
-        "Откройте мир через кнопку Steam в меню паузы",
+        "Use Open to LAN in the pause menu to share this world on Steam",
+        "Чтобы открыть мир в Steam, нажмите «Открыть для сети» в меню паузы",
     )
 }
 
 pub fn scan_label() -> &'static str {
     label("Looking for Steam worlds", "Поиск миров Steam")
-}
-
-pub fn share_label(open: bool) -> &'static str {
-    if open {
-        label("Close Steam world", "Закрыть мир Steam")
-    } else {
-        label("Open to Steam friends", "Открыть для друзей в Steam")
-    }
 }
 
 fn known_identities(text: &str) -> Result<BTreeMap<u64, u128>, &'static str> {

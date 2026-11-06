@@ -4,6 +4,8 @@
     target_feature = "crt-static"
 )))]
 compile_error!("The portable Windows x64 bootstrap requires the static MSVC runtime.");
+mod prepared_data;
+
 use anyhow::{Context, Result, bail, ensure};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
@@ -19,7 +21,7 @@ use std::{
     os::windows::fs::MetadataExt,
     path::{Path, PathBuf},
     process::{Command, ExitCode},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 const REPARSE_POINT: u32 = 0x400;
@@ -237,13 +239,20 @@ fn prepare(
     );
     let resources = child(cache, "resources")?;
     let receipt = child(cache, "resources.json")?;
+    let verify_started = Instant::now();
     if resources.is_dir()
         && let Ok(file) = File::open(&receipt)
         && let Ok(old) = serde_json::from_reader::<_, Receipt>(file)
         && old.key == key
         && !old.files.is_empty()
-        && old.files == inventory(&resources)?
+        && verify_inventory(&resources, &old.files)?
     {
+        prepared_data::reconcile(&resources, &old.files)?;
+        eprintln!(
+            "Verified {} cached Horizon resource files in {:.2}s",
+            old.files.len(),
+            verify_started.elapsed().as_secs_f64()
+        );
         return Ok(resources);
     }
 
@@ -311,6 +320,7 @@ fn prepare(
         );
         let files = inventory(&resources)?;
         ensure!(!files.is_empty(), "Horizon did not create any resources");
+        prepared_data::reconcile(&resources, &files)?;
         let pending = child(cache, "resources.json.part")?;
         serde_json::to_writer(File::create(&pending)?, &Receipt { key, files })?;
         fs::rename(pending, &receipt)?;
@@ -513,46 +523,109 @@ fn download<D: Digest>(url: &str, size: u64, expected: &str, target: &Path) -> R
 }
 
 fn hash<D: Digest>(path: &Path) -> Result<String> {
+    hash_reader::<D>(File::open(path)?, &mut [0; 65536])
+}
+
+fn hash_reader<D: Digest>(mut reader: impl Read, buffer: &mut [u8]) -> Result<String> {
     let mut digest = D::new();
-    let mut file = File::open(path)?;
-    let mut buffer = [0_u8; 65536];
     loop {
-        let count = file.read(&mut buffer)?;
+        let count = reader.read(buffer)?;
         if count == 0 {
             break;
         }
         digest.update(&buffer[..count]);
     }
-    Ok(digest
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect())
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let bytes = digest.finalize();
+    let mut text = String::with_capacity(bytes.len() * 2);
+    for &byte in &bytes {
+        text.push(char::from(HEX[(byte >> 4) as usize]));
+        text.push(char::from(HEX[(byte & 15) as usize]));
+    }
+    Ok(text)
+}
+
+fn resource_files(root: &Path) -> Result<Vec<PathBuf>> {
+    let mut files = tree_files(root)?;
+    // Horizon generates this decoded-sprite cache after preparation and
+    // independently checks its format and texture fingerprint on each read.
+    files.retain(|file| {
+        file.parent() != Some(root)
+            || !file
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| {
+                    name == "horizon-sprites.cache" || prepared_data::generated(name)
+                })
+    });
+    Ok(files)
+}
+
+fn resource_name(root: &Path, file: &Path) -> Result<String> {
+    Ok(file
+        .strip_prefix(root)?
+        .to_str()
+        .context("Invalid resource path")?
+        .replace('\\', "/"))
 }
 
 fn inventory(root: &Path) -> Result<BTreeMap<String, String>> {
-    let mut files = BTreeMap::new();
-    for file in tree_files(root)? {
-        let name = file
-            .strip_prefix(root)?
-            .to_str()
-            .context("Invalid resource path")?
-            .replace('\\', "/");
-        // Horizon generates this decoded-sprite cache after preparation and
-        // independently checks its format and texture fingerprint on each read.
-        if name != "horizon-sprites.cache" {
-            files.insert(name, hash::<Sha256>(&file)?);
-        }
+    resource_files(root)?
+        .into_iter()
+        .map(|file| Ok((resource_name(root, &file)?, hash::<Sha256>(&file)?)))
+        .collect()
+}
+
+fn verify_inventory(root: &Path, expected: &BTreeMap<String, String>) -> Result<bool> {
+    let files = resource_files(root)?;
+    if files.len() != expected.len() {
+        return Ok(false);
     }
-    Ok(files)
+    let workers = std::thread::available_parallelism().map_or(1, |count| count.get().min(8));
+    let batch_size = files.len().div_ceil(workers).max(1);
+    std::thread::scope(|scope| {
+        let tasks: Vec<_> = files
+            .chunks(batch_size)
+            .map(|batch| {
+                scope.spawn(move || -> Result<bool> {
+                    let mut buffer = [0; 65536];
+                    for file in batch {
+                        let name = resource_name(root, file)?;
+                        let Some(digest) = expected.get(&name) else {
+                            return Ok(false);
+                        };
+                        if hash_reader::<Sha256>(File::open(file)?, &mut buffer)? != *digest {
+                            return Ok(false);
+                        }
+                    }
+                    Ok(true)
+                })
+            })
+            .collect();
+        let mut verified = true;
+        for task in tasks {
+            verified &= task
+                .join()
+                .map_err(|_| anyhow::anyhow!("Resource verifier stopped"))??;
+        }
+        Ok(verified)
+    })
 }
 
 fn tree_files(root: &Path) -> Result<Vec<PathBuf>> {
     ensure_unlinked(root)?;
     let mut files = Vec::new();
     for entry in fs::read_dir(root)? {
-        let path = entry?.path();
-        let info = ensure_unlinked(&path)?.context("A preparation file disappeared")?;
+        let entry = entry?;
+        let path = entry.path();
+        // Windows already provides size and attributes while enumerating a
+        // directory. This metadata does not follow a reparse point.
+        let info = entry.metadata()?;
+        ensure!(
+            info.file_attributes() & REPARSE_POINT == 0,
+            "Linked path refused: {}",
+            path.display()
+        );
         if info.is_dir() {
             files.extend(tree_files(&path)?);
         } else {
@@ -621,4 +694,37 @@ fn remove_tree(path: &Path) -> Result<()> {
         fs::remove_dir_all(path)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn warm_resources_reject_changed_bytes_and_paths() -> Result<()> {
+        let root = env::temp_dir().join(format!("lanmc-receipt-test-{}", std::process::id()));
+        fs::create_dir(&root)?;
+        let result = (|| {
+            let data = root.join("data.json");
+            fs::write(&data, b"original")?;
+            let expected = inventory(&root)?;
+            let modified = data.metadata()?.modified()?;
+            fs::write(root.join("horizon-sprites.cache"), b"mutable")?;
+            ensure!(verify_inventory(&root, &expected)?);
+
+            fs::write(&data, b"modified")?;
+            File::options()
+                .write(true)
+                .open(&data)?
+                .set_modified(modified)?;
+            ensure!(!verify_inventory(&root, &expected)?);
+
+            fs::write(&data, b"original")?;
+            fs::rename(&data, root.join("other.json"))?;
+            ensure!(!verify_inventory(&root, &expected)?);
+            Ok(())
+        })();
+        fs::remove_dir_all(&root)?;
+        result
+    }
 }

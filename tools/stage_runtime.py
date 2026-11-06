@@ -53,6 +53,7 @@ RECIPE_FILES = (
     "rust-logo/rust-logo.svg",
 )
 LIBRARY_SOURCES = ("content.json", "mod-pages.json", "loaded-mods.json", "preview.jpg")
+CONTROL_FILES = ("launcher/controls-preset.txt", "configureddefaults/options.txt")
 STEAM_NOTICES = ("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md")
 RUST_ARTWORK = ROOT / "integration/steam/rust-logo"
 RUST_NOTICES = ("NOTICE.txt", "artwork-lock.json", "rust-logo.svg")
@@ -234,6 +235,10 @@ def stage_runtime(archives, stage, openssl, client=None, steam_dll=None, receipt
         native = candidate / "native"
         unpack_runtime(archives / RUNTIME_ARCHIVE, archives / SOURCE_ARCHIVE, native, lock, receipt_path is None)
         shutil.copy2(ROOT / "portable-pack.json", candidate / "portable-pack.json")
+        for name in CONTROL_FILES:
+            destination = candidate / name
+            destination.parent.mkdir()
+            shutil.copyfile(ROOT / name, destination)
         display_name = read_json(ROOT / "library/content.json")["name"]
         presentation = json.dumps({"name": display_name}, ensure_ascii=False, indent=2) + "\n"
         (native / "presentation.json").write_bytes(presentation.encode("utf-8"))

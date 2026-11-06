@@ -14,8 +14,8 @@ HERE = Path(__file__).resolve().parent
 COMMIT = "66f3981f522b24c250b21523a70080965b940424"
 SOURCE_SHA = "3e3f5bf9df5f86b3c72a950f0869f09d1178814ac101d5f9af849b5d70c0fef4"
 SOURCE_SIZE = 44_596_081
-TRANSPORT_COMMIT = "832be7c5c478f28dbb31378d94e40a1ea5f401a6"
-TRANSPORT_SHA = "bfaf867a08a538bcc28676c40d4ed2bc6ae21ac23b50661816553d66c7cfc6f1"
+TRANSPORT_COMMIT = "a4a362c313e99386dd46c02d7d5fd67aa6057948"
+TRANSPORT_SHA = "67cd60fbca1ef441aa02e4408553f16cb676191809a0930bcaa7b42613462865"
 STEAM_DLL_SIZE = 317_080
 STEAM_DLL_SHA = "eb17909a76668cf9ae0b92a618a34a50f6c73d3a6787cb4dd8ce36a8b10bfb75"
 PREFIX = f"horizon-{COMMIT[:7]}/"
@@ -30,7 +30,8 @@ SOURCE_PATHS = {
     *(CLIENT + "src/" + path for path in (
         "entry.rs", "lib.rs", "client_lib.rs", "game.rs", "game/no_resources.rs",
         "game/split/windows.rs", "game/integrated.rs", "game/lan.rs",
-        "game/remote.rs", "game/screens.rs", "game/friends.rs", "game/dedicated.rs", "lan/mod.rs",
+        "game/remote.rs", "game/screens.rs", "game/friends.rs", "game/dedicated.rs",
+        "game/lan_screen.rs", "lan/mod.rs",
         "lan/conn.rs", "lan/discovery.rs", "multiplayer.rs",
     )),
 }
@@ -186,26 +187,141 @@ def changes(inputs, transport):
         """    pub(super) fn tick_friends(&mut self) {
         if let Some(message) = crate::lanmc_steam::sharing_notice() {
             self.system_message(Text::literal(message));
+        }
+        if crate::lanmc_steam::publication_failed() && self.lan_port().is_some() {
+            self.lan_close(false);
         }""")
-    src("game/screens.rs", "            10 => self.screen = Screen::Friends,",
-        '''            10 if crate::lanmc_steam::active() => {
-                if self.lan_port().is_some() {
-                    self.lan_close(true);
-                } else if let Err(error) = self.lan_open(super::lan::LanSettings {
-                    port: 0,
-                    guest_commands: false,
-                    force_game_mode: true,
-                }) {
-                    self.system_message(horizon_client::text::Text::literal(error.to_string()));
+    src("game/lan_screen.rs", "    pub(super) fn open_world_options(&mut self) {",
+        "    #[allow(dead_code)] // The pack uses Open to LAN directly in the pause menu.\n"
+        "    pub(super) fn open_world_options(&mut self) {")
+    src("game/screens.rs", "/// PauseScreen buttons:",
+        '''#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PauseNetwork {
+    Open,
+    Opening,
+    Reports,
+}
+
+impl PauseNetwork {
+    fn for_world(remote: bool, listening: bool, steam_published: Option<bool>) -> Self {
+        if remote || steam_published == Some(true) || (listening && steam_published.is_none()) {
+            Self::Reports
+        } else if listening {
+            Self::Opening
+        } else {
+            Self::Open
+        }
+    }
+}
+
+/// PauseScreen buttons:''')
+    src("game/screens.rs",
+        "    split: bool,\n) -> Vec<(f32, f32, f32, &'static str, u8, bool)> {",
+        "    split: bool,\n    network: PauseNetwork,\n) -> Vec<(f32, f32, f32, &'static str, u8, bool)> {")
+    src("game/screens.rs",
+        '''            "options.worldOptions.button",
+            9,
+            true,''',
+        '''            match network {
+                PauseNetwork::Reports => "menu.playerReporting",
+                _ => "menu.multiplayerOptions.button",
+            },
+            9,
+            network != PauseNetwork::Opening,''')
+    src("game/screens.rs", "    pub(super) fn draw_pause_menu(&mut self, batch: &mut HudBatch) {",
+        '''    fn pause_network(&self) -> PauseNetwork {
+        PauseNetwork::for_world(
+            self.external_server(),
+            self.lan_port().is_some(),
+            crate::lanmc_steam::active().then(crate::lanmc_steam::is_published),
+        )
+    }
+
+    fn pause_friends_available(&self) -> bool {
+        !crate::lanmc_steam::active() && self.friends_view().shown
+    }
+
+    pub(super) fn draw_pause_menu(&mut self, batch: &mut HudBatch) {''')
+    src("game/screens.rs", "let friends = self.friends_view().shown;",
+        "let friends = self.pause_friends_available();", count=3)
+    src("game/screens.rs", "(self.friends_view().shown", "(self.pause_friends_available()")
+    for additions, count in (
+        ("additions.is_some()", 2),
+        ("self.pause_screen_additions().is_some()", 1),
+    ):
+        args = (
+            "            self.external_server(),\n"
+            "            links,\n"
+            f"            {additions},\n"
+            "            self.options.split_guest || self.split_hud.menu,\n"
+        )
+        src("game/screens.rs", args, args + "            self.pause_network(),\n", count)
+    src("game/screens.rs",
+        '''                    self.external_server(),
+                    links,
+                    self.pause_screen_additions().is_some(),
+                    self.options.split_guest || self.split_hud.menu,
+                );''',
+        '''                    self.external_server(),
+                    links,
+                    self.pause_screen_additions().is_some(),
+                    self.options.split_guest || self.split_hud.menu,
+                    self.pause_network(),
+                );''')
+    src("game/screens.rs",
+        '''            9 => self.open_world_options(),
+            10 => self.screen = Screen::Friends,''',
+        '''            9 => match self.pause_network() {
+                PauseNetwork::Reports => self.open_social(true),
+                PauseNetwork::Opening => {}
+                PauseNetwork::Open => {
+                    if let Err(error) = self.lan_open(super::lan::LanSettings {
+                        port: 0,
+                        guest_commands: false,
+                        force_game_mode: true,
+                    }) {
+                        self.system_message(Text::literal(error.to_string()));
+                    }
                 }
-            }
-            10 => self.screen = Screen::Friends,''')
-    src("game/screens.rs", "Text::literal(horizon_client::friends_screen::title())",
-        """if crate::lanmc_steam::active() {
-                        Text::literal(crate::lanmc_steam::share_label(self.lan_port().is_some()))
-                    } else {
-                        Text::literal(horizon_client::friends_screen::title())
-                    }""")
+            },
+            10 if self.pause_friends_available() => self.screen = Screen::Friends,''')
+    src("game/screens.rs",
+        "    use super::{Screen, death_buttons, pause_buttons, pause_icon_focus_ids, pause_icons};",
+        '''    use super::{PauseNetwork, Screen, death_buttons, pause_icon_focus_ids, pause_icons};
+
+    fn pause_buttons(
+        w: f32, h: f32, remote: bool, links: bool, additions: bool, split: bool,
+    ) -> Vec<(f32, f32, f32, &'static str, u8, bool)> {
+        super::pause_buttons(w, h, remote, links, additions, split,
+            PauseNetwork::for_world(remote, false, None))
+    }''')
+    src("game/screens.rs",
+        "fn pause_menu_uses_disconnect_for_servers_and_keeps_world_options()",
+        "fn pause_menu_uses_disconnect_for_servers_and_places_the_network_action()")
+    src("game/screens.rs", "            assert!(buttons.iter().any(|b| b.4 == 9 && b.5));",
+        '''            let network = buttons.iter().find(|b| b.4 == 9).unwrap();
+            assert_eq!(network.3, if remote { "menu.playerReporting" } else { "menu.multiplayerOptions.button" });
+            assert!(network.5);
+            assert!(buttons.iter().all(|b| b.3 != "options.worldOptions.button"));''')
+    src("game/screens.rs", "    fn pause_icons_report_bugs_and_feedback_are_active_like_vanilla() {",
+        '''    fn pause_slot_waits_for_steam_and_keeps_its_position_when_reportable() {
+        let slot = |listening, steam| {
+            let state = PauseNetwork::for_world(false, listening, steam);
+            super::pause_buttons(427.0, 240.0, false, false, false, false, state)
+                .into_iter().find(|b| b.4 == 9).unwrap()
+        };
+        let open = slot(false, Some(false));
+        let pending = slot(true, Some(false));
+        let published = slot(true, Some(true));
+        assert_eq!((open.3, open.5), ("menu.multiplayerOptions.button", true));
+        assert_eq!((pending.3, pending.5), ("menu.multiplayerOptions.button", false));
+        assert_eq!((published.3, published.5), ("menu.playerReporting", true));
+        assert_eq!((open.0, open.1, open.2), (published.0, published.1, published.2));
+        assert_eq!(slot(true, None).3, "menu.playerReporting");
+    }
+
+    #[test]
+    fn pause_icons_report_bugs_and_feedback_are_active_like_vanilla() {''')
     src("lan/conn.rs", "    if !valid_name(&hello.name) {",
         """    let portable = if shared.config.lanmc_steam {
         if c.is_memory() {

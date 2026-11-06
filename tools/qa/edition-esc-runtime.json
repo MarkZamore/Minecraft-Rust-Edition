@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "client": {
+    "sizeBytes": 86248960,
+    "sha256": "3e677bd8522635f72e367756024ede1e50ee6ac7807edb5282155c03b3b14c9c"
+  },
+  "bootstrap": {
+    "sizeBytes": 2835968,
+    "sha256": "eb90ce18a028f8c7d18f96cb61d7de3de5b9d9ac7b542e1fdb8d4e2f44e6a04b"
+  },
+  "windowTitle": "Minecraft Rust Edition",
+  "pauseMenu": {
+    "before": "Открыть для сети",
+    "after": "Жалобы",
+    "loopback": "PASS"
+  },
+  "worldSaveAndReopen": "PASS",
+  "resourceCacheReuse": {
+    "coldPrepared": false,
+    "secondLaunchReused": true,
+    "receipt": {
+      "sizeBytes": 3564115,
+      "sha256": "2006688a9227636ff42513bdbabdfa74e065ffe4620020b25956b5c5a4ea5dd7"
+    }
+  },
+  "preparedCacheVerificationSeconds": [
+    7.03,
+    5.43
+  ],
+  "controlsPreset": {
+    "count": 62,
+    "sha256": "969b87fe9c5063c2e0bc5dfd5bccfe3dea24bf15c8b2114085927268caa75cb8",
+    "fresh": 62,
+    "modified": 62,
+    "repeat": 0,
+    "personalOptionsPreserved": true,
+    "controlsPreset": "PASS"
+  },
+  "defenderExactClientAndBootstrap": "PASS",
+  "pauseLayoutAndSteamPendingTests": 2,
+  "launcherReleaseGate": {
+    "revision": "34e2a0b0253b53996b6a80089823c9f125ea36a3",
+    "passed": 537
+  },
+  "liveSteamTwoAccounts": "NOT RUN"
+}
