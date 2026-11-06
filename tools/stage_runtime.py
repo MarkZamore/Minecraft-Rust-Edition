@@ -21,6 +21,7 @@ STEAM_LOCK = ROOT / "tools/steam-lock.json"
 SIGNATURES = ROOT / "tools/upstream"
 RUNTIME_ARCHIVE = "horizon-windows-x64.zip"
 SOURCE_ARCHIVE = "horizon-source.tar.gz"
+ONBOARDING_SOURCE_SHA256 = "f395c83abe16e2c976630430c1935826d1e07b5edc3450eccb021e2b468bdc4e"
 RUNTIME_PREFIX = "horizon-windows-x64/"
 SUPPORT_PATHS = (
     "crates/horizon-prepare/",
@@ -94,6 +95,17 @@ def verify_pe(path, dll=False):
         raise ValueError(f"Invalid Windows x64 image type: {path.name}")
 
 
+def verify_onboarding_narrator(source, commit):
+    path = f"horizon-{commit[:7]}/crates/horizon-client/src/title/onboarding.rs"
+    entries = [entry for entry in source if entry.name == path]
+    if len(entries) == 1 and entries[0].isfile() and entries[0].size <= 512 * 1024:
+        # The reviewed file presents Narrator as Not Available and creates its button disabled.
+        with source.extractfile(entries[0]) as stream:
+            if hashlib.file_digest(stream, "sha256").hexdigest() == ONBOARDING_SOURCE_SHA256:
+                return
+    raise ValueError("Horizon onboarding source changed. Review the inactive Narrator before staging.")
+
+
 def verify_upstream(archives, openssl, scratch):
     lock = read_json(LOCK)
     commit = lock["commit"]
@@ -127,6 +139,8 @@ def verify_upstream(archives, openssl, scratch):
         if expected["sha256"] != signed_hashes.get(asset):
             raise ValueError(f"Pinned SHA-256 differs from the signed SHA-256 for {asset}")
         verify_file(archives / asset, expected)
+    with tarfile.open(archives / SOURCE_ARCHIVE, "r:gz") as source:
+        verify_onboarding_narrator(source, commit)
     return lock
 
 
