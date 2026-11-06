@@ -16,7 +16,13 @@
 
 ## Подготовка и проверка релиза
 
-Для инструментов сборки нужны Python 3.12 или новее, Git и OpenSSL 3. Rust нужен для сборки исходников, а игрок запускает готовый Windows x64 клиент.
+Для инструментов сборки нужны Python 3.12 или новее, Git и OpenSSL 3. Rust нужен для сборки исходников, а игрок запускает готовый Windows x64 клиент. Bootstrap собирается для `x86_64-pc-windows-msvc` со статическим C runtime.
+
+```powershell
+Push-Location launcher/standalone
+cargo build --release --locked
+Pop-Location
+```
 
 - `tools/upstream-lock.json` закрепляет Nightly, исходники, архив Windows, размер, SHA-256, коммит и Minecraft/Java. `tools/upstream/` хранит подписанные исходные контрольные суммы. `tools/steam-lock.json` закрепляет исходники общего адаптера и DLL Steamworks. Плавающий тег `nightly` и удаляемые upstream assets не подходят в качестве постоянного адреса активной поставки.
 - `integration/steam/apply_horizon_overlay.py` проверяет точный архив исходников, применяет Steam-слой и связывает проверенный `horizon-client.exe` с исходниками и DLL. `launcher/standalone` содержит исходники программы запуска.
@@ -28,7 +34,7 @@ python tools/stage_runtime.py --archives $archives --stage $candidate `
     --bootstrap $bootstrap --steam-repo $steamRepo
 ```
 
-- Проверьте настоящий клиент с `tools/smoke_runtime.py`, автономный bootstrap и обычный запуск из LANMinecraft. `tools/generate_manifest.py --propose-inventory $smokeJson --candidate $candidate` связывает пустую страницу загруженных модов и SHA-256 файлов `native/` для `library/loaded-mods.json`. Превью `library/preview.jpg` берите из реального технического мира проверенного клиента. После приёмки перенесите четыре файла `library` в уже подготовленный candidate и положите проверенную квитанцию overlay в `tools/overlay-receipt.json`.
+- Проверьте настоящий клиент с `tools/smoke_runtime.py`, автономный bootstrap и обычный запуск из LANMinecraft. При изменении bootstrap `--reuse-world` повторяет проверку на техническом мире из предыдущего прогона. `tools/generate_manifest.py --propose-inventory $smokeJson --candidate $candidate` связывает пустую страницу загруженных модов и SHA-256 файлов `native/` для `library/loaded-mods.json`. Превью `library/preview.jpg` берите из реального технического мира проверенного клиента. После приёмки перенесите четыре файла `library` в уже подготовленный candidate и положите проверенную квитанцию overlay в `tools/overlay-receipt.json`.
 - `tools/generate_manifest.py --propose-lock --candidate $candidate --library-tool $libraryTool` выводит проект distribution lock для явной проверки. После проверки закрепите его в `tools/distribution-lock.json`. Обычная генерация повторно проверяет точный состав, исходный рецепт и наблюдение модов. Она принимает чистый Git checkout указанного коммита.
 
 ```powershell

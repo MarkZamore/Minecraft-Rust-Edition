@@ -88,8 +88,15 @@ def run_client(executable, controller, resources, qa, index, action, standalone=
                 process.wait(timeout=15)
 
 
-def smoke(executable, controller, resources, qa, standalone=None, expected_title=None, expect_cold=False):
-    preview = qa / "preview.png"
+def smoke(executable, controller, resources, qa, standalone=None, expected_title=None,
+          expect_cold=False, reuse_world=False):
+    suffix = "-update" if reuse_world else ""
+    first_index = 3 if reuse_world else 1
+    second_index = first_index + 1
+    preview = qa / f"preview{suffix}.png"
+    saved = qa / "game" / "saves" / WORLD / "level.dat"
+    if reuse_world and not saved.is_file():
+        raise ValueError("No technical world from the previous smoke run")
 
     def create(control):
         control("options", "mods")
@@ -97,24 +104,28 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         if {widget["id"] for widget in mods["widgets"]} != {"open-mod-folder", "done"}:
             raise RuntimeError("The native Mods page has entries outside the expected empty inventory")
         control("click", "done")
-        control("open", WORLD, "137248", "creative")
+        world = [WORLD] if reuse_world else [WORLD, "137248", "creative"]
+        control("open", *world)
         photograph(control, preview)
         control("save")
         return control("state"), mods
 
     def reopen(control):
         worlds = control("worlds")
-        saved = qa / "game" / "saves" / WORLD / "level.dat"
         if not saved.is_file() or saved.stat().st_size == 0:
             raise RuntimeError("Native client did not create a saved world")
         control("open", WORLD)
         control("wait-for", "loaded", "--timeout", "90")
         return worlds, control("state")
 
-    (first, mods) = run_client(executable, controller, resources, qa, 1, create, standalone, expected_title)
+    (first, mods) = run_client(
+        executable, controller, resources, qa, first_index, create, standalone, expected_title,
+    )
     cache_receipt = standalone[3] / "resources.json" if standalone else None
     first_receipt = file_info(cache_receipt) if cache_receipt else None
-    worlds, reopened = run_client(executable, controller, resources, qa, 2, reopen, standalone, expected_title)
+    worlds, reopened = run_client(
+        executable, controller, resources, qa, second_index, reopen, standalone, expected_title,
+    )
     if any(first[key] != reopened[key] for key in ("dimension", "gamemode")) or any(
         abs(a - b) > 1.0 for a, b in zip(first["player"]["position"], reopened["player"]["position"])
     ):
@@ -130,8 +141,8 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
     }
     if standalone:
         marker = "Prepared Horizon native-client resources"
-        cold = marker in (qa / "client-1.log").read_text(encoding="utf-8", errors="replace")
-        warm = marker not in (qa / "client-2.log").read_text(encoding="utf-8", errors="replace")
+        cold = marker in (qa / f"client-{first_index}.log").read_text(encoding="utf-8", errors="replace")
+        warm = marker not in (qa / f"client-{second_index}.log").read_text(encoding="utf-8", errors="replace")
         if not warm or file_info(cache_receipt) != first_receipt:
             raise RuntimeError("The second standalone launch did not reuse the prepared resources")
         if expect_cold and not cold:
@@ -145,7 +156,9 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         report["cacheReuse"] = {"coldPrepared": cold, "secondLaunchReused": True, "receipt": first_receipt}
     if expected_title is not None:
         report["windowTitle"] = expected_title
-    (qa / "smoke.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (qa / f"smoke{suffix}.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
+    )
 
 
 def photograph(control, preview):
@@ -167,6 +180,7 @@ def main():
     parser.add_argument("--resources", type=pathlib.Path)
     parser.add_argument("--qa", required=True, type=pathlib.Path)
     parser.add_argument("--refresh-preview", action="store_true")
+    parser.add_argument("--reuse-world", action="store_true")
     parser.add_argument("--bootstrap", type=pathlib.Path)
     parser.add_argument("--minecraft", type=pathlib.Path)
     parser.add_argument("--java", type=pathlib.Path)
@@ -181,6 +195,8 @@ def main():
         parser.error("Supply either prepared resources or the standalone bootstrap")
     if (args.expect_title or args.expect_cold) and not args.bootstrap:
         parser.error("Window title or cold preparation verification requires the standalone bootstrap")
+    if args.refresh_preview and args.reuse_world:
+        parser.error("Choose either a new smoke run with the existing world or a preview refresh")
     standalone = tuple(path.resolve() for path in standalone_paths) if args.bootstrap else None
     qa = args.qa.resolve()
     try:
@@ -198,8 +214,9 @@ def main():
 
             run_client(executable, controller, resources, qa, 3, take_preview, standalone, args.expect_title)
         else:
-            qa.mkdir()
-            smoke(executable, controller, resources, qa, standalone, args.expect_title, args.expect_cold)
+            qa.mkdir(exist_ok=args.reuse_world)
+            smoke(executable, controller, resources, qa, standalone, args.expect_title,
+                  args.expect_cold, args.reuse_world)
     except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
         parser.exit(1, f"{error}\n")
 

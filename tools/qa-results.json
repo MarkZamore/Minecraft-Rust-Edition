@@ -6,8 +6,8 @@
     "sha256": "189ff15c4f896829b0f4aac9fd00cd3185df92941f409c8d8bbc62c1be607be0"
   },
   "bootstrap": {
-    "sizeBytes": 2681856,
-    "sha256": "bf70ed10aed71c00490404a12ddf47d82a1f9f5e31c4f1cd98510787a071694f"
+    "sizeBytes": 2778112,
+    "sha256": "acfcaef091099862d10f84b0ee178f72285fb17dd487935a1498940250304866"
   },
   "platform": "Windows x64, Intel Arc B390 Vulkan",
   "checks": {
@@ -18,12 +18,13 @@
     "signedUpstreamInputs": "PASS",
     "nativePayloadUnchanged": "PASS",
     "windowsNativeIconResources": "PASS",
-    "liveSteamTwoAccounts": "NOT RUN"
+    "liveSteamTwoAccounts": "NOT RUN",
+    "bootstrapStaticCrt": "PASS"
   },
   "windowTitle": "Minecraft Rust Edition",
   "preparedReceipt": {
     "sizeBytes": 3564115,
-    "sha256": "5b1983ddedb711fef8fb85dc380736b139d0f8e89b18d7b34c3e20dd21495d26"
+    "sha256": "2006688a9227636ff42513bdbabdfa74e065ffe4620020b25956b5c5a4ea5dd7"
   },
   "sourceScreenshot": {
     "sizeBytes": 2880345,
@@ -40,5 +41,18 @@
     "cache/resources",
     "cache/process-home/AppData/Local",
     "cache/java-tool-home"
-  ]
+  ],
+  "bootstrapDependencies": [
+    "api-ms-win-core-synch-l1-2-0.dll",
+    "bcryptprimitives.dll",
+    "bcrypt.dll",
+    "ADVAPI32.dll",
+    "KERNEL32.dll",
+    "ntdll.dll",
+    "WS2_32.dll"
+  ],
+  "bootstrapUpdateScreenshot": {
+    "sizeBytes": 3124509,
+    "sha256": "c94b186e46f7f78b275a462d5f764a7c397a4b9ed2eb47ac91eac142099bb8de"
+  }
 }

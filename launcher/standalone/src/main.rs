@@ -1,3 +1,9 @@
+#[cfg(not(all(
+    target_os = "windows",
+    target_arch = "x86_64",
+    target_feature = "crt-static"
+)))]
+compile_error!("The portable Windows x64 bootstrap requires the static MSVC runtime.");
 use anyhow::{Context, Result, bail, ensure};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
