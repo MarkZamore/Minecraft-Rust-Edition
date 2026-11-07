@@ -207,7 +207,7 @@ def verify_overlay(lock, receipt, client, steam_dll):
     steam = read_json(STEAM_LOCK)
     recipe = "".join(
         f"{file_info(ROOT / 'integration/steam' / name)['sha256']}  {name}\n"
-        for name in RECIPE_FILES
+        for name in sorted(RECIPE_FILES)
     )
     if (receipt["schemaVersion"] != 1 or receipt["upstreamCommit"] != lock["commit"] or
             receipt["upstreamSourceSha256"] != lock["assets"][SOURCE_ARCHIVE]["sha256"] or
