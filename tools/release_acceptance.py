@@ -93,6 +93,19 @@ def verify_native_notices(report, files, context, name):
             and all(isinstance(capture, dict) for capture in captures), "native notice captures incomplete")
     by_name = {capture.get("file"): capture for capture in captures}
     require(set(by_name) == set(NATIVE_NOTICE_CAPTURES), "native notice capture coverage differs")
+
+    def presented(heartbeat, observed, expected_count):
+        require(isinstance(heartbeat, dict) and _notice_int(observed), "native notice heartbeat evidence missing")
+        stamp = heartbeat.get("timestampUnixMs")
+        require(heartbeat.get("backend") == "native-ui-v1" and _notice_int(heartbeat.get("pid"))
+                and heartbeat["pid"] == native and _notice_int(heartbeat.get("transformations"))
+                and heartbeat["transformations"] == 0 and heartbeat.get("error") == ""
+                and _notice_int(heartbeat.get("renderedCount"))
+                and heartbeat["renderedCount"] == expected_count and _notice_int(stamp)
+                and stamp > 0 and 0 <= observed-stamp <= 1500,
+                "native notice heartbeat is stale, foreign or not actually presented")
+        return stamp
+
     for filename, expected_count in NATIVE_NOTICE_CAPTURES.items():
         capture = by_name[filename]
         require(_notice_int(capture.get("sizeBytes")) and capture["sizeBytes"] > 8
@@ -120,20 +133,91 @@ def verify_native_notices(report, files, context, name):
         for key, observed_key in (("heartbeatBefore", "heartbeatBeforeObservedUnixMs"),
                                   ("heartbeatAfter", "heartbeatAfterObservedUnixMs")):
             heartbeat, observed = capture.get(key), capture.get(observed_key)
-            require(isinstance(heartbeat, dict) and _notice_int(observed), "native notice heartbeat evidence missing")
-            stamp = heartbeat.get("timestampUnixMs")
-            require(heartbeat.get("backend") == "native-ui-v1" and _notice_int(heartbeat.get("pid"))
-                    and heartbeat["pid"] == native and _notice_int(heartbeat.get("transformations"))
-                    and heartbeat["transformations"] == 0 and heartbeat.get("error") == ""
-                    and _notice_int(heartbeat.get("renderedCount"))
-                    and heartbeat["renderedCount"] == expected_count and _notice_int(stamp)
-                    and stamp > 0 and 0 <= observed-stamp <= 1500,
-                    "native notice heartbeat is stale, foreign or not actually presented")
-            stamps.append(stamp)
+            stamps.append(presented(heartbeat, observed, expected_count))
         captured = capture.get("capturedUnixMs")
         require(_notice_int(captured) and capture["heartbeatBeforeObservedUnixMs"] <= captured
                 <= capture["heartbeatAfterObservedUnixMs"] and stamps[1] > stamps[0],
                 "native notice capture has no subsequent presented frame")
+
+    timing = report.get("timing", {})
+    require(isinstance(timing, dict) and _notice_int(timing.get("lifeMs")) and timing["lifeMs"] == 7000,
+            "native notice lifetime timing evidence missing")
+
+    def lifetime_input(key):
+        value = timing.get(key, {})
+        require(isinstance(value, dict) and _notice_int(value.get("createdUnixMs"))
+                and value["createdUnixMs"] > 0 and _notice_int(value.get("sentUnixMs"))
+                and 0 <= value["sentUnixMs"]-value["createdUnixMs"] <= 1000,
+                "native notice creation/send timing differs")
+        return value, value["createdUnixMs"], value["createdUnixMs"] + 7000
+
+    def observation(value, count, earliest, latest):
+        require(isinstance(value, dict), "native notice timing observation missing")
+        stamp = presented(value.get("heartbeat"), value.get("observedUnixMs"), count)
+        require(earliest <= stamp <= value["observedUnixMs"] <= latest,
+                "native notice observed outside its required lifetime interval")
+        return stamp
+
+    def capture_interval(filename, earliest, latest):
+        capture = by_name[filename]
+        require(earliest <= capture["heartbeatBefore"]["timestampUnixMs"]
+                <= capture["heartbeatBeforeObservedUnixMs"] <= capture["capturedUnixMs"]
+                <= capture["heartbeatAfterObservedUnixMs"] <= latest
+                and capture["heartbeatAfter"]["timestampUnixMs"] >= earliest,
+                "native notice capture is outside its creation/expiry interval")
+
+    lifetime, created, expiry = lifetime_input("threeCards")
+    capture_interval("title-three.png", lifetime["sentUnixMs"], created + 5999)
+    observation(lifetime.get("nearExpiry"), 3, created + 6000, expiry - 1)
+    expired = observation(lifetime.get("expired"), 0, expiry, expiry + 1000)
+    capture_interval("expired-three.png", expired, expiry + 4000)
+
+    torn, created, expiry = lifetime_input("tornSnapshot")
+    invalid = torn.get("invalidSnapshots", [])
+    require(isinstance(invalid, list) and len(invalid) == 2
+            and all(isinstance(value, dict) for value in invalid),
+            "native notice malformed snapshot observations missing")
+    previous = torn["sentUnixMs"]
+    for value, kind, delay in zip(invalid, ("invalid-utf8", "broken-unicode-escape"), (2000, 4000)):
+        written = value.get("writtenUnixMs")
+        require(value.get("kind") == kind and _notice_int(written)
+                and max(previous, created + delay) <= written < expiry - 1000,
+                "native notice malformed snapshot was not tested during the original lifetime")
+        retained = observation(value, 1, written + 500, expiry - 1)
+        previous = value["observedUnixMs"]
+    capture_interval("torn-snapshot-retains-card.png", retained, expiry - 1)
+    require(by_name["torn-snapshot-retains-card.png"]["capturedUnixMs"] >= previous,
+            "native notice retained capture precedes the malformed snapshot observations")
+    expired = observation(torn.get("expired"), 0, expiry, expiry + 1000)
+    capture_interval("torn-snapshot-original-expiry.png", expired, expiry + 4000)
+
+    future = timing.get("futureNotice", {})
+    require(isinstance(future, dict) and all(_notice_int(future.get(key)) for key in
+            ("queuedUnixMs", "createdUnixMs", "sentUnixMs"))
+            and future["queuedUnixMs"] > 0
+            and future["createdUnixMs"]-future["queuedUnixMs"] == 1500
+            and future["queuedUnixMs"] <= future["sentUnixMs"] < future["createdUnixMs"],
+            "native notice future skew was not the observed +1500 ms input")
+    capture_interval("future-not-yet-visible.png", future["sentUnixMs"], future["createdUnixMs"] - 1)
+    capture_interval("future-notice-retained.png", future["createdUnixMs"], future["createdUnixMs"] + 6999)
+
+    dpi = report.get("dpi", {})
+    one, two = by_name["dpi-one.png"]["pixels"], by_name["dpi-two.png"]["pixels"]
+    first_width, second_width = (value["boxes"][0][2]-value["boxes"][0][0] for value in (one, two))
+    require(isinstance(dpi, dict) and _notice_int(dpi.get("oneWidth"))
+            and _notice_int(dpi.get("twoWidth")) and dpi["oneWidth"] == first_width
+            and dpi["twoWidth"] == second_width and abs(second_width-2*first_width) <= 5
+            and one["expectedPhysicalWidth"] == 240 and two["expectedPhysicalWidth"] == 480
+            and one["size"][0] >= 264 and two["size"][0] >= 528,
+            "native notice DPI did not scale the measured physical width exactly once")
+    require(isinstance(dpi.get("guiScaleBefore"), str)
+            and re.fullmatch(r"guiScale:[0-9]+", dpi["guiScaleBefore"]) is not None
+            and dpi["guiScaleBefore"] == dpi.get("guiScaleAfter") == dpi.get("guiScale")
+            and isinstance(dpi.get("uiBefore"), dict)
+            and dpi["uiBefore"].get("screen") == "title"
+            and isinstance(dpi["uiBefore"].get("widgets"), list) and dpi["uiBefore"]["widgets"]
+            and dpi["uiBefore"] == dpi.get("uiAfter"),
+            "native notice DPI changed game GUI scale/widgets or lacks before/after observations")
     fullscreen = by_name["fullscreen-world.png"]["window"]
     require(_notice_rect(fullscreen.get("monitor"))
             and all(abs(a-b) <= 2 for a, b in zip(fullscreen["client"], fullscreen["monitor"])),

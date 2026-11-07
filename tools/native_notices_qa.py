@@ -403,28 +403,44 @@ def exercise(session, report):
     checks["titleVisiblePixelsAndFreshPresentation"] = "PASS"
 
     created = session.send(3)
+    timing = report["timing"] = {"lifeMs": LIFE_MS}
+    lifetime = timing["threeCards"] = {"createdUnixMs": created, "sentUnixMs": unix_ms()}
     session.capture("title-three", 3)
     session.until(created + 6000)
-    session.wait_heartbeat(3)
+    near = session.wait_heartbeat(3, after=created + 5999)
+    lifetime["nearExpiry"] = {"heartbeat": near, "observedUnixMs": unix_ms()}
     session.until(created + LIFE_MS)
-    session.wait_heartbeat(0)
+    expired = session.wait_heartbeat(0, after=created + LIFE_MS - 1)
+    lifetime["expired"] = {"heartbeat": expired, "observedUnixMs": unix_ms()}
     session.capture("expired-three", 0)
     checks["threeCardsAndSevenSecondExpiry"] = "PASS"
 
     created = session.send(1)
+    torn = timing["tornSnapshot"] = {"createdUnixMs": created, "sentUnixMs": unix_ms(),
+                                      "invalidSnapshots": []}
     session.wait_heartbeat(1)
-    for data in (b"count=0\ndpiScale=1\n\xff", b"count=3\ndpiScale=1\n0.title=broken\\u12\n"):
+    for delay, kind, data in (
+            (2000, "invalid-utf8", b"count=0\ndpiScale=1\n\xff"),
+            (4000, "broken-unicode-escape", b"count=3\ndpiScale=1\n0.title=broken\\u12\n")):
+        session.until(created + delay)
         atomic_write(session.directory / "notices.properties", data)
+        written = unix_ms()
         time.sleep(0.7)
-        session.wait_heartbeat(1)
+        retained = session.wait_heartbeat(1, after=written + 499)
+        torn["invalidSnapshots"].append({"kind": kind, "writtenUnixMs": written,
+                                          "heartbeat": retained, "observedUnixMs": unix_ms()})
     session.capture("torn-snapshot-retains-card", 1)
     session.until(created + LIFE_MS)
-    session.wait_heartbeat(0)
+    expired = session.wait_heartbeat(0, after=created + LIFE_MS - 1)
+    torn["expired"] = {"heartbeat": expired, "observedUnixMs": unix_ms()}
     session.capture("torn-snapshot-original-expiry", 0)
     checks["malformedAndTornKeepPriorUntilOriginalExpiry"] = "PASS"
 
-    created = session.send(1, unix_ms() + 1500)
-    session.wait_heartbeat(0)
+    queued = unix_ms()
+    created = session.send(1, queued + 1500)
+    future = timing["futureNotice"] = {"queuedUnixMs": queued, "createdUnixMs": created,
+                                       "sentUnixMs": unix_ms()}
+    session.wait_heartbeat(0, after=future["sentUnixMs"])
     session.capture("future-not-yet-visible", 0)
     if unix_ms() >= created:
         raise AssertionError("Future-skew precondition was not observed before its creation time")
@@ -443,16 +459,21 @@ def exercise(session, report):
     # to the preceding 250-ms worker snapshot. Wait beyond that poll interval.
     session.until(double_created + 700)
     double = session.capture("dpi-two", 1, 2)
-    if ui_shape(session.control("ui")) != ui_before:
+    ui_after = ui_shape(session.control("ui"))
+    if ui_after != ui_before:
         raise AssertionError("Notice DPI changed Minecraft widget geometry")
     gui = lambda text: next(line for line in text.splitlines() if line.startswith("guiScale:"))
-    if gui((session.game / "options.txt").read_text(encoding="utf-8")) != gui(options_before):
+    gui_before = gui(options_before)
+    gui_after = gui((session.game / "options.txt").read_text(encoding="utf-8"))
+    if gui_after != gui_before:
         raise AssertionError("Notice DPI rewrote the game's GUI scale")
     first_width = normal["pixels"]["boxes"][0][2] - normal["pixels"]["boxes"][0][0]
     second_width = double["pixels"]["boxes"][0][2] - double["pixels"]["boxes"][0][0]
     if abs(second_width - 2 * first_width) > 5:
         raise AssertionError("Notice physical width did not scale exactly once at DPI 2")
-    report["dpi"] = {"oneWidth": first_width, "twoWidth": second_width, "guiScale": gui(options_before)}
+    report["dpi"] = {"oneWidth": first_width, "twoWidth": second_width,
+                     "guiScale": gui_before, "guiScaleBefore": gui_before, "guiScaleAfter": gui_after,
+                     "uiBefore": ui_before, "uiAfter": ui_after}
     checks["dpiOnceAndGameGuiScaleUnchanged"] = "PASS"
 
     session.send(0)

@@ -163,20 +163,40 @@ class NativeNoticeEvidenceTests(unittest.TestCase):
             "foregroundBeforeChat": 12, "foregroundAfterChat": 12,
             "technicalChat": ["1 player online"], "captures": [],
         }
+        times = {"title-three.png": 2500, "expired-three.png": 9600,
+                 "torn-snapshot-retains-card.png": 15000, "torn-snapshot-original-expiry.png": 17600,
+                 "future-not-yet-visible.png": 18300, "future-notice-retained.png": 20000}
         for filename, count in gate.NATIVE_NOTICE_CAPTURES.items():
             def beat(stamp):
                 return {"backend": "native-ui-v1", "pid": 11, "timestampUnixMs": stamp,
                         "renderedCount": count, "transformations": 0, "error": ""}
+            captured = times.get(filename, 1150)
+            width = 480 if filename == "dpi-two.png" else 240
             self.report["captures"].append({
                 "file": filename, "sha256": "3"*64, "sizeBytes": 100,
-                "pixels": {"count": count, "boxes": [[12, 100+i*110, 252, 200+i*110]
-                            for i in range(count)], "size": [800, 600], "expectedPhysicalWidth": 240},
+                "pixels": {"count": count, "boxes": [[12, 100+i*110, 12+width, 200+i*110]
+                            for i in range(count)], "size": [800, 600], "expectedPhysicalWidth": width},
                 "window": {"hwnd": 12, "title": "Unit pack", "client": [0, 0, 800, 600],
                            "monitor": [0, 0, 800, 600]},
-                "capturedUnixMs": 1150, "heartbeatBeforeObservedUnixMs": 1100,
-                "heartbeatAfterObservedUnixMs": 1250,
-                "heartbeatBefore": beat(1000), "heartbeatAfter": beat(1200),
+                "capturedUnixMs": captured, "heartbeatBeforeObservedUnixMs": captured-50,
+                "heartbeatAfterObservedUnixMs": captured+100,
+                "heartbeatBefore": beat(captured-150), "heartbeatAfter": beat(captured+50),
             })
+        def observed(stamp, count):
+            return {"heartbeat": {"backend": "native-ui-v1", "pid": 11, "timestampUnixMs": stamp,
+                    "renderedCount": count, "transformations": 0, "error": ""}, "observedUnixMs": stamp+50}
+        first = {"kind": "invalid-utf8", "writtenUnixMs": 12000, **observed(12550, 1)}
+        second = {"kind": "broken-unicode-escape", "writtenUnixMs": 14000, **observed(14550, 1)}
+        self.report["timing"] = {"lifeMs": 7000,
+            "threeCards": {"createdUnixMs": 2000, "sentUnixMs": 2010,
+                           "nearExpiry": observed(8100, 3), "expired": observed(9100, 0)},
+            "tornSnapshot": {"createdUnixMs": 10000, "sentUnixMs": 10010,
+                             "invalidSnapshots": [first, second], "expired": observed(17100, 0)},
+            "futureNotice": {"queuedUnixMs": 18000, "createdUnixMs": 19500, "sentUnixMs": 18010}}
+        ui = {"screen": "title", "widgets": [{"id": "singleplayer"}]}
+        self.report["dpi"] = {"oneWidth": 240, "twoWidth": 480, "guiScale": "guiScale:2",
+                              "guiScaleBefore": "guiScale:2", "guiScaleAfter": "guiScale:2",
+                              "uiBefore": copy.deepcopy(ui), "uiAfter": copy.deepcopy(ui)}
 
     def verify(self, report):
         gate.verify_native_notices(report, self.files, self.context, "Unit pack")
@@ -207,6 +227,71 @@ class NativeNoticeEvidenceTests(unittest.TestCase):
             "ui-captured-input": lambda r: r["pauseUiAfter"]["widgets"].append({"id": "notice"}),
             "focus-changed": lambda r: r.update(foregroundAfterChat=99),
             "no-real-chat": lambda r: r.update(technicalChat=[]),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(mutation=name):
+                report = copy.deepcopy(self.report)
+                mutate(report)
+                with self.assertRaises(ValueError):
+                    self.verify(report)
+
+    def test_timing_and_dpi_pass_labels_cannot_replace_measured_evidence(self):
+        def shift_capture(report, name, delta):
+            capture = next(value for value in report["captures"] if value["file"] == name)
+            for key in ("capturedUnixMs", "heartbeatBeforeObservedUnixMs", "heartbeatAfterObservedUnixMs"):
+                capture[key] += delta
+            for key in ("heartbeatBefore", "heartbeatAfter"):
+                capture[key]["timestampUnixMs"] += delta
+
+        def wrong_dpi_width(report, width):
+            capture = next(value for value in report["captures"] if value["file"] == "dpi-two.png")
+            capture["window"]["client"][2] = 1600
+            capture["pixels"]["size"][0] = 1600
+            capture["pixels"]["boxes"][0][2] = capture["pixels"]["boxes"][0][0] + width
+            capture["pixels"]["expectedPhysicalWidth"] = width
+            report["dpi"]["twoWidth"] = width
+
+        mutations = {
+            "no-timing": lambda r: r.pop("timing"),
+            "wrong-life": lambda r: r["timing"].update(lifeMs=9000),
+            "creation-missing": lambda r: r["timing"]["threeCards"].pop("createdUnixMs"),
+            "creation-not-number": lambda r: r["timing"]["threeCards"].update(createdUnixMs=True),
+            "sent-before-created": lambda r: r["timing"]["threeCards"].update(sentUnixMs=1999),
+            "near-expiry-not-observed": lambda r: r["timing"]["threeCards"].pop("nearExpiry"),
+            "near-expiry-foreign-pid": lambda r: r["timing"]["threeCards"]["nearExpiry"]["heartbeat"].update(pid=99),
+            "near-expiry-too-early": lambda r: r["timing"]["threeCards"]["nearExpiry"].update(
+                heartbeat={**r["timing"]["threeCards"]["nearExpiry"]["heartbeat"], "timestampUnixMs": 7000},
+                observedUnixMs=7050),
+            "expired-before-seven-seconds": lambda r: r["timing"]["threeCards"]["expired"].update(
+                heartbeat={**r["timing"]["threeCards"]["expired"]["heartbeat"], "timestampUnixMs": 8900},
+                observedUnixMs=8950),
+            "expired-too-late": lambda r: r["timing"]["threeCards"]["expired"].update(
+                heartbeat={**r["timing"]["threeCards"]["expired"]["heartbeat"], "timestampUnixMs": 11000},
+                observedUnixMs=11050),
+            "initial-capture-past-expiry": lambda r: shift_capture(r, "title-three.png", 7000),
+            "expired-capture-too-late": lambda r: shift_capture(r, "expired-three.png", 5000),
+            "missing-torn-case": lambda r: r["timing"]["tornSnapshot"]["invalidSnapshots"].pop(),
+            "torn-cases-relabelled": lambda r: r["timing"]["tornSnapshot"]["invalidSnapshots"][0].update(kind="valid"),
+            "torn-written-too-early": lambda r: r["timing"]["tornSnapshot"]["invalidSnapshots"][0].update(writtenUnixMs=10020),
+            "torn-no-post-poll-presentation": lambda r: r["timing"]["tornSnapshot"]["invalidSnapshots"][0].update(
+                heartbeat={**r["timing"]["tornSnapshot"]["invalidSnapshots"][0]["heartbeat"], "timestampUnixMs": 12010},
+                observedUnixMs=12060),
+            "torn-reset-original-expiry": lambda r: r["timing"]["tornSnapshot"]["expired"].update(
+                heartbeat={**r["timing"]["tornSnapshot"]["expired"]["heartbeat"], "timestampUnixMs": 19100},
+                observedUnixMs=19150),
+            "retained-before-second-malformed": lambda r: shift_capture(r, "torn-snapshot-retains-card.png", -1000),
+            "future-skew-not-1500": lambda r: r["timing"]["futureNotice"].update(createdUnixMs=19501),
+            "future-not-future-when-sent": lambda r: r["timing"]["futureNotice"].update(sentUnixMs=19500),
+            "future-precondition-captured-too-late": lambda r: shift_capture(r, "future-not-yet-visible.png", 2000),
+            "future-painted-before-created": lambda r: shift_capture(r, "future-notice-retained.png", -1000),
+            "future-painted-after-life": lambda r: shift_capture(r, "future-notice-retained.png", 7000),
+            "dpi-missing": lambda r: r.pop("dpi"),
+            "dpi-width-does-not-match-pixels": lambda r: r["dpi"].update(twoWidth=240),
+            "dpi-scale-applied-twice": lambda r: wrong_dpi_width(r, 960),
+            "dpi-scale-applied-zero-times": lambda r: wrong_dpi_width(r, 240),
+            "gui-scale-rewritten": lambda r: r["dpi"].update(guiScaleAfter="guiScale:4"),
+            "gui-scale-after-missing": lambda r: r["dpi"].pop("guiScaleAfter"),
+            "dpi-game-ui-rebuilt": lambda r: r["dpi"]["uiAfter"].update(widgets=[]),
         }
         for name, mutate in mutations.items():
             with self.subTest(mutation=name):
