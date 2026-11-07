@@ -30,8 +30,6 @@ var lockedPath = changed.Contains("native/horizon-client.exe") ? "native/horizon
 Check(lockedPath is not null && changed.Count > 0, "The update must replace an existing managed native file.");
 var previousAsset = previous.AssetFor(lockedPath!);
 var targetAsset = target.AssetFor(lockedPath!);
-var downloadBytes = target.Assets.Values.Where(asset => asset.Covers.Any(changed.Contains))
-    .Sum(asset => asset.SizeBytes);
 previous.VerifyAssets();
 target.VerifyAssets();
 var json = new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true };
@@ -120,7 +118,7 @@ try
     using (File.Open(Path.Combine(canonical, lockedPath!), FileMode.Open, FileAccess.Read, FileShare.Read))
         await MustThrow<PackApplyFailedException>(() => service.SyncAsync(pack, null, CancellationToken.None));
     Check(PortablePackSyncService.IsUpdatePending(canonical), "The apply failure did not leave a durable pending marker.");
-    VerifyFiles(canonical, previous);
+    VerifyPendingFiles(canonical, previous, target, lockedPath!);
     service = new PortablePackSyncService(paths, logger, http);
     handler.Offline = true;
     await MustThrow<PackApplyFailedException>(() => service.SyncAsync(pack, null, CancellationToken.None));
@@ -128,9 +126,16 @@ try
     report["persistentPendingAndOfflineRefusal"] = "PASS";
 
     handler.Offline = false;
+    var remaining = target.Files.Values.Where(file => !MatchesFile(canonical, file))
+        .Select(file => file.Path).ToHashSet(StringComparer.Ordinal);
+    var remainingRemoved = removed.Count(path => File.Exists(Path.Combine(canonical, path)));
+    var downloadBytes = target.Assets.Values.Where(asset => asset.Covers.Any(remaining.Contains))
+        .Sum(asset => asset.SizeBytes);
+    report["alreadyAppliedVerifiedFiles"] = changed.Count - remaining.Count;
+    report["remainingManagedFiles"] = remaining.Count;
     var updated = await service.SyncAsync(pack, null, CancellationToken.None);
     Check(updated.Outcome == PackSyncOutcome.Updated && updated.Revision == target.Revision
-        && updated.FilesChanged == changed.Count + removed.Length && updated.BytesDownloaded == downloadBytes
+        && updated.FilesChanged == remaining.Count + remainingRemoved && updated.BytesDownloaded == downloadBytes
         && !PortablePackSyncService.IsUpdatePending(canonical), "Retry must converge to the exact new revision.");
     VerifyFiles(canonical, target);
     await instances.PrepareAsync(pack);
@@ -214,6 +219,29 @@ static void VerifyFiles(string root, Release release)
         var path = Path.Combine(root, file.Path);
         Check(new FileInfo(path).Length == file.SizeBytes && Hash(path) == file.Sha256, "Wrong installed bytes: " + file.Path);
     }
+}
+
+static bool MatchesFile(string root, ManagedFile file)
+{
+    var path = Path.Combine(root, file.Path);
+    return File.Exists(path) && new FileInfo(path).Length == file.SizeBytes && Hash(path) == file.Sha256;
+}
+
+static void VerifyPendingFiles(string root, Release previous, Release target, string lockedPath)
+{
+    // Applying a large pack is journaled per file. Until the final state is
+    // committed, every present managed file must be a verified old/new file,
+    // the locked client must remain intact, and preparation must stay blocked.
+    using var state = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, PortablePackSyncService.SyncStateFileName)));
+    Check(state.RootElement.GetProperty("revision").GetString() == previous.Revision,
+        "A partial update claimed the completed target revision.");
+    Check(MatchesFile(root, previous.Files[lockedPath]), "The blocked old client was damaged.");
+    foreach (var (path, old) in previous.Files)
+        Check(MatchesFile(root, old) || (target.Files.TryGetValue(path, out var current) && MatchesFile(root, current)),
+            "A pending update contains unverified managed bytes: " + path);
+    foreach (var (path, current) in target.Files)
+        if (!previous.Files.ContainsKey(path) && File.Exists(Path.Combine(root, path)))
+            Check(MatchesFile(root, current), "A newly placed managed file is incomplete: " + path);
 }
 
 static void CheckOrdinaryPath(string root, string target)

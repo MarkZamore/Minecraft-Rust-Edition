@@ -29,7 +29,9 @@
     "sharedNativeBridgeUnitTests": "PASS",
     "identityAndStaleChatActionTests": "PASS",
     "launcherCompactRelease551": "PASS",
-    "liveSteamOverlayAndTwoAccounts": "NOT RUN (user chose Steam later)"
+    "liveSteamOverlayAndTwoAccounts": "NOT RUN (user chose Steam later)",
+    "nativeArchiveUpdateAndRecovery": "PASS",
+    "personalSettingsAndManualServersPreserved": "PASS"
   },
   "nativeUnitCases": 10,
   "packIdentityActionCases": 3,
@@ -96,5 +98,14 @@
   "websiteUrlAbsent": true,
   "aboutAndSummaryPreservedFromMain": true,
   "launcherPackSpecificExceptions": [],
-  "pending": "Exact archive installation/update QA and independent public readback follow packaging"
+  "archiveAcceptance": {
+    "stagedRevision": "83cba036ac5716deafa372cf73f119ef961705de",
+    "runtimeArchiveSha256": "4bf9598b4e87c9ea64d76b5358324db65138ef23ab40243e1683876df149ff42",
+    "managedFiles": 479,
+    "changedFiles": 43,
+    "personalSentinels": 7,
+    "fixtureRemoved": true
+  },
+  "launcherReleaseSourceRevision": "79a398437c7f8987a4adc983f731063adbd9d1f6",
+  "publicVerificationPending": true
 }
