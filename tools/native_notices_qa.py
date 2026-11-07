@@ -478,6 +478,7 @@ def exercise(session, report):
     checks["actualFullscreenVisibleNotice"] = "PASS"
     session.send(1)
     before = session.window.inspect(session.renderer_pid)["foregroundHwnd"]
+    report["foregroundBeforeChat"] = before
     chat_before = session.control("chat-log", "8")["chat"]
     session.control("key", "t", "tap")
     session.control("type", "/list")
@@ -491,7 +492,9 @@ def exercise(session, report):
         if time.monotonic() >= deadline:
             raise AssertionError("T/type/Enter /list did not reach the integrated server with a card present")
         time.sleep(0.1)
-    if before != session.window.inspect(session.renderer_pid)["foregroundHwnd"]:
+    after = session.window.inspect(session.renderer_pid)["foregroundHwnd"]
+    report["foregroundAfterChat"] = after
+    if before != after:
         raise AssertionError("Foreground input focus changed during notice/chat input")
     report["technicalChat"] = chat
     checks["worldAndChatInputWhileVisible"] = "PASS"
@@ -500,9 +503,12 @@ def exercise(session, report):
     session.control("key", "esc", "tap")
     session.control("wait-for", "screen", "paused", "--timeout", "5")
     pause = ui_shape(session.control("ui"))
+    report["pauseUiBefore"] = pause
     session.send(3)
     session.capture("paused-world-three", 3)
-    if ui_shape(session.control("ui")) != pause:
+    pause_after = ui_shape(session.control("ui"))
+    report["pauseUiAfter"] = pause_after
+    if pause_after != pause:
         raise AssertionError("Notice cards changed pause-menu widgets/input")
     checks["pauseMenuVisibleWithoutInputWidgets"] = "PASS"
     session.send(0)
