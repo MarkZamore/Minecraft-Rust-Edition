@@ -326,6 +326,8 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
         ("(324.0, 45.0)", "(324.0, 69.0)", 1),
         ("(33.0, 180.0, 61.0)", "(57.0, 180.0, 61.0)", 1),
         ("(100.0, 35.0)", "(100.0, 59.0)", 2),
+        ("(100.0, 70.9)", "(100.0, 94.9)", 1),
+        ("(100.0, 71.0)", "(100.0, 95.0)", 1),
         ("(100.0, 143.0)", "(100.0, 167.0)", 1),
         ("(60.0, 40.0)", "(60.0, 64.0)", 1),
         ("(100.0, 32.0)", "(100.0, 56.0)", 1),
@@ -335,6 +337,7 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
         ("bars at (349, 37)", "bars at (349, 61)", 1),
         ("the first at y 35", "the first at y 59", 1),
         ("the first icon at (63, 37)", "the first icon at (63, 61)", 1),
+        ("the list spans 33..180", "the list spans 57..180", 1),
     ):
         src("multiplayer.rs", old, new, count=count)
     src("lan/discovery.rs", "pub struct Scanner {\n    inner: Arc<ScanInner>,\n}",
