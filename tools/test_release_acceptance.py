@@ -142,5 +142,79 @@ class ReleaseAcceptanceTests(unittest.TestCase):
             self.assertFalse((production / "pack-manifest.json").exists())
 
 
+class NativeNoticeEvidenceTests(unittest.TestCase):
+    """Synthetic gate fault injection only; this never records a real runtime PASS."""
+
+    def setUp(self):
+        self.files = {"native/horizon-client.exe": {"sha256": "1"*64, "sizeBytes": 10},
+                      "native/launch-rust-edition.exe": {"sha256": "2"*64, "sizeBytes": 20}}
+        self.context = {"unitFixture": "not actual runtime evidence"}
+        self.report = {
+            "schemaVersion": 1, "status": "PASS", "acceptanceContext": self.context,
+            "client": self.files["native/horizon-client.exe"],
+            "bootstrap": self.files["native/launch-rust-edition.exe"],
+            "startup": "exact bootstrap child; native-ui-v1; real presented unscaled screenshots",
+            "fixtureRemoved": True, "checks": {key: "PASS" for key in gate.NATIVE_NOTICE_CHECKS},
+            "nativeProcessId": 11, "bootstrapProcessId": 10,
+            "processAncestry": [{"pid": 11, "parent": 10, "path": "C:/qa/native/horizon-client.exe"},
+                                {"pid": 10, "parent": 9, "path": "C:/qa/native/launch-rust-edition.exe"}],
+            "pauseUiBefore": {"screen": "paused", "widgets": [{"id": "return"}]},
+            "pauseUiAfter": {"screen": "paused", "widgets": [{"id": "return"}]},
+            "foregroundBeforeChat": 12, "foregroundAfterChat": 12,
+            "technicalChat": ["1 player online"], "captures": [],
+        }
+        for filename, count in gate.NATIVE_NOTICE_CAPTURES.items():
+            def beat(stamp):
+                return {"backend": "native-ui-v1", "pid": 11, "timestampUnixMs": stamp,
+                        "renderedCount": count, "transformations": 0, "error": ""}
+            self.report["captures"].append({
+                "file": filename, "sha256": "3"*64, "sizeBytes": 100,
+                "pixels": {"count": count, "boxes": [[12, 100+i*110, 252, 200+i*110]
+                            for i in range(count)], "size": [800, 600], "expectedPhysicalWidth": 240},
+                "window": {"hwnd": 12, "title": "Unit pack", "client": [0, 0, 800, 600],
+                           "monitor": [0, 0, 800, 600]},
+                "capturedUnixMs": 1150, "heartbeatBeforeObservedUnixMs": 1100,
+                "heartbeatAfterObservedUnixMs": 1250,
+                "heartbeatBefore": beat(1000), "heartbeatAfter": beat(1200),
+            })
+
+    def verify(self, report):
+        gate.verify_native_notices(report, self.files, self.context, "Unit pack")
+
+    def test_complete_structural_fixture_is_accepted(self):
+        self.verify(self.report)
+
+    def test_stale_missing_foreign_unpresented_or_input_changing_evidence_is_rejected(self):
+        mutations = {
+            "missing": lambda r: r.clear(),
+            "not-run": lambda r: r.update(status="NOT RUN"),
+            "stale-payload": lambda r: r.update(acceptanceContext={}),
+            "other-client": lambda r: r.update(client={}),
+            "fixture-left": lambda r: r.update(fixtureRemoved=False),
+            "root-is-not-child": lambda r: r.update(nativeProcessId=10),
+            "foreign-child": lambda r: r["processAncestry"][0].update(parent=99),
+            "no-png": lambda r: r["captures"][0].update(sha256=""),
+            "capture-missing": lambda r: r["captures"].pop(),
+            "wrong-pixels": lambda r: r["captures"][0]["pixels"].update(count=0),
+            "foreign-heartbeat": lambda r: r["captures"][0]["heartbeatAfter"].update(pid=99),
+            "not-native": lambda r: r["captures"][0]["heartbeatAfter"].update(backend="lwjgl3"),
+            "stale-heartbeat": lambda r: r["captures"][0].update(heartbeatAfterObservedUnixMs=9999),
+            "no-new-present": lambda r: r["captures"][0]["heartbeatAfter"].update(timestampUnixMs=1000),
+            "renderer-error": lambda r: r["captures"][0]["heartbeatAfter"].update(error="failed"),
+            "transformer-used": lambda r: r["captures"][0]["heartbeatAfter"].update(transformations=1),
+            "fullscreen-not-run": lambda r: r["checks"].update(actualFullscreenVisibleNotice="NOT RUN"),
+            "windowed-proof": lambda r: next(c for c in r["captures"] if c["file"] == "fullscreen-world.png")["window"].update(monitor=[0, 0, 1920, 1080]),
+            "ui-captured-input": lambda r: r["pauseUiAfter"]["widgets"].append({"id": "notice"}),
+            "focus-changed": lambda r: r.update(foregroundAfterChat=99),
+            "no-real-chat": lambda r: r.update(technicalChat=[]),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(mutation=name):
+                report = copy.deepcopy(self.report)
+                mutate(report)
+                with self.assertRaises(ValueError):
+                    self.verify(report)
+
+
 if __name__ == "__main__":
     unittest.main()

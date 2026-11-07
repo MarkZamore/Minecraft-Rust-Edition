@@ -39,6 +39,116 @@ def require(condition, message):
         raise ValueError("Release acceptance: " + message)
 
 
+NATIVE_NOTICE_CHECKS = (
+    "bootstrapChildPidAndTitle", "titleVisiblePixelsAndFreshPresentation",
+    "threeCardsAndSevenSecondExpiry", "malformedAndTornKeepPriorUntilOriginalExpiry",
+    "future1500msRetainedUntilItsTime", "dpiOnceAndGameGuiScaleUnchanged",
+    "actualFullscreenVisibleNotice", "worldAndChatInputWhileVisible",
+    "pauseMenuVisibleWithoutInputWidgets", "emptyQueueFreshHeartbeat",
+    "sessionSentinelAndNoExtraMod", "exactCandidateUnchanged",
+)
+NATIVE_NOTICE_CAPTURES = {
+    "title-one.png": 1, "title-three.png": 3, "expired-three.png": 0,
+    "torn-snapshot-retains-card.png": 1, "torn-snapshot-original-expiry.png": 0,
+    "future-not-yet-visible.png": 0, "future-notice-retained.png": 1,
+    "dpi-one.png": 1, "dpi-two.png": 1, "fullscreen-world.png": 1,
+    "world-chat-input-with-card.png": 1, "paused-world-three.png": 3,
+    "paused-zero-fresh-heartbeat.png": 0,
+}
+
+
+def _notice_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _notice_rect(value):
+    return (isinstance(value, list) and len(value) == 4 and all(map(_notice_int, value))
+            and value[2] > value[0] and value[3] > value[1])
+
+
+def verify_native_notices(report, files, context, name):
+    require(isinstance(report, dict) and report.get("schemaVersion") == 1
+            and report.get("status") == "PASS", "native notice runtime QA missing")
+    require(report.get("acceptanceContext") == context, "native notice report has another payload")
+    require(report.get("client") == files["native/horizon-client.exe"]
+            and report.get("bootstrap") == files["native/launch-rust-edition.exe"],
+            "native notice report has another executable")
+    require(report.get("startup") == "exact bootstrap child; native-ui-v1; real presented unscaled screenshots",
+            "native notices were not tested through the exact bootstrap child")
+    require(report.get("fixtureRemoved") is True
+            and all(report.get("checks", {}).get(key) == "PASS" for key in NATIVE_NOTICE_CHECKS),
+            "native notice scenarios or cleanup incomplete")
+    native, bootstrap = report.get("nativeProcessId"), report.get("bootstrapProcessId")
+    require(_notice_int(native) and native > 0 and _notice_int(bootstrap) and bootstrap > 0
+            and native != bootstrap, "native notice child PID proof missing")
+    ancestry = report.get("processAncestry", [])
+    require(isinstance(ancestry, list) and 2 <= len(ancestry) <= 12
+            and all(isinstance(row, dict) for row in ancestry)
+            and ancestry[0].get("pid") == native and ancestry[-1].get("pid") == bootstrap
+            and all(left.get("parent") == right.get("pid") for left, right in zip(ancestry, ancestry[1:]))
+            and str(ancestry[0].get("path", "")).replace("\\", "/").rsplit("/", 1)[-1].lower() == "horizon-client.exe",
+            "native notice process does not descend from the tested bootstrap")
+    captures = report.get("captures", [])
+    require(isinstance(captures, list) and len(captures) == len(NATIVE_NOTICE_CAPTURES)
+            and all(isinstance(capture, dict) for capture in captures), "native notice captures incomplete")
+    by_name = {capture.get("file"): capture for capture in captures}
+    require(set(by_name) == set(NATIVE_NOTICE_CAPTURES), "native notice capture coverage differs")
+    for filename, expected_count in NATIVE_NOTICE_CAPTURES.items():
+        capture = by_name[filename]
+        require(_notice_int(capture.get("sizeBytes")) and capture["sizeBytes"] > 8
+                and isinstance(capture.get("sha256"), str)
+                and re.fullmatch(r"[0-9a-f]{64}", capture["sha256"]) is not None,
+                "native notice PNG evidence missing")
+        pixels, window = capture.get("pixels", {}), capture.get("window", {})
+        require(isinstance(pixels, dict) and isinstance(window, dict)
+                and _notice_int(pixels.get("count")) and pixels["count"] == expected_count
+                and isinstance(pixels.get("boxes"), list) and len(pixels["boxes"]) == expected_count,
+                "native notice pixels do not match the presented card count")
+        require(_notice_rect(window.get("client")) and _notice_int(window.get("hwnd"))
+                and window["hwnd"] > 0 and window.get("title") == name,
+                "native notice window proof differs")
+        left, top, right, bottom = window["client"]
+        require(pixels.get("size") == [right-left, bottom-top], "native notice image is not the real client size")
+        for box in pixels["boxes"]:
+            require(_notice_rect(box) and 0 <= box[0] < box[2] <= right-left
+                    and 0 <= box[1] < box[3] <= bottom-top,
+                    "native notice pixel bounds are outside the actual image")
+            require(isinstance(pixels.get("expectedPhysicalWidth"), (int, float))
+                    and abs((box[2]-box[0])-pixels["expectedPhysicalWidth"]) <= 5,
+                    "native notice physical width/DPI proof differs")
+        stamps = []
+        for key, observed_key in (("heartbeatBefore", "heartbeatBeforeObservedUnixMs"),
+                                  ("heartbeatAfter", "heartbeatAfterObservedUnixMs")):
+            heartbeat, observed = capture.get(key), capture.get(observed_key)
+            require(isinstance(heartbeat, dict) and _notice_int(observed), "native notice heartbeat evidence missing")
+            stamp = heartbeat.get("timestampUnixMs")
+            require(heartbeat.get("backend") == "native-ui-v1" and _notice_int(heartbeat.get("pid"))
+                    and heartbeat["pid"] == native and _notice_int(heartbeat.get("transformations"))
+                    and heartbeat["transformations"] == 0 and heartbeat.get("error") == ""
+                    and _notice_int(heartbeat.get("renderedCount"))
+                    and heartbeat["renderedCount"] == expected_count and _notice_int(stamp)
+                    and stamp > 0 and 0 <= observed-stamp <= 1500,
+                    "native notice heartbeat is stale, foreign or not actually presented")
+            stamps.append(stamp)
+        captured = capture.get("capturedUnixMs")
+        require(_notice_int(captured) and capture["heartbeatBeforeObservedUnixMs"] <= captured
+                <= capture["heartbeatAfterObservedUnixMs"] and stamps[1] > stamps[0],
+                "native notice capture has no subsequent presented frame")
+    fullscreen = by_name["fullscreen-world.png"]["window"]
+    require(_notice_rect(fullscreen.get("monitor"))
+            and all(abs(a-b) <= 2 for a, b in zip(fullscreen["client"], fullscreen["monitor"])),
+            "native notice fullscreen proof is not monitor-sized")
+    before, after = report.get("pauseUiBefore"), report.get("pauseUiAfter")
+    require(isinstance(before, dict) and before.get("screen") == "paused"
+            and isinstance(before.get("widgets"), list) and before["widgets"] and before == after,
+            "native notices changed game UI widgets or have no pause proof")
+    require(_notice_int(report.get("foregroundBeforeChat"))
+            and report["foregroundBeforeChat"] == report.get("foregroundAfterChat")
+            and isinstance(report.get("technicalChat"), list)
+            and any("online" in str(line).casefold() for line in report["technicalChat"]),
+            "native notice input/focus and actual chat proof missing")
+
+
 def verify_startup(record, files, receipt, name):
     require(record["schemaVersion"] == 1, "unknown schema")
     context = context_from_files(files, receipt)
@@ -91,6 +201,7 @@ def verify_startup(record, files, receipt, name):
                 and not any(argument == flag or argument.startswith(flag + "=")
                             for argument in run["arguments"] for flag in harness)
                 for run in runs), "server-list report used harness startup or incomplete runs")
+    verify_native_notices(record.get("nativeNotices"), files, context, name)
     # Steam deferral cannot waive any of the required checks above.
     steam = record["liveSteam"]
     require(steam["status"] in ("PASS", "NOT RUN"), "unknown live Steam status")
@@ -135,6 +246,8 @@ def main():
     parser.add_argument("--multiplayer", required=True, type=Path)
     parser.add_argument("--servers", required=True, type=Path,
                         help="Four ordinary launches proving no public seeding and manual-list preservation")
+    parser.add_argument("--native-notices", required=True, type=Path,
+                        help="Exact bootstrap child, final UI pixel/heartbeat/fullscreen/input acceptance")
     parser.add_argument("--preparation", type=Path, help="Separate cold proof, or coldPreparation in the smoke report")
     parser.add_argument("--update", type=Path)
     parser.add_argument("--out", required=True, type=Path)
@@ -145,6 +258,7 @@ def main():
     record = {"schemaVersion": 1, "context": execution_context(args.candidate),
               **{key: read_json(getattr(args, key)) for key in ("smoke", "multiplayer")},
               "serverList": read_json(args.servers),
+              "nativeNotices": read_json(args.native_notices),
               "update": read_json(args.update) if args.update else None,
               "liveSteam": {"status": "NOT RUN", "userDecision": args.defer_live_steam or ""}}
     record["preparation"] = read_json(args.preparation) if args.preparation else record["smoke"]["coldPreparation"]
