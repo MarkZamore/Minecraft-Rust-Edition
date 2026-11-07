@@ -81,15 +81,22 @@ def recipe_fixture():
     files["crates/horizon-client/src/lanmc_rust_logo.png"] = (STEAM / "rust-logo/rust-logo.png").read_bytes()
     files["packaging/icons/rust-edition.ico"] = (STEAM / "rust-logo/rust-edition.ico").read_bytes()
     files["crates/lanmc-steam-native/src/lib.rs"] = b"""
+        mod invitation;
         self.control.sharing_epoch.fetch_add(1, Ordering::AcqRel);
         shared.claims.clear(); shared.published = false; shared.published_lobby = None;
     """
     files["crates/lanmc-steam-native/src/worker.rs"] = b"""
         steam.register_callback(move |invite: GameLobbyJoinRequested| { });
         steam.register_callback(move |invite: GameRichPresenceJoinRequested| { });
-        lobbies.is_some_and(|time| time.elapsed() <= DISCOVERY_TTL)
-          && self.discovered.get(&lobby) == Some(&friend)
-          && self.world_offer(lobby, friend).is_some();
+        else if let Some(owner) = self.invited_world_owner(lobby, friend) {
+            self.invited_join.authorize(lobby.raw(), owner.raw(), Instant::now());
+        }
+        self.invited_join.take_owner(lobby_id, Instant::now(), HANDSHAKE);
+        invited_owner.or_else(|| self.discovered.get(&lobby).copied())
+            .filter(|owner| self.world_offer(lobby, *owner).is_some());
+        self.fresh_lobbies .get(&lobby) .is_some_and(|time| time.elapsed() <= DISCOVERY_TTL);
+        self.steam.friends().get_friend(inviter) .has_friend(FriendFlags::IMMEDIATE);
+        self.world_offer(lobby, owner).map(|_| owner);
         if matchmaking.lobby_owner(lobby) != owner
           || !matchmaking.lobby_members(lobby).contains(&self.local_id)
           || self.world_offer(lobby, owner).is_none() { return Err(error); }
@@ -102,6 +109,11 @@ def recipe_fixture():
           shared.lock().unwrap().claims.remove(&address); return Err(error);
         }
         std::backtrace::Backtrace::force_capture();
+    """
+    files["crates/lanmc-steam-native/src/invitation.rs"] = b"""
+        let (authorized_lobby, owner, since) = self.authorized.take()?;
+        (authorized_lobby == lobby && now.checked_duration_since(since)? <= max_age)
+            .then_some(owner)
     """
     return files
 
@@ -190,6 +202,21 @@ class RequiredLayersTests(unittest.TestCase):
                 broken = dict(self.patched)
                 broken[path] = broken[path].replace(token, b"removed")
                 with self.assertRaises(ValueError):
+                    guard.validate_patched_sources(broken)
+
+    def test_overlay_join_keeps_one_shot_and_fresh_friend_authorization(self):
+        for path, token in [
+            ("crates/lanmc-steam-native/src/invitation.rs", b"self.authorized.take()?"),
+            ("crates/lanmc-steam-native/src/invitation.rs", b"now.checked_duration_since(since)? <= max_age"),
+            ("crates/lanmc-steam-native/src/worker.rs", b"self.invited_world_owner(lobby, friend)"),
+            ("crates/lanmc-steam-native/src/worker.rs", b"get_friend(inviter)"),
+            ("crates/lanmc-steam-native/src/worker.rs", b"self.world_offer(lobby, *owner).is_some()"),
+        ]:
+            with self.subTest(path=path, token=token):
+                broken = dict(self.patched)
+                self.assertIn(token, broken[path])
+                broken[path] = broken[path].replace(token, b"removed")
+                with self.assertRaisesRegex(ValueError, "steam-frontend-invitations"):
                     guard.validate_patched_sources(broken)
 
     def test_releasing_ready_before_identity_claim_is_rejected(self):

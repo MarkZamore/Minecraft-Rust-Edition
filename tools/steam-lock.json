@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "source": {
     "repository": "https://github.com/MarkZamore/e4steam",
-    "commit": "faa25063441b83f589caab505dfefda8932e4fe4",
-    "tree": "091d338c90eaa87a2d7974b8c0e71173d049c8e1",
+    "commit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+    "tree": "588eb1b480ec442934df48c2d79dd578b0849c4e",
     "path": "source/native",
-    "overlaySourceSha256": "0113c3695a06e2aee1cd0a520cd8bce096b2a85d40f5fd565d515af00204a698"
+    "overlaySourceSha256": "f0d3f400397aaae5f56b508575019dd7fbed30e22dbf60cd6a67cd2cce505033"
   },
   "dll": {
     "name": "steam_api64.dll",
