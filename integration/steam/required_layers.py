@@ -12,6 +12,8 @@ import re
 CLIENT = "crates/horizon-client/"
 SRC = CLIENT + "src/"
 NATIVE = "crates/lanmc-steam-native/src/"
+RENDER = "crates/horizon-client-render/src/"
+NOTICE = RENDER + "gfx/"
 
 # The fragments include call/guard context rather than names alone. Whitespace
 # formatting is ignored, but changed behavior or a removed hook blocks the gate.
@@ -109,6 +111,55 @@ LAYERS = {
         (SRC + "lanmc_presentation.rs", "let attributes = attributes.with_window_icon(icon.clone());"),
         (SRC + "lanmc_presentation.rs", "winit::platform::windows::WindowAttributesExtWindows::with_taskbar_icon(attributes, icon)"),
     ),
+    "native-launcher-notices": (
+        (RENDER + "gfx.rs", "mod lanmc_notices;"),
+        (RENDER + "gfx.rs", "lanmc_notices: lanmc_notices::Overlay::new(),"),
+        (RENDER + "gfx.rs", "if self.surface.is_some() { self.lanmc_notices.draw( &self.device, &self.queue, encoder, view_target, [self.config.width, self.config.height], self.frame_format, ); } if overlay.real { self.own_timing = timing; } readback"),
+        (RENDER + "gfx.rs", "after_present: self.lanmc_notices.callback(),"),
+        (RENDER + "gfx.rs", "Err(back) => (back.encoder, back.surface, back.after, back.after_present),"),
+        (RENDER + "gfx.rs", "self.queue.present(surface_frame); if let Some(callback) = after_present { callback(); }"),
+        (RENDER + "gfx.rs", "self.frame_gen.present(real, generated, fg_made, after_present);"),
+        (RENDER + "gfx.rs", "let after_present = if frame_gen::generated_only() { notice_generated_callback } else { after_present }; self.frame_gen.present(real, generated, fg_made, after_present);"),
+        (RENDER + "gfx.rs", "self.draw_overlay(&mut encoder, frame, &generated_view, generated, &overlay); notice_generated_callback = self.lanmc_notices.callback();"),
+        (RENDER + "gfx.rs", "else if frame_gen::generated_only() && self.surface.is_some() { self.lanmc_notices.draw( &self.device, &self.queue, &mut encoder, &generated_view, [self.config.width, self.config.height], self.frame_format, ); notice_generated_callback = self.lanmc_notices.callback(); }"),
+        (NOTICE + "compositor.rs", "self.lanmc_notices.draw( &self.device, &self.queue, &mut encoder, &target, [self.config.width, self.config.height], self.config.format, ); let after_present = self.lanmc_notices.callback(); self.queue.submit([encoder.finish()]); self.queue.present(frame); if let Some(callback) = after_present { callback(); } true"),
+        (NOTICE + "submit.rs", "pub after_present: Option<AfterSubmit>,"),
+        (NOTICE + "submit.rs", "if let Some(surface) = job.surface { queue.present(surface); if let Some(callback) = job.after_present { callback(); } }"),
+        (NOTICE + "frame_gen.rs", "after_present: Option<Box<dyn FnOnce() + Send>>,"),
+        (NOTICE + "frame_gen.rs", "if failed_here.load(Ordering::Relaxed) { return false; }"),
+        (NOTICE + "frame_gen.rs", "queue.present(target); true"),
+        (NOTICE + "frame_gen.rs", "if show(&pair.second) { if let Some(callback) = pair.after_present { callback(); } }"),
+        (NOTICE + "lanmc_notices.rs", 'mod protocol;'),
+        (NOTICE + "lanmc_notices.rs", "mod raster;"),
+        (NOTICE + "lanmc_notices.rs", "mod render;"),
+        (NOTICE + "lanmc_notices.rs", "mod state;"),
+        (NOTICE + "lanmc_notices.rs", "self.encoded_count = Some(0);"),
+        (NOTICE + "lanmc_notices.rs", "Some(Box::new(move || service.report_presented(count)))"),
+        (NOTICE + "lanmc_notice_state.rs", 'std::env::var_os("LANMINECRAFT_NOTICE_DIRECTORY")?'),
+        (NOTICE + "lanmc_notice_state.rs", "if !directory.is_absolute() || !ordinary_directory(&directory) { return None; }"),
+        (NOTICE + "lanmc_notice_state.rs", "tick = !tick; if tick { let _ = worker.heartbeat(); } thread::sleep(Duration::from_millis(250));"),
+        (NOTICE + "lanmc_notice_state.rs", "frame.timestamp_ms = unix_ms(); frame.rendered_count = rendered_count.min(3);"),
+        (NOTICE + "lanmc_notice_state.rs", "let first = (read_document(&style)?, read_document(&notices)?); let second = (read_document(&style)?, read_document(&notices)?); if first != second {"),
+        (NOTICE + "lanmc_notice_state.rs", '"backend=native-ui-v1\\npid={}\\ntimestampUnixMs={}\\nrenderedCount={}\\ntransformations=0\\nerror={}\\n"'),
+        (NOTICE + "lanmc_notice_state.rs", "std::process::id(), frame.timestamp_ms, frame.rendered_count.min(3),"),
+        (NOTICE + "lanmc_notice_state.rs", 'let target = directory.join("heartbeat.properties");'),
+        (NOTICE + "lanmc_notice_state.rs", ".create_new(true) .write(true) .open(&temporary)"),
+        (NOTICE + "lanmc_notice_state.rs", 'fs::rename(&temporary, &target).map_err(|_| "Notice heartbeat replace failed")?;'),
+        (NOTICE + "lanmc_notice_protocol.rs", "pub const MAX_BYTES: usize = 32 * 1024;"),
+        (NOTICE + "lanmc_notice_protocol.rs", "pub const LIFE_MS: u64 = 7_000;"),
+        (NOTICE + "lanmc_notice_protocol.rs", "if title.encode_utf16().count() > 160 || body.encode_utf16().count() > 320 {"),
+        (NOTICE + "lanmc_notice_protocol.rs", "if created_unix_ms > now_ms.saturating_add(2_000) {"),
+        (NOTICE + "lanmc_notice_raster.rs", "let dpi = snapshot.dpi_scale as f64;"),
+        (NOTICE + "lanmc_notice_raster.rs", "let width = (s.width as f64 * dpi)"),
+        (NOTICE + "lanmc_notice_raster.rs", "CreateFontW( -size,"),
+        (NOTICE + "lanmc_notice_raster.rs", "DrawTextW( self.dc, text.as_ptr(), text.len() as i32,"),
+        (NOTICE + "lanmc_notice_render.rs", "self.uploads.texture( encoder, texture.as_image_copy(), card.width, card.height, card.rgba, );"),
+        (NOTICE + "lanmc_notice_render.rs", 'label: Some("LANMinecraft final notices"),'),
+        (NOTICE + "lanmc_notice_render.rs", "self.uploads.finish(encoder);"),
+        (NOTICE + "lanmc_notice_render.rs", "pass.draw(first..first + 6, 0..1);"),
+        (NOTICE + "lanmc_notice_layout.rs", "width: card.width as f32, height: card.height as f32,"),
+        (NOTICE + "lanmc_notice_layout.rs", "if age >= motion.life_ms { continue; }"),
+    ),
 }
 
 ASSETS = {
@@ -188,6 +239,10 @@ def validate_patched_sources(patched):
     for call in (b"add_official_server(", b"add_partner_servers("):
         if call in game:
             raise ValueError("Mandatory layer steam-world-list forbids automatic public server seeding")
+    # Every presenter mode retains its callback. One surviving envelope is not
+    # enough when the generated-frame presenter has three submission branches.
+    if sources[NOTICE + "frame_gen.rs"].count(b"interval: self.interval, after_present,") < 3:
+        raise ValueError("Mandatory layer native-launcher-notices lost a frame-generation presentation callback")
     for path, magic in ASSETS.items():
         data = patched.get(path)
         if not isinstance(data, bytes) or not data.startswith(magic) or len(data) <= len(magic):
