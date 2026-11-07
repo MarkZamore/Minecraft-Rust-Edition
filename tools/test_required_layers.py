@@ -159,6 +159,24 @@ class RequiredLayersTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "current-host-chat-actions"):
             guard.validate_patched_sources(self.patched)
 
+    def test_window_and_taskbar_icon_hooks_are_both_required(self):
+        for path, token in [
+            ("crates/horizon-client/src/game/no_resources.rs", b"crate::lanmc_presentation::with_icon("),
+            ("crates/horizon-client/src/game/split/windows.rs", b"crate::lanmc_presentation::with_icon("),
+            ("crates/horizon-client/src/lanmc_presentation.rs", b"with_window_icon(icon.clone())"),
+            ("crates/horizon-client/src/lanmc_presentation.rs", b"with_taskbar_icon(attributes, icon)"),
+        ]:
+            with self.subTest(path=path, token=token):
+                broken = dict(self.patched)
+                broken[path] = broken[path].replace(token, b"removed")
+                with self.assertRaisesRegex(ValueError, "pack-window-title-and-icon"):
+                    guard.validate_patched_sources(broken)
+
+    def test_internal_port_notice_cannot_be_removed(self):
+        self.lose("crates/horizon-client/src/game/lan.rs", "Локальный порт сервера: {port}".encode(), b"removed")
+        with self.assertRaisesRegex(ValueError, "steam-publish-close-loopback"):
+            guard.validate_patched_sources(self.patched)
+
     def test_commented_out_frontend_hook_does_not_count(self):
         self.lose("crates/horizon-client/src/game.rs", b"self.poll_steam_sharing();",
                   b"/* retired /* nested note */ self.poll_steam_sharing(); */")

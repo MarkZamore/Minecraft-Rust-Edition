@@ -36,6 +36,8 @@ LAYERS = {
         (SRC + "game/integrated.rs", "crate::lanmc_steam::unpublish(); s.pending = Some(Publish::Close);"),
         (SRC + "game/integrated.rs", "self.native_lifecycle.begin_close(); crate::lanmc_steam::unpublish();"),
         (SRC + "game/integrated.rs", "host.hub.lan.listen_on(listener, !crate::lanmc_steam::active())"),
+        (SRC + "game/lan.rs", 'if crate::lanmc_steam::active() { self.system_message(Text::literal(format!('),
+        (SRC + "game/lan.rs", 'Локальный порт сервера: {port} (внутренний порт Steam; друзья подключаются по адресу .steam)'),
     ),
     "steam-frontend-invitations": (
         (SRC + "game.rs", "pub(super) fn idle(&mut self, event_loop: &dyn EventLoopCtl) { self.poll_steam_sharing();"),
@@ -88,11 +90,15 @@ LAYERS = {
     "pack-window-title-and-icon": (
         (SRC + "lib.rs", "mod lanmc_presentation;"),
         (SRC + "game.rs", 'crate::lanmc_presentation::title("Horizon")'),
+        (SRC + "game.rs", "crate::lanmc_presentation::with_icon("),
         (SRC + "game/no_resources.rs", 'crate::lanmc_presentation::title("Horizon")'),
-        (SRC + "game/split/windows.rs", "crate::lanmc_presentation::icon()"),
+        (SRC + "game/no_resources.rs", "crate::lanmc_presentation::with_icon("),
+        (SRC + "game/split/windows.rs", "crate::lanmc_presentation::with_icon(Window::default_attributes())"),
         (CLIENT + "build.rs", '.join("packaging/icons/rust-edition.ico")'),
         (SRC + "lanmc_presentation.rs", 'std::env::var("LANMINECRAFT_BUILD_NAME")'),
         (SRC + "lanmc_presentation.rs", 'include_bytes!("lanmc_rust_logo.png")'),
+        (SRC + "lanmc_presentation.rs", "let attributes = attributes.with_window_icon(icon.clone());"),
+        (SRC + "lanmc_presentation.rs", "winit::platform::windows::WindowAttributesExtWindows::with_taskbar_icon(attributes, icon)"),
     ),
 }
 
