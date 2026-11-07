@@ -73,6 +73,9 @@ def recipe_fixture():
                         else:
                             path = literal(call.args[1], values)
                             replacement = literal(call.args[3], values)
+                    elif call.func.id == "replace" and notice:
+                        path = literal(call.args[0], values)
+                        replacement = literal(call.args[2], values)
                     else:
                         continue
                     count = next((literal(keyword.value, values) for keyword in call.keywords
@@ -85,10 +88,19 @@ def recipe_fixture():
     notice_tree = ast.parse((STEAM / "notice_overlay.py").read_text(encoding="utf-8"))
     notice_apply = next(node for node in notice_tree.body
                         if isinstance(node, ast.FunctionDef) and node.name == "apply")
-    walk(notice_apply.body, {}, notice=True)
+    notice_globals = {}
+    for node in notice_tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            try:
+                notice_globals[node.targets[0].id] = literal(node.value, notice_globals)
+            except (KeyError, TypeError, ValueError):
+                pass
+    walk(notice_apply.body, notice_globals, notice=True)
     for name in ["lanmc_notices.rs", "lanmc_notice_protocol.rs", "lanmc_notice_state.rs",
                  "lanmc_notice_raster.rs", "lanmc_notice_render.rs", "lanmc_notice_layout.rs"]:
         files["crates/horizon-client-render/src/gfx/" + name] = (STEAM / name).read_bytes()
+    for name in ["Cargo.toml", "src/lib.rs"]:
+        files["crates/lanmc-notice-platform/" + name] = (STEAM / "notice-platform" / name).read_bytes()
     for name in ["lanmc_steam.rs", "lanmc_skins.rs", "lanmc_presentation.rs"]:
         files["crates/horizon-client/src/" + name] = (STEAM / name).read_bytes()
     files["crates/horizon-client/src/lanmc_rust_logo.png"] = (STEAM / "rust-logo/rust-logo.png").read_bytes()
@@ -270,7 +282,9 @@ class RequiredLayersTests(unittest.TestCase):
                      "crates/horizon-client-render/src/gfx/lanmc_notice_protocol.rs",
                      "crates/horizon-client-render/src/gfx/lanmc_notice_raster.rs",
                      "crates/horizon-client-render/src/gfx/lanmc_notice_render.rs",
-                     "crates/horizon-client-render/src/gfx/lanmc_notice_layout.rs"]:
+                     "crates/horizon-client-render/src/gfx/lanmc_notice_layout.rs",
+                     "crates/lanmc-notice-platform/Cargo.toml",
+                     "crates/lanmc-notice-platform/src/lib.rs"]:
             with self.subTest(path=path):
                 broken = dict(self.patched)
                 del broken[path]
@@ -343,19 +357,40 @@ class RequiredLayersTests(unittest.TestCase):
                     guard.validate_patched_sources(broken)
 
     def test_notice_protocol_or_dpi_contract_cannot_be_relaxed(self):
+        notice = "crates/horizon-client-render/src/gfx/"
         for path, old in [
-            ("lanmc_notice_protocol.rs", b"title.encode_utf16().count() > 160"),
-            ("lanmc_notice_protocol.rs", b"now_ms.saturating_add(2_000)"),
-            ("lanmc_notice_state.rs", b"transformations=0"),
-            ("lanmc_notice_state.rs", b"std::env::var_os(\"LANMINECRAFT_NOTICE_DIRECTORY\")?"),
-            ("lanmc_notice_raster.rs", b"s.width as f64 * dpi"),
-            ("lanmc_notice_layout.rs", b"width: card.width as f32,"),
+            (notice + "lanmc_notice_protocol.rs", b"title.encode_utf16().count() > 160"),
+            (notice + "lanmc_notice_protocol.rs", b"now_ms.saturating_add(2_000)"),
+            (notice + "lanmc_notice_state.rs", b"transformations=0"),
+            (notice + "lanmc_notice_state.rs", b"std::env::var_os(\"LANMINECRAFT_NOTICE_DIRECTORY\")?"),
+            ("crates/lanmc-notice-platform/src/lib.rs", b"s.width as f64 * dpi"),
+            (notice + "lanmc_notice_layout.rs", b"width: card.width as f32,"),
         ]:
-            path = "crates/horizon-client-render/src/gfx/" + path
             with self.subTest(path=path, token=old):
                 broken = dict(self.patched)
                 self.assertIn(old, broken[path])
                 broken[path] = broken[path].replace(old, b"removed")
+                with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+                    guard.validate_patched_sources(broken)
+
+    def test_windows_ffi_stays_in_the_local_platform_crate_behind_a_safe_adapter(self):
+        adapter = "crates/horizon-client-render/src/gfx/lanmc_notice_raster.rs"
+        unsafe = dict(self.patched)
+        unsafe[adapter] += b"\npub unsafe fn bypass() {}\n"
+        with self.assertRaisesRegex(ValueError, "requires a safe game adapter"):
+            guard.validate_patched_sources(unsafe)
+        for path, old, new in [
+            ("crates/horizon-client-render/Cargo.toml",
+             b'lanmc_notice_platform = { path = "../lanmc-notice-platform" }',
+             b'lanmc_notice_platform = "0.1.0"'),
+            ("crates/lanmc-notice-platform/src/lib.rs", b"#![forbid(unsafe_op_in_unsafe_fn)]", b""),
+            (adapter, b"lanmc_notice_platform::rasterize(&converted, viewport_width)",
+             b"bypass_platform(&converted, viewport_width)"),
+        ]:
+            with self.subTest(path=path):
+                broken = dict(self.patched)
+                self.assertIn(old, broken[path])
+                broken[path] = broken[path].replace(old, new)
                 with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
                     guard.validate_patched_sources(broken)
 

@@ -14,6 +14,7 @@ SRC = CLIENT + "src/"
 NATIVE = "crates/lanmc-steam-native/src/"
 RENDER = "crates/horizon-client-render/src/"
 NOTICE = RENDER + "gfx/"
+PLATFORM = "crates/lanmc-notice-platform/"
 
 # The fragments include call/guard context rather than names alone. Whitespace
 # formatting is ignored, but changed behavior or a removed hook blocks the gate.
@@ -152,10 +153,17 @@ LAYERS = {
         (NOTICE + "lanmc_notice_protocol.rs", "pub const LIFE_MS: u64 = 7_000;"),
         (NOTICE + "lanmc_notice_protocol.rs", "if title.encode_utf16().count() > 160 || body.encode_utf16().count() > 320 {"),
         (NOTICE + "lanmc_notice_protocol.rs", "if created_unix_ms > now_ms.saturating_add(2_000) {"),
-        (NOTICE + "lanmc_notice_raster.rs", "let dpi = snapshot.dpi_scale as f64;"),
-        (NOTICE + "lanmc_notice_raster.rs", "let width = (s.width as f64 * dpi)"),
-        (NOTICE + "lanmc_notice_raster.rs", "CreateFontW( -size,"),
-        (NOTICE + "lanmc_notice_raster.rs", "DrawTextW( self.dc, text.as_ptr(), text.len() as i32,"),
+        ("crates/horizon-client-render/Cargo.toml", 'lanmc_notice_platform = { path = "../lanmc-notice-platform" }'),
+        (PLATFORM + "Cargo.toml", 'name = "lanmc_notice_platform"'),
+        (PLATFORM + "src/lib.rs", "#![forbid(unsafe_op_in_unsafe_fn)]"),
+        (PLATFORM + "src/lib.rs", "let dpi = snapshot.dpi_scale as f64;"),
+        (PLATFORM + "src/lib.rs", "let width = (s.width as f64 * dpi)"),
+        (PLATFORM + "src/lib.rs", "notice.title.encode_utf16().count() > 160 || notice.body.encode_utf16().count() > 320"),
+        (PLATFORM + "src/lib.rs", "CreateFontW( -size,"),
+        (PLATFORM + "src/lib.rs", "DrawTextW( self.dc, text.as_ptr(), text.len() as i32,"),
+        (NOTICE + "lanmc_notice_raster.rs", "pub use lanmc_notice_platform::CardBitmap;"),
+        (NOTICE + "lanmc_notice_raster.rs", "dpi_scale: snapshot.dpi_scale,"),
+        (NOTICE + "lanmc_notice_raster.rs", "lanmc_notice_platform::rasterize(&converted, viewport_width)"),
         (NOTICE + "lanmc_notice_render.rs", "self.uploads.texture( encoder, texture.as_image_copy(), card.width, card.height, card.rgba, );"),
         (NOTICE + "lanmc_notice_render.rs", 'label: Some("LANMinecraft final notices"),'),
         (NOTICE + "lanmc_notice_render.rs", "self.uploads.finish(encoder);"),
@@ -247,6 +255,8 @@ def validate_patched_sources(patched):
     # enough when the generated-frame presenter has three submission branches.
     if sources[NOTICE + "frame_gen.rs"].count(b"interval: self.interval, after_present,") < 3:
         raise ValueError("Mandatory layer native-launcher-notices lost a frame-generation presentation callback")
+    if re.search(rb"\bunsafe\b", sources[NOTICE + "lanmc_notice_raster.rs"]):
+        raise ValueError("Mandatory layer native-launcher-notices requires a safe game adapter; FFI belongs to its platform crate")
     for path, magic in ASSETS.items():
         data = patched.get(path)
         if not isinstance(data, bytes) or not data.startswith(magic) or len(data) <= len(magic):
