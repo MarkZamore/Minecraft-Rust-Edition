@@ -1,19 +1,25 @@
 {
   "schemaVersion": 1,
-  "recordedUtc": "2026-11-07T18:46:54.235306+00:00",
-  "upstreamCommit": "6560641ba51a452f6bc2407baa4eb1b3be517ca8",
-  "steamTransportCommit": "faa25063441b83f589caab505dfefda8932e4fe4",
-  "platform": "Windows x64, Intel Arc B390 Vulkan",
+  "recordedUtc": "2026-11-07T23:34:31.302232+00:00",
+  "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
+  "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+  "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc",
+  "sourceReadyCommit": "3852ee50faa296d3ee32686b2cff5ab97c799a33",
+  "platform": "Windows x64; Intel Arc B390; actual native frontend",
   "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
   "client": {
-    "sizeBytes": 92301824,
-    "sha256": "1ef39eed0270d0cdfe02c590fed6654c35ec9a39bad0ac42394822dfdbcdf4db"
+    "sizeBytes": 92608512,
+    "sha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3"
   },
   "bootstrap": {
     "sizeBytes": 2885120,
     "sha256": "41e8adeb1560a4cb14d3809f225505edbbf581449c11fb638ec6b597ed75cf11"
   },
   "bootstrapUnchanged": true,
+  "preparedReceipt": {
+    "sizeBytes": 3564115,
+    "sha256": "3c8a8b4672bd3ee675d3e02f51d9775931e39cf2ba2d2d5f05ef5f3aca51caca"
+  },
   "checks": {
     "signedUpstreamAndValveDll": "PASS",
     "exactSourceRecipeAndPeIcon": "PASS",
@@ -24,27 +30,18 @@
     "nativeModsPageEmptyWithAuthorBrowseButton": "PASS",
     "narratorOffAndOnboardingDisabled": "PASS",
     "pauseReturnsToGameAndReportsSameSlot": "PASS",
+    "numericLocalPortInActualChat": "PASS",
     "guestCommandsViaTTypeEnterAllowed": "PASS",
     "guestCommandsDeniedWithoutCheats": "PASS",
     "sharedNativeBridgeUnitTests": "PASS",
-    "identityAndStaleChatActionTests": "PASS",
-    "launcherCompactRelease551": "PASS",
-    "liveSteamOverlayAndTwoAccounts": "NOT RUN (user chose Steam later)",
+    "ordinarySteamDefaultAndSavedViews": "PASS",
+    "manualAndUnknownNbtBytePreservation": "PASS",
+    "nativeNoticeActualPixelsAndPresentation": "PASS",
     "nativeArchiveUpdateAndRecovery": "PASS",
     "personalSettingsAndManualServersPreserved": "PASS",
-    "publicArchivesSha256": "PASS",
-    "manifestUploadedLastAndReadBack": "PASS"
+    "windowCaptionIconVisibleOnDark": "PASS",
+    "supportingLauncherPublishedSha256": "PASS"
   },
-  "nativeUnitCases": 10,
-  "packIdentityActionCases": 3,
-  "launcherReleaseCases": 551,
-  "launcherReleaseSkipped": 0,
-  "preparedReceipt": {
-    "sizeBytes": 3564115,
-    "sha256": "80a0e0493d0ee874b96670f00d63c3e06b104895a79c87f3f3a515d869432f9a"
-  },
-  "preparedFiles": 28178,
-  "resourcePreparationScope": "Cold autonomous resource preparation using signed original preparer; gameplay acceptance is separate",
   "guestCommands": {
     "allowed": {
       "result": "PASS",
@@ -53,7 +50,11 @@
         "before": "Open to LAN",
         "after": "Player Reporting",
         "returnedToGame": true,
-        "loopback": "PASS"
+        "loopback": "PASS",
+        "localPort": 50494,
+        "publicationChat": [
+          "This world is now open to LAN. The port number is 50494"
+        ]
       },
       "guestFinalMode": "creative",
       "guestChat": [
@@ -68,7 +69,11 @@
         "before": "Open to LAN",
         "after": "Player Reporting",
         "returnedToGame": true,
-        "loopback": "PASS"
+        "loopback": "PASS",
+        "localPort": 50545,
+        "publicationChat": [
+          "This world is now open to LAN. The port number is 50545"
+        ]
       },
       "guestFinalMode": "survival",
       "guestChat": [
@@ -77,40 +82,91 @@
       ]
     }
   },
-  "pauseMenu": {
-    "before": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0434\u043b\u044f \u0441\u0435\u0442\u0438",
-    "after": "\u0416\u0430\u043b\u043e\u0431\u044b",
-    "returnedToGame": true,
-    "loopback": "PASS"
-  },
-  "savedOwnerState": {
-    "dimension": "minecraft:overworld",
-    "gamemode": "spectator"
-  },
-  "savedPosition": [
-    26.5,
-    94.0,
-    -8.5
-  ],
-  "reopenedPosition": [
-    26.5,
-    94.0,
-    -8.5
-  ],
-  "websiteUrlAbsent": true,
-  "aboutAndSummaryPreservedFromMain": true,
-  "launcherPackSpecificExceptions": [],
   "archiveAcceptance": {
-    "stagedRevision": "83cba036ac5716deafa372cf73f119ef961705de",
-    "runtimeArchiveSha256": "4bf9598b4e87c9ea64d76b5358324db65138ef23ab40243e1683876df149ff42",
+    "status": "PASS",
+    "runtimeArchiveSha256": "5133a0176e36c4df3e4a26e55e487a6b0e5555265668095cf98fee2a3403de3f",
     "managedFiles": 479,
-    "changedFiles": 43,
-    "personalSentinels": 7,
-    "fixtureRemoved": true
+    "personalSentinelsPreserved": 7,
+    "repeatPayloadBytes": 0
   },
-  "launcherReleaseSourceRevision": "79a398437c7f8987a4adc983f731063adbd9d1f6",
-  "publicVerificationPending": false,
-  "publishedRevision": "bb8302b206ed158e85aefead08bb78cd96606ba2",
-  "publicManifestSha256": "f5b0b0575f9a8d89e00d0c18ae91356645dbc97d02a4ba6ff116206d24388485",
-  "sourceRecipePayloadUnchangedAfterArchiveAcceptance": true
+  "sourceChecks": {
+    "mandatoryGroups": 13,
+    "patchedFiles": 49,
+    "guardTests": 28,
+    "selectionAndAuthoredGeometryRustTests": 7,
+    "artworkTests": 7,
+    "nativeTransportTests": 20,
+    "nativeTransportClippyWarningsDenied": "PASS",
+    "nativeNoticeContractStateLayoutTests": 23,
+    "nativeNoticePlatformTests": 6,
+    "pythonTests": 66
+  },
+  "runtimeNoticeEvidence": {
+    "status": "PASS",
+    "checks": 12,
+    "captures": 13,
+    "scope": "Actual default native frontend in window and fullscreen; split/other rendering modes source/type coverage only"
+  },
+  "supportingLauncher": {
+    "status": "PASS",
+    "verifiedAtUtc": "2026-11-07T23:13:55.711700+00:00",
+    "releaseNumber": 478,
+    "commitSha": "98e3146e5bc469e54deedf3512681a9a351320ed",
+    "assetId": 722162871,
+    "sizeBytes": 157872128,
+    "sha256": "3338b80f0eb01c6247ca2b5847199c68a6250eb5465736bb4063c94df40ff6c7",
+    "url": "https://github.com/MarkZamore/LANMinecraft/releases/download/latest/LANMinecraft.exe",
+    "requiredFeature": "native-launcher-notices-v1",
+    "minimumSupportingRelease": 477,
+    "executedByThisPackTask": false
+  },
+  "liveSteam": {
+    "status": "NOT RUN",
+    "userDecision": "Проверить Steam позже: явное решение пользователя от 8 ноября 2026 года"
+  },
+  "windowIconVisual": {
+    "schemaVersion": 1,
+    "scope": "Visual observations from actual returned native Windows window through sky.get_window_state",
+    "observedUnixMs": 1794094052198,
+    "clientSha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3",
+    "window": {
+      "app": "process:C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\candidate-2eb\\native\\horizon-client.exe",
+      "id": 27856374,
+      "title": "Minecraft Rust Edition"
+    },
+    "captionIcon": {
+      "status": "PASS",
+      "observation": "White circular backplate and black Rust gear are clearly visible against the black Windows titlebar next to Minecraft Rust Edition"
+    },
+    "taskbarIcon": {
+      "status": "NOT RUN",
+      "reason": "Bounded window capture did not include the Windows taskbar"
+    },
+    "sourceViewObservations": {
+      "steamDefault": {
+        "observedUnixMs": 1794094065670,
+        "status": "PASS",
+        "observation": "Selected Steam-world tab shows Looking for Steam worlds, no saved rows and no local-network search label"
+      },
+      "savedView": {
+        "observedUnixMs": 1794094110351,
+        "status": "PASS",
+        "observation": "Selected Saved tab contains all three fixture rows; no synthetic discovery header, spinner or LAN search text is drawn beneath saved rows"
+      }
+    },
+    "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc"
+  },
+  "contentPolicy": {
+    "newLauncherAppliedExceptions": [],
+    "fpsAndFlicker": "Closed by user; no fixes or distance caps added"
+  },
+  "knownLimits": [
+    "Original anuvenn KeepAlive timeout cause remains unconfirmed; timeout unchanged",
+    "Whole-world Valve listener shutdown may discard final channel data; best effort",
+    "Live Steam overlay, two accounts and world transfer deferred by explicit user decision"
+  ],
+  "publicDelivery": {
+    "status": "NOT RUN",
+    "reason": "Publish archives, independent readback, then manifest after exact update acceptance"
+  }
 }
