@@ -142,6 +142,18 @@ class ReleaseAcceptanceTests(unittest.TestCase):
             self.assertFalse((production / "pack-manifest.json").exists())
 
 
+class PublicationPortEvidenceTests(unittest.TestCase):
+    def test_actual_decimal_port_is_required_as_its_own_number(self):
+        gate.verify_publication_port({"localPort": 28055, "publicationChat": ["Local server port: 28055."]})
+        for port, chat in ((0, ["Port: 0"]), (65536, ["Port: 65536"]),
+                           (True, ["Port: True"]), ("28055", ["Port: 28055"]),
+                           (28055, ["Port: 1280556"]), (28055, ["Port: 28056"]),
+                           (28055, []), (28055, [28055]), (28055, None)):
+            with self.subTest(port=port, chat=chat):
+                with self.assertRaisesRegex(ValueError, "publication port"):
+                    gate.verify_publication_port({"localPort": port, "publicationChat": chat})
+
+
 class NativeNoticeEvidenceTests(unittest.TestCase):
     """Synthetic gate fault injection only; this never records a real runtime PASS."""
 

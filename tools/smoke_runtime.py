@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import subprocess
 import time
 
@@ -128,6 +129,20 @@ def check_pause_menu(control):
         raise RuntimeError("The pause menu still offers World Settings")
     if control("click", opened["id"])["screen"] != "playing":
         raise RuntimeError("Opening to LAN did not return to the game")
+    port = control("lan", "status", timeout=5)["port"]
+    if not isinstance(port, int) or isinstance(port, bool) or not 1 <= port <= 65535:
+        raise RuntimeError(f"Published local server has no valid numeric port: {port!r}")
+    port_token = re.compile(rf"(?<!\d){port}(?!\d)")
+    deadline = time.monotonic() + 5
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("The publication chat did not show the actual local server port")
+        publication_chat = control("chat-log", "8", timeout=remaining)["chat"]
+        if isinstance(publication_chat, list) and all(isinstance(line, str) for line in publication_chat) \
+                and any(port_token.search(line) for line in publication_chat):
+            break
+        time.sleep(min(0.1, max(0, deadline - time.monotonic())))
     control("key", "esc", "tap")
     control("wait-for", "screen", "paused", "--timeout", "5")
     after = rendered_pause()
@@ -142,7 +157,8 @@ def check_pause_menu(control):
     control("key", "esc", "tap")
     control("resume")
     return {"before": opened["label"], "after": reports["label"],
-            "returnedToGame": True, "loopback": "PASS"}
+            "returnedToGame": True, "loopback": "PASS",
+            "localPort": port, "publicationChat": publication_chat}
 
 
 def set_test_language(game, code):

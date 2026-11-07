@@ -250,6 +250,14 @@ def verify_native_notices(report, files, context, name):
             "native notice input/focus and actual chat proof missing")
 
 
+def verify_publication_port(pause):
+    port, chat = pause.get("localPort"), pause.get("publicationChat")
+    require(isinstance(port, int) and not isinstance(port, bool) and 1 <= port <= 65535
+            and isinstance(chat, list) and all(isinstance(line, str) for line in chat)
+            and any(re.search(rf"(?<!\d){port}(?!\d)", line) for line in chat),
+            "actual local publication port was not shown in chat")
+
+
 def verify_startup(record, files, receipt, name):
     require(record["schemaVersion"] == 1, "unknown schema")
     context = context_from_files(files, receipt)
@@ -283,9 +291,11 @@ def verify_startup(record, files, receipt, name):
                 and case["guestFinalMode"] == mode, "guest permission scenario incomplete: " + key)
         require(case["pauseMenu"]["loopback"] == "PASS"
                 and case["pauseMenu"]["returnedToGame"] is True, "one-click publication not verified")
+        verify_publication_port(case["pauseMenu"])
     pause = smoke["pauseMenu"]
     require(pause["loopback"] == "PASS" and pause["returnedToGame"] is True
             and (pause["before"], pause["after"]) == ("Открыть для сети", "Жалобы"), "Russian pause menu not verified")
+    verify_publication_port(pause)
     servers = record.get("serverList")
     require(isinstance(servers, dict) and servers.get("status") == "PASS",
             "ordinary-startup server-list QA missing")
