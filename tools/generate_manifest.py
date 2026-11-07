@@ -137,11 +137,14 @@ def load_library_tool(path):
     return module
 
 
-def stage_release(candidate, out, revision, library_tool):
+def stage_release(candidate, out, revision, library_tool, prepare_qa=False):
     runtime, content, distribution = describe_candidate(candidate)
     if distribution != read_json(RELEASE_LOCK):
         raise ValueError("Candidate differs from the explicitly approved distribution lock")
     files = distribution["files"]
+    from release_acceptance import read_record, verify_startup, verify_update
+    acceptance = read_record()
+    verify_startup(acceptance, files, read_json(candidate / "overlay-receipt.json"), content["name"])
     assets_dir = out / "assets"
     assets_dir.mkdir(parents=True)
     preset = CONTROL_FILES[0]
@@ -167,7 +170,10 @@ def stage_release(candidate, out, revision, library_tool):
         "assets": assets,
         "library": library,
     }
-    (out / "pack-manifest.json").write_bytes(json_bytes(manifest))
+    if not prepare_qa:
+        verify_update(acceptance, manifest)
+    filename = "candidate-manifest.json" if prepare_qa else "pack-manifest.json"
+    (out / filename).write_bytes(json_bytes(manifest))
 
 
 def output_files(root):
@@ -196,6 +202,7 @@ def main():
     action.add_argument("--verify-only", action="store_true")
     action.add_argument("--propose-lock", action="store_true")
     action.add_argument("--propose-inventory", type=pathlib.Path, metavar="SMOKE_JSON")
+    action.add_argument("--prepare-qa", action="store_true", help="Create archives and candidate-manifest.json for update QA, without a publishable manifest")
     args = parser.parse_args()
     if args.propose_inventory is None and args.library_tool is None:
         parser.error("--library-tool is required for packaging")
@@ -217,7 +224,7 @@ def main():
             raise ValueError("Use a fresh distribution path")
         with tempfile.TemporaryDirectory(dir=args.out.parent) as temporary:
             regenerated = pathlib.Path(temporary) / "dist"
-            stage_release(args.candidate, regenerated, args.revision, library_tool)
+            stage_release(args.candidate, regenerated, args.revision, library_tool, args.prepare_qa)
             if args.verify_only:
                 if output_files(regenerated) != output_files(args.out):
                     raise ValueError("Published candidate does not match regenerated distribution")

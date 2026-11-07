@@ -135,12 +135,17 @@ def main():
         value.resolve() for value in (args.client, args.controller, args.resources, args.out)
     )
     output.mkdir()
+    from release_acceptance import execution_context
+    acceptance_context = execution_context(executable.parent.parent)
     report = {"schemaVersion": 1, "client": file_info(executable),
+              "acceptanceContext": acceptance_context,
               "transport": "Windows loopback; real Horizon server; guest T/type/Enter input",
               "twoAccountSteam": "NOT RUN", "status": "RUNNING"}
     try:
         report["commandsAllowed"] = check_pair(executable, controller, resources, output, True)
         report["commandsDenied"] = check_pair(executable, controller, resources, output, False)
+        if execution_context(executable.parent.parent) != acceptance_context:
+            raise RuntimeError("The packaged payload changed during multiplayer QA")
         report["status"] = "PASS"
     except Exception as error:
         report.update(status="FAIL", error=str(error))

@@ -62,6 +62,8 @@ var report = new Dictionary<string, object?>
     ["newManifestSha256"] = Hash(target.Manifest),
     ["oldAssetSha256"] = previousAsset.Sha256,
     ["newAssetSha256"] = targetAsset.Sha256,
+    ["targetFiles"] = target.Files.ToDictionary(pair => pair.Key,
+        pair => new { pair.Value.SizeBytes, pair.Value.Sha256 }),
     ["changedManagedFiles"] = changed.Count,
     ["removedManagedFiles"] = removed.Length,
     ["lockedPath"] = lockedPath,
@@ -292,6 +294,7 @@ sealed record Release(string Manifest, string Id, string RelativePath, string Re
     public static Release Read(string dist)
     {
         var path = Path.Combine(Path.GetFullPath(dist), PortablePackSyncService.PackManifestAssetName);
+        if (!File.Exists(path)) path = Path.Combine(Path.GetFullPath(dist), "candidate-manifest.json");
         using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
         var value = doc.RootElement;
         var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);

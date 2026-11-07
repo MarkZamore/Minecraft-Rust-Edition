@@ -193,6 +193,8 @@ def unpack_runtime(archive, source, destination, lock, include_controller):
 
 
 def verify_overlay(lock, receipt, client, steam_dll):
+    from check_required_layers import verify_proof
+    verify_proof(receipt)
     steam = read_json(STEAM_LOCK)
     recipe = "".join(
         f"{file_info(ROOT / 'integration/steam' / name)['sha256']}  {name}\n"
@@ -241,6 +243,8 @@ def stage_runtime(archives, stage, openssl, client=None, steam_dll=None, receipt
         raise ValueError("Use a fresh staging path")
     lock = verify_upstream(archives, openssl, stage.parent)
     if receipt_path is not None:
+        from check_required_layers import compute_proof, verify_proof
+        verify_proof(read_json(receipt_path), compute_proof(archives, steam_repo / "source/native"))
         verify_overlay(lock, read_json(receipt_path), client, steam_dll)
         verify_pe(bootstrap)
         notices = {"e4steam": steam_notices(steam_repo), "rust": rust_notices()}
@@ -293,6 +297,8 @@ def main():
         if args.verify_only:
             lock = verify_upstream(args.archives, args.openssl, args.stage.parent)
             if args.overlay_receipt is not None:
+                from check_required_layers import compute_proof, verify_proof
+                verify_proof(read_json(args.overlay_receipt), compute_proof(args.archives, args.steam_repo / "source/native"))
                 verify_overlay(lock, read_json(args.overlay_receipt), args.patched_client, args.steam_dll)
                 verify_pe(args.bootstrap)
                 steam_notices(args.steam_repo)

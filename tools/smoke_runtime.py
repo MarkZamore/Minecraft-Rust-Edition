@@ -155,6 +155,8 @@ def set_test_language(game, code):
 
 def smoke(executable, controller, resources, qa, standalone=None, expected_title=None,
           expect_cold=False, reuse_world=False, check_pause=False):
+    from release_acceptance import execution_context
+    acceptance_context = execution_context(executable.parent.parent)
     suffix = "-update" if reuse_world else ""
     first_index = 3 if reuse_world else 1
     second_index = first_index + 1
@@ -166,6 +168,8 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         set_test_language(qa / "game", "en_us")
 
     def create(control):
+        if control("narration")["status"] != "off":
+            raise RuntimeError("The first screen enabled narration")
         control("options", "mods")
         mods = control("ui")
         if {widget["id"] for widget in mods["widgets"]} != {"browse-mods", "open-mod-folder", "done"}:
@@ -201,6 +205,7 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         raise RuntimeError("The reopened world did not retain the saved player state")
     report = {
         "schemaVersion": 1,
+        "acceptanceContext": acceptance_context,
         "client": file_info(executable),
         "preview": file_info(preview),
         "modsPage": mods,
@@ -223,6 +228,15 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         report["bootstrap"] = file_info(standalone[0])
         report["cacheEntries"] = sorted(entry.name for entry in standalone[3].iterdir())
         report["cacheReuse"] = {"coldPrepared": cold, "secondLaunchReused": True, "receipt": first_receipt}
+        if cold:
+            receipt_data = json.loads(cache_receipt.read_text(encoding="utf-8"))
+            report["coldPreparation"] = {
+                "status": "PASS", "narration": "off", "bootstrap": file_info(standalone[0]),
+                "preparer": file_info(executable.parent / "horizon-prepare.exe"),
+                "researchLock": file_info(executable.parent / "research-lock.json"),
+                "resourceReceipt": first_receipt, "resourceFiles": len(receipt_data["files"]),
+                "selfContainedInputs": standalone[1] is None and standalone[2] is None,
+            }
     if expected_title is not None:
         report["windowTitle"] = expected_title
     if check_pause:
@@ -241,6 +255,8 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         report["pauseMenu"] = run_client(
             executable, controller, prepared, qa, second_index + 1, check_reopened_pause,
         )
+    if execution_context(executable.parent.parent) != acceptance_context:
+        raise RuntimeError("The packaged payload changed during Windows QA")
     (qa / f"smoke{suffix}.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
     )

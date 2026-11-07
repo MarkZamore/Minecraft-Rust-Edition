@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "recordedUtc": "2026-11-07T20:19:29.693558+00:00",
+  "scope": "QA/source protection only; no new game, launcher or pack-manifest published",
+  "runtimeRevisionUnchanged": "bb8302b206ed158e85aefead08bb78cd96606ba2",
+  "checks": {
+    "unitFaultInjection26": "PASS",
+    "signedPinnedSourceAnd11LayerGroups": "PASS",
+    "exactPublishedCandidateGates": "PASS",
+    "qaHostCompilation": "PASS",
+    "newWindowsGameRun": "NOT RUN: runtime unchanged",
+    "liveSteam": "NOT RUN: deferred by user"
+  },
+  "sourceBaseWorktree": "Unchanged clean bb8302b, retained for Mods acceptance",
+  "runtimeInputsUnchanged": [
+    "integration/steam/apply_horizon_overlay.py",
+    "integration/steam/lanmc_steam.rs",
+    "tools/overlay-receipt.json",
+    "tools/distribution-lock.json",
+    "tools/upstream-lock.json",
+    "tools/steam-lock.json",
+    "portable-pack.json"
+  ]
+}
