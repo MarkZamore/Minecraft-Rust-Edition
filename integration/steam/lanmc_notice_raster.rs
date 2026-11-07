@@ -57,7 +57,8 @@ fn geometry(snapshot: &Snapshot, viewport_width: u32) -> Result<Geometry, String
     if width > MAX_SIDE as f64
         || height > MAX_SIDE as f64
         || font > MAX_SIDE as f64
-        || width * height * 4.0 * snapshot.notices.len().max(1) as f64 > MAX_TOTAL_BYTES as f64
+        // The output cards and one reusable GDI mask are live together.
+        || width * height * 4.0 * (snapshot.notices.len() + 1) as f64 > MAX_TOTAL_BYTES as f64
     {
         return Err("Notice raster exceeds its bounded canvas".into());
     }
@@ -450,9 +451,10 @@ mod windows {
                     0x0020 | 0x0800 | 0x8000,
                 )
             };
+            let flushed = unsafe { GdiFlush() } != 0;
             drop(selected);
             drop(font);
-            if result == 0 || unsafe { GdiFlush() } == 0 {
+            if result == 0 || !flushed {
                 return Err("Could not rasterize launcher notice text".into());
             }
             Ok(())
