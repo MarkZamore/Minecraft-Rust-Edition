@@ -359,6 +359,23 @@ class RequiredLayersTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
                     guard.validate_patched_sources(broken)
 
+    def test_notice_modules_left_on_disk_cannot_be_orphaned_from_runtime(self):
+        for filename, old, new in [
+            ("lanmc_notices.rs", b"service: state::service(),", b"service: None,"),
+            ("lanmc_notice_state.rs", b"protocol::parse_snapshot(style, notices, now)",
+             b"unchecked_snapshot(style, notices, now)"),
+            ("lanmc_notice_state.rs", b"raster::rasterize(&snapshot, width)", b"old_raster(&snapshot, width)"),
+            ("lanmc_notice_render.rs", b"layout::layout(dimensions, &sizes, motion, now_ms)",
+             b"scaled_twice(dimensions, &sizes, motion, now_ms)"),
+        ]:
+            path = "crates/horizon-client-render/src/gfx/" + filename
+            with self.subTest(path=path):
+                broken = dict(self.patched)
+                self.assertIn(old, broken[path])
+                broken[path] = broken[path].replace(old, new)
+                with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+                    guard.validate_patched_sources(broken)
+
 
 if __name__ == "__main__":
     unittest.main()
