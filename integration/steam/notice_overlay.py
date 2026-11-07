@@ -66,6 +66,22 @@ def apply(patched: dict[str, bytes], here: Path) -> None:
          "Err(back) => (back.encoder, back.surface, back.after, back.after_present),")
     edit("gfx.rs", "            (encoder, surface_frame, None)\n",
          "            (encoder, surface_frame, None, self.lanmc_notices.callback())\n")
+    edit("gfx.rs", "        let mut fg_made = false;\n",
+         "        let mut fg_made = false;\n        let mut notice_generated_callback = None;\n")
+    edit("gfx.rs", """                self.draw_overlay(&mut encoder, frame, &generated_view, generated, &overlay);
+            }
+        } else if scaled.is_some() {""", """                self.draw_overlay(&mut encoder, frame, &generated_view, generated, &overlay);
+                notice_generated_callback = self.lanmc_notices.callback();
+            } else if frame_gen::generated_only() && self.surface.is_some() {
+                // The debug presenter may show the initial copied generated
+                // frame too. Its launcher UI is independent of author HUD debug.
+                self.lanmc_notices.draw(
+                    &self.device, &self.queue, &mut encoder, &generated_view,
+                    [self.config.width, self.config.height], self.frame_format,
+                );
+                notice_generated_callback = self.lanmc_notices.callback();
+            }
+        } else if scaled.is_some() {""")
     edit("gfx.rs", "            self.queue.present(surface_frame);\n",
          """            self.queue.present(surface_frame);
             if let Some(callback) = after_present {
@@ -73,7 +89,12 @@ def apply(patched: dict[str, bytes], here: Path) -> None:
             }
 """)
     edit("gfx.rs", "self.frame_gen.present(real, generated, fg_made);",
-         "self.frame_gen.present(real, generated, fg_made, after_present);")
+         """let after_present = if frame_gen::generated_only() {
+                notice_generated_callback
+            } else {
+                after_present
+            };
+            self.frame_gen.present(real, generated, fg_made, after_present);""")
 
     edit("gfx/submit.rs", "    pub after: Option<AfterSubmit>,\n",
          """    pub after: Option<AfterSubmit>,
