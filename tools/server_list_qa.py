@@ -238,7 +238,11 @@ def check_server_views(control, game, original, desktop_keys):
         raise RuntimeError("The saved-server editor is not accessible")
     click({"Cancel"}, "button")
     click({"Direct Connection"}, "button")
-    field = widget(ui(), {"Server Address"}, "field")
+    # The author records this edit box by stable ID without a label in the
+    # control tree; its separately drawn "Server Address" text is not a widget.
+    field = widget_id(ui(), "field-0")
+    if field["kind"] != "field" or not field["enabled"]:
+        raise RuntimeError("The direct-address edit box is not accessible")
     control("click", field["id"])
     desktop_keys.press("Ctrl+A")
     desktop_keys.press("Backspace")
