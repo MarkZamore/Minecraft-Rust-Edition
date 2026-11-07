@@ -19,21 +19,37 @@ def main():
     args = parser.parse_args()
     upload = (args.upstream / "crates/horizon-client-render/src/gfx/upload.rs").resolve(strict=True)
     backend = (Path(__file__).resolve().parents[1] / "integration/steam/lanmc_notices.rs").resolve(strict=True)
+    platform = backend.parent / "notice-platform/src/lib.rs"
+    engine_lib = args.upstream / "crates/horizon-client-render/src/lib.rs"
+    if "#![forbid(unsafe_code)]" not in engine_lib.read_text(encoding="utf-8"):
+        raise ValueError("The native renderer's original unsafe-code prohibition must remain")
     deps = args.deps.resolve(strict=True)
     output = args.out.resolve()
     output.mkdir()
     harness = output / "notice_renderer_check.rs"
     metadata = output / "notice_renderer_check.rmeta"
+    platform_library = output / "liblanmc_notice_platform.rlib"
+    platform_result = subprocess.run([
+        "rustc", "--crate-name", "lanmc_notice_platform", "--crate-type=rlib",
+        "--edition=2024", "-C", "target-feature=+crt-static", str(platform),
+        "-o", str(platform_library),
+    ], capture_output=True, text=True, encoding="utf-8")
+    (output / "platform-compiler.log").write_text(platform_result.stdout + platform_result.stderr, encoding="utf-8")
+    if platform_result.returncode:
+        raise SystemExit(platform_result.stderr)
     # #[path] uses exact source files, including the real staging upload API.
     harness.write_text(
-        "#![allow(dead_code)]\nmod gfx {\n"
+        "#![allow(dead_code)]\n#![forbid(unsafe_code)]\nmod gfx {\n"
         + f"#[path = {json.dumps(upload.as_posix())}] pub mod upload;\n"
         + f"#[path = {json.dumps(backend.as_posix())}] mod notices;\n}}\n",
         encoding="utf-8",
     )
     arguments = ["rustc", "--edition=2024", "--crate-type=lib", "--emit=metadata",
-                 "-L", f"dependency={deps}", str(harness), "-o", str(metadata)]
-    selected = {}
+                 "-C", "target-feature=+crt-static", "-L", f"dependency={deps}",
+                 "--extern", f"lanmc_notice_platform={platform_library}",
+                 str(harness), "-o", str(metadata)]
+    selected = {"lanmc_notice_platform": {"path": str(platform_library),
+                "sha256": hashlib.sha256(platform_library.read_bytes()).hexdigest()}}
     for name in ("wgpu", "bytemuck"):
         libraries = list(deps.glob(f"lib{name}-*.rlib"))
         if not libraries:
@@ -51,7 +67,7 @@ def main():
         str(path): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in (backend, *(backend.with_name(name) for name in (
             "lanmc_notice_protocol.rs", "lanmc_notice_state.rs", "lanmc_notice_raster.rs",
-            "lanmc_notice_render.rs", "lanmc_notice_layout.rs")), upload)
+            "lanmc_notice_render.rs", "lanmc_notice_layout.rs")), upload, platform, engine_lib)
     }
     report["rustc"] = subprocess.check_output(["rustc", "--version"], text=True).strip()
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

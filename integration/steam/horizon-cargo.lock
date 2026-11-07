@@ -1569,6 +1569,7 @@ dependencies = [
 name = "horizon-client-render"
 version = "0.1.0"
 dependencies = [
+ "lanmc_notice_platform",
  "ab_glyph",
  "base64 0.22.1",
  "bytemuck",
@@ -5789,6 +5790,10 @@ checksum = "29ce2c8a9384ad323cf564b67da86e21d3cfdff87908bc1223ed5c99bc792713"
 dependencies = [
  "zune-core",
 ]
+
+[[package]]
+name = "lanmc_notice_platform"
+version = "0.1.0"
 
 [[package]]
 name = "lanmc_steam_native"

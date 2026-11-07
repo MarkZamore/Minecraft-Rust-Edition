@@ -587,6 +587,7 @@ def recipe_sha():
     return tree_sha(index({name: (HERE / name).read_bytes() for name in (
         Path(__file__).name, "lanmc_steam.rs", "lanmc_skins.rs", "lanmc_presentation.rs",
         "notice_overlay.py", *NOTICE_OVERLAY.COPY_FILES,
+        *(f"notice-platform/{name}" for name in NOTICE_OVERLAY.PLATFORM_FILES),
         "horizon-cargo.lock", "rust-logo/artwork-lock.json", "rust-logo/render.py",
         "rust-logo/NOTICE.txt", "rust-logo/rust-logo.svg", "rust-logo/rust-logo.png",
         "rust-logo/rust-edition.ico",

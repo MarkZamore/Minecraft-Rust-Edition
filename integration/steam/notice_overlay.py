@@ -8,27 +8,35 @@ from pathlib import Path
 
 
 RENDER = "crates/horizon-client-render/src/"
+RENDER_MANIFEST = "crates/horizon-client-render/Cargo.toml"
 SOURCES = frozenset(RENDER + name for name in (
     "gfx.rs", "gfx/compositor.rs", "gfx/submit.rs", "gfx/frame_gen.rs",
     "gfx/gpu_culling.rs", "gfx/pack_center_depth.rs",
-))
+)) | {RENDER_MANIFEST}
 COPY_FILES = (
     "lanmc_notices.rs", "lanmc_notice_protocol.rs", "lanmc_notice_state.rs",
     "lanmc_notice_raster.rs", "lanmc_notice_render.rs", "lanmc_notice_layout.rs",
 )
+PLATFORM_FILES = ("Cargo.toml", "src/lib.rs")
 
 
 def apply(patched: dict[str, bytes], here: Path) -> None:
-    def edit(name: str, old: str, new: str, count: int = 1) -> None:
-        path = RENDER + name
+    def replace(path: str, old: str, new: str, count: int = 1) -> None:
         original = patched[path]
         before, after = old.encode("utf-8"), new.encode("utf-8")
         if original.count(before) != count:
             raise ValueError(f"Mandatory launcher-notice anchor missing or ambiguous in {path}: {old[:100]!r}")
         patched[path] = original.replace(before, after)
 
+    def edit(name: str, old: str, new: str, count: int = 1) -> None:
+        replace(RENDER + name, old, new, count)
+
     if not SOURCES.issubset(patched):
         raise ValueError("Mandatory launcher-notice source inputs are absent")
+    replace("Cargo.toml", '    "crates/lanmc-steam-native",\n',
+            '    "crates/lanmc-steam-native",\n    "crates/lanmc-notice-platform",\n')
+    replace(RENDER_MANIFEST, "[dependencies]\n",
+            '[dependencies]\nlanmc_notice_platform = { path = "../lanmc-notice-platform" }\n')
     edit("gfx.rs", "pub mod submit;", "pub mod submit;\nmod lanmc_notices;")
     edit("gfx.rs", "    first_frame: FirstFrame,\n",
          "    first_frame: FirstFrame,\n    lanmc_notices: lanmc_notices::Overlay,\n")
@@ -202,3 +210,8 @@ def apply(patched: dict[str, bytes], here: Path) -> None:
         if path in patched:
             raise ValueError(f"Unexpected launcher-notice source already present: {path}")
         patched[path] = (here / filename).read_bytes()
+    for filename in PLATFORM_FILES:
+        path = "crates/lanmc-notice-platform/" + filename
+        if path in patched:
+            raise ValueError(f"Unexpected launcher-notice platform source already present: {path}")
+        patched[path] = (here / "notice-platform" / filename).read_bytes()
