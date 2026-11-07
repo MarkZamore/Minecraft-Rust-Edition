@@ -1,0 +1,14 @@
+{
+  "revision": "7ea032fa0e5b38ecc70e35bb00c10d0cb995ee37",
+  "archivesReadback": "PASS",
+  "urlFieldAbsent": "PASS",
+  "runtimeAndManagedFilesUnchanged": true,
+  "releaseTests": 551,
+  "libraryTests": 19,
+  "gameRuntime": "NOT RUN, metadata-only change",
+  "manifestReadback": "PASS",
+  "launcherRelease": 468,
+  "launcherCommit": "53ca4e2584afd84c0b5a0808720f7a2835feb2f9",
+  "ci": "PASS",
+  "websiteUrlPresent": false
+}
