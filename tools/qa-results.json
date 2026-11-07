@@ -187,5 +187,28 @@
     "status": "SENT",
     "acceptedSourceRevision": "3bf42761e1f9302ed19820d2a010b78e2c3748db",
     "scope": "Apply applicable shared fixes to the separate 37-mod client; keep closed FPS/flicker scope"
+  },
+  "cleanup": {
+    "schemaVersion": 1,
+    "status": "PASS",
+    "verifiedAtUtc": "2026-11-07T23:51:03.414302+00:00",
+    "owner": "codex/Edition-repairs",
+    "removedBytes": 6929617141,
+    "retainedBytes": 246765669,
+    "evidenceBytes": 29349797,
+    "heldForMods": {
+      "archives-2eb": 90741533,
+      "upstream/horizon-2ebf00a": 126674339
+    },
+    "holdDeadline": "2026-11-09",
+    "holdReason": "Mods chat verifies its completed corrective build against these immutable inputs",
+    "processesRemaining": 0,
+    "cleanupErrors": [],
+    "workspaceStorage": {
+      "uniqueGiB": 8.351,
+      "budgetGiB": 50,
+      "withinBudget": true
+    },
+    "requiredResults": "13 native-notice PNGs plus compact source/build/acceptance/public-delivery records"
   }
 }
