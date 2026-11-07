@@ -193,7 +193,11 @@ class NativeNoticeEvidenceTests(unittest.TestCase):
             "tornSnapshot": {"createdUnixMs": 10000, "sentUnixMs": 10010,
                              "invalidSnapshots": [first, second], "expired": observed(17100, 0)},
             "futureNotice": {"queuedUnixMs": 18000, "createdUnixMs": 19500, "sentUnixMs": 18010}}
-        ui = {"screen": "title", "widgets": [{"id": "singleplayer"}]}
+        ui = {"screen": "title", "widgets": [
+            {"id": "singleplayer", "label": "Singleplayer", "enabled": True},
+            {"id": "multiplayer", "label": "Multiplayer", "enabled": True}]}
+        self.report["titleUiBefore"] = copy.deepcopy(ui)
+        self.report["titleUiAfter"] = copy.deepcopy(ui)
         self.report["dpi"] = {"oneWidth": 240, "twoWidth": 480, "guiScale": "guiScale:2",
                               "guiScaleBefore": "guiScale:2", "guiScaleAfter": "guiScale:2",
                               "uiBefore": copy.deepcopy(ui), "uiAfter": copy.deepcopy(ui)}
@@ -230,6 +234,11 @@ class NativeNoticeEvidenceTests(unittest.TestCase):
             "foreign-foreground": lambda r: r.update(foregroundBeforeChat=99, foregroundAfterChat=99),
             "chat-captured-another-window": lambda r: next(c for c in r["captures"] if c["file"] == "world-chat-input-with-card.png")["window"].update(hwnd=99),
             "no-real-chat": lambda r: r.update(technicalChat=[]),
+            "title-proof-missing": lambda r: r.pop("titleUiBefore"),
+            "title-widgets-changed": lambda r: r["titleUiAfter"]["widgets"].pop(),
+            "mods-mislabeled-as-title": lambda r: r.update(
+                titleUiBefore={"screen": "title", "widgets": [{"id": "browse-mods", "enabled": True}]},
+                titleUiAfter={"screen": "title", "widgets": [{"id": "browse-mods", "enabled": True}]}),
         }
         for name, mutate in mutations.items():
             with self.subTest(mutation=name):

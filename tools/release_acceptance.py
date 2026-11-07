@@ -66,6 +66,16 @@ def _notice_rect(value):
             and value[2] > value[0] and value[3] > value[1])
 
 
+def _notice_main_title(value):
+    if not isinstance(value, dict) or value.get("screen") != "title" \
+            or not isinstance(value.get("widgets"), list) \
+            or not all(isinstance(widget, dict) for widget in value["widgets"]):
+        return False
+    labels = {widget.get("label") for widget in value["widgets"] if widget.get("enabled") is True}
+    return {"Singleplayer", "Multiplayer"}.issubset(labels) and not any(
+        widget.get("id") in {"browse-mods", "open-mod-folder", "done"} for widget in value["widgets"])
+
+
 def verify_native_notices(report, files, context, name):
     require(isinstance(report, dict) and report.get("schemaVersion") == 1
             and report.get("status") == "PASS", "native notice runtime QA missing")
@@ -218,6 +228,10 @@ def verify_native_notices(report, files, context, name):
             and isinstance(dpi["uiBefore"].get("widgets"), list) and dpi["uiBefore"]["widgets"]
             and dpi["uiBefore"] == dpi.get("uiAfter"),
             "native notice DPI changed game GUI scale/widgets or lacks before/after observations")
+    title_before, title_after = report.get("titleUiBefore"), report.get("titleUiAfter")
+    require(_notice_main_title(title_before) and _notice_main_title(title_after)
+            and title_before == title_after == dpi["uiBefore"],
+            "native notice title proof is not unchanged actual main title widgets")
     fullscreen = by_name["fullscreen-world.png"]["window"]
     require(_notice_rect(fullscreen.get("monitor"))
             and all(abs(a-b) <= 2 for a, b in zip(fullscreen["client"], fullscreen["monitor"])),

@@ -46,10 +46,27 @@ def properties(values):
     return ("".join(f"{key}={escape(value)}\n" for key, value in values.items())).encode("utf-8")
 
 
+def retry_file_lock(operation, timeout=1):
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            return operation()
+        except OSError as error:
+            if (not isinstance(error, PermissionError) and getattr(error, "winerror", None) not in (32, 33)) \
+                    or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.05)
+
+
 def atomic_write(path, data):
     temporary = path.with_name(path.name + ".qa.tmp")
-    temporary.write_bytes(data)
-    os.replace(temporary, path)
+    try:
+        # A Windows reader may briefly deny replacement. Retry these same
+        # already serialized bytes, preserving the notice's original lifetime.
+        temporary.write_bytes(data)
+        retry_file_lock(lambda: os.replace(temporary, path))
+    finally:
+        retry_file_lock(lambda: temporary.unlink(missing_ok=True))
 
 
 def snapshot(count, created=None, dpi=1):
@@ -143,12 +160,21 @@ def registered_output(path):
 def remove_fixture(path, qa):
     if path.parent.resolve() != qa.resolve() or path.name not in ("game", "session", "empty-profile"):
         raise ValueError("Refusing cleanup outside owned technical fixture")
-    for directory, names, files in os.walk(path, followlinks=False):
-        for name in [*names, *files]:
-            item = Path(directory) / name
-            if item.is_symlink() or (hasattr(item, "is_junction") and item.is_junction()):
-                raise ValueError("Refusing cleanup through a fixture link")
-    shutil.rmtree(path)
+    def remove():
+        if not path.exists():
+            return
+        if path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction()):
+            raise ValueError("Refusing cleanup through a fixture link")
+        for directory, names, files in os.walk(path, followlinks=False):
+            for name in [*names, *files]:
+                item = Path(directory) / name
+                if item.is_symlink() or (hasattr(item, "is_junction") and item.is_junction()):
+                    raise ValueError("Refusing cleanup through a fixture link")
+        shutil.rmtree(path)
+
+    # The bootstrap can exit before its killed child releases its working
+    # directory. Recheck the exact owned path on every bounded cleanup retry.
+    retry_file_lock(remove, timeout=5)
 
 
 def process_ancestry(renderer_pid, root_pid, client):
@@ -380,17 +406,32 @@ def check_mods(session):
     # Opening an options subpage pushes Mods above Main. Leave both pages so
     # the following title/world checks measure the real screen, not its options.
     for _ in range(3):
-        if session.control("ui")["screen"] != "options":
-            break
-        session.control("click", "done")
-    else:
+        page = session.control("ui")
+        done = [item for item in page["widgets"] if item["id"] == "done"]
+        if not done:
+            return sorted(ids), ui_shape(page)
+        if len(done) != 1 or not done[0]["enabled"]:
+            raise AssertionError("The technical Mods inventory has no usable Done action")
+        session.control("click", done[0]["id"])
+    page = session.control("ui")
+    if any(item["id"] == "done" for item in page["widgets"]):
         raise AssertionError("The technical Mods inventory did not return from options")
-    return sorted(ids)
+    return sorted(ids), ui_shape(page)
+
+
+def require_main_title(page):
+    widgets = page.get("widgets", [])
+    labels = {item.get("label") for item in widgets if item.get("enabled") is True}
+    if page.get("screen") != "title" or not {"Singleplayer", "Multiplayer"}.issubset(labels) \
+            or any(item.get("id") in {"browse-mods", "open-mod-folder", "done"} for item in widgets):
+        raise AssertionError("Title proof is not the actual main title screen")
 
 
 def exercise(session, report):
     checks = report["checks"]
-    initial_mods = check_mods(session)
+    initial_mods, title_ui = check_mods(session)
+    require_main_title(title_ui)
+    report["titleUiBefore"] = title_ui
     expected_title = json.loads((session.candidate / "native/presentation.json").read_text(encoding="utf-8"))["name"]
     if session.window.inspect(session.renderer_pid)["title"] != expected_title:
         raise AssertionError("The exact native child has the wrong window title")
@@ -475,6 +516,10 @@ def exercise(session, report):
                      "guiScale": gui_before, "guiScaleBefore": gui_before, "guiScaleAfter": gui_after,
                      "uiBefore": ui_before, "uiAfter": ui_after}
     checks["dpiOnceAndGameGuiScaleUnchanged"] = "PASS"
+    report["titleUiAfter"] = ui_shape(session.control("ui"))
+    require_main_title(report["titleUiAfter"])
+    if report["titleUiAfter"] != title_ui:
+        raise AssertionError("Native notices changed the actual main title widgets")
 
     session.send(0)
     session.wait_heartbeat(0)
@@ -542,7 +587,7 @@ def exercise(session, report):
     if cleared["timestampUnixMs"] <= title["heartbeatAfter"]["timestampUnixMs"]:
         raise AssertionError("An empty notice queue did not retain fresh presentation heartbeats")
     checks["emptyQueueFreshHeartbeat"] = "PASS"
-    if check_mods(session) != initial_mods:
+    if check_mods(session)[0] != initial_mods:
         raise AssertionError("Native mod inventory changed after displaying notices")
     if (session.directory / "session.json").read_bytes() != session.sentinel:
         raise AssertionError("Native frontend rewrote launcher-owned session.json")
