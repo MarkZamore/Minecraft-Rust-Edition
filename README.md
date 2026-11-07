@@ -41,7 +41,7 @@ python tools/stage_runtime.py --archives $archives --stage $candidate `
 ```
 
 - Проверьте настоящий клиент с `tools/smoke_runtime.py`, автономный bootstrap и обычный запуск из LANMinecraft. При изменении bootstrap `--reuse-world` повторяет проверку на техническом мире из предыдущего прогона. `tools/generate_manifest.py --propose-inventory $smokeJson --candidate $candidate` связывает пустую страницу загруженных модов и SHA-256 файлов `native/` для `library/loaded-mods.json`. Превью `library/preview.jpg` берите из реального технического мира проверенного клиента. После приёмки перенесите четыре файла `library` в уже подготовленный candidate и положите проверенную квитанцию overlay в `tools/overlay-receipt.json`.
-  Флаг `--check-pause-menu` проверяет переход «Открыть для сети» → «Жалобы» тем же клиентом через локальный loopback. Для проверки самостоятельной подготовки передайте `--bootstrap` и пустой `--cache`, опустив `--minecraft` и `--java`. Сценарий изолирует поиск внешних установок. Проверка подключения двух Steam-аккаунтов выполняется отдельно.
+  Флаг `--check-pause-menu` проверяет возвращение в игру после «Открыть для сети» и переход к «Жалобы» при повторном открытии меню тем же клиентом через локальный loopback. Для проверки самостоятельной подготовки передайте `--bootstrap` и пустой `--cache`, опустив `--minecraft` и `--java`. Сценарий изолирует поиск внешних установок. Проверка подключения двух Steam-аккаунтов выполняется отдельно.
 - `tools/generate_manifest.py --propose-lock --candidate $candidate --library-tool $libraryTool` выводит проект distribution lock для явной проверки. После проверки закрепите его в `tools/distribution-lock.json`. Обычная генерация повторно проверяет точный состав, исходный рецепт и наблюдение модов. Она принимает чистый Git checkout указанного коммита.
 
 ```powershell
@@ -66,3 +66,7 @@ python tools/generate_manifest.py --candidate $candidate --out $dist `
 Тег зеркала закрепляет точный исходный снимок Horizon. Обновление использует новый тег. Для `--archives` загрузите из него два архива. `stage_runtime.py` сверяет подпись Ed25519 по исходному тегу и проверяет архивы по закреплённым размерам и SHA-256. Зеркало содержит только исходные файлы Horizon. Подготовленные ресурсы Minecraft, технические миры и итоговые файлы LANMinecraft находятся за пределами этого выпуска.
 
 Оригинальный код Horizon распространяется по MIT. Лицензия и уведомления о сторонних компонентах входят в `native`, атрибуция логотипа Rust находится в `native/third_party/rust/NOTICE.txt`. Minecraft и его игровые материалы принадлежат Mojang и Microsoft.
+
+### Команды гостей и Steam
+
+`tools/steam_runtime_qa.py --client $client --controller $controller --resources $resources --out $qa` запускает два настоящих Windows-клиента в отдельных технических профилях. Проверяет однокнопочную публикацию, отключённого диктора, выполнение `/gamemode survival` и `/gamemode creative` гостем при разрешённых командах владельца и отказ в мире без команд. Результат loopback не подтверждает Steam-приглашения двух аккаунтов. Для них отдельно проверяют Shift+Tab, принятие приглашения, подключение и повторное открытие мира с прежним профилем.

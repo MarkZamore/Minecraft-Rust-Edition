@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "recordedUtc": "2026-11-07T18:46:54.235306+00:00",
+  "upstreamCommit": "6560641ba51a452f6bc2407baa4eb1b3be517ca8",
+  "steamTransportCommit": "faa25063441b83f589caab505dfefda8932e4fe4",
+  "platform": "Windows x64, Intel Arc B390 Vulkan",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "client": {
+    "sizeBytes": 92301824,
+    "sha256": "1ef39eed0270d0cdfe02c590fed6654c35ec9a39bad0ac42394822dfdbcdf4db"
+  },
+  "bootstrap": {
+    "sizeBytes": 2885120,
+    "sha256": "41e8adeb1560a4cb14d3809f225505edbbf581449c11fb638ec6b597ed75cf11"
+  },
+  "bootstrapUnchanged": true,
+  "checks": {
+    "signedUpstreamAndValveDll": "PASS",
+    "exactSourceRecipeAndPeIcon": "PASS",
+    "autonomousColdPreparation": "PASS",
+    "exactFinalClientSaveReopen": "PASS",
+    "bootstrapResourceReuse": "PASS",
+    "windowTitleMinecraftRustEdition": "PASS",
+    "nativeModsPageEmptyWithAuthorBrowseButton": "PASS",
+    "narratorOffAndOnboardingDisabled": "PASS",
+    "pauseReturnsToGameAndReportsSameSlot": "PASS",
+    "guestCommandsViaTTypeEnterAllowed": "PASS",
+    "guestCommandsDeniedWithoutCheats": "PASS",
+    "sharedNativeBridgeUnitTests": "PASS",
+    "identityAndStaleChatActionTests": "PASS",
+    "launcherCompactRelease551": "PASS",
+    "liveSteamOverlayAndTwoAccounts": "NOT RUN (user chose Steam later)"
+  },
+  "nativeUnitCases": 10,
+  "packIdentityActionCases": 3,
+  "launcherReleaseCases": 551,
+  "launcherReleaseSkipped": 0,
+  "preparedReceipt": {
+    "sizeBytes": 3564115,
+    "sha256": "80a0e0493d0ee874b96670f00d63c3e06b104895a79c87f3f3a515d869432f9a"
+  },
+  "preparedFiles": 28178,
+  "resourcePreparationScope": "Cold autonomous resource preparation using signed original preparer; gameplay acceptance is separate",
+  "guestCommands": {
+    "allowed": {
+      "result": "PASS",
+      "hostAllowsCommands": true,
+      "pauseMenu": {
+        "before": "Open to LAN",
+        "after": "Player Reporting",
+        "returnedToGame": true,
+        "loopback": "PASS"
+      },
+      "guestFinalMode": "creative",
+      "guestChat": [
+        "Set own game mode to Creative Mode",
+        "Set own game mode to Survival Mode"
+      ]
+    },
+    "denied": {
+      "result": "PASS",
+      "hostAllowsCommands": false,
+      "pauseMenu": {
+        "before": "Open to LAN",
+        "after": "Player Reporting",
+        "returnedToGame": true,
+        "loopback": "PASS"
+      },
+      "guestFinalMode": "survival",
+      "guestChat": [
+        "gamemode creative<--[HERE]",
+        "Unknown or incomplete command. See below for error"
+      ]
+    }
+  },
+  "pauseMenu": {
+    "before": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0434\u043b\u044f \u0441\u0435\u0442\u0438",
+    "after": "\u0416\u0430\u043b\u043e\u0431\u044b",
+    "returnedToGame": true,
+    "loopback": "PASS"
+  },
+  "savedOwnerState": {
+    "dimension": "minecraft:overworld",
+    "gamemode": "spectator"
+  },
+  "savedPosition": [
+    26.5,
+    94.0,
+    -8.5
+  ],
+  "reopenedPosition": [
+    26.5,
+    94.0,
+    -8.5
+  ],
+  "websiteUrlAbsent": true,
+  "aboutAndSummaryPreservedFromMain": true,
+  "launcherPackSpecificExceptions": [],
+  "pending": "Exact archive installation/update QA and independent public readback follow packaging"
+}

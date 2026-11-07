@@ -97,7 +97,7 @@ def observed_inventory(candidate, report_path):
         report["client"] != files["native/horizon-client.exe"] or
         report["bootstrap"] != files[descriptor["nativeRuntime"]["executable"]] or
         report["windowTitle"] != presentation["name"] or
-        {item["id"] for item in report["modsPage"]["widgets"]} != {"open-mod-folder", "done"}
+        {item["id"] for item in report["modsPage"]["widgets"]} != {"browse-mods", "open-mod-folder", "done"}
     ):
         raise ValueError("Smoke report does not prove the packaged native client and empty Mods page")
     return {

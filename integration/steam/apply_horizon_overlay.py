@@ -11,11 +11,11 @@ import tarfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-COMMIT = "66f3981f522b24c250b21523a70080965b940424"
-SOURCE_SHA = "3e3f5bf9df5f86b3c72a950f0869f09d1178814ac101d5f9af849b5d70c0fef4"
-SOURCE_SIZE = 44_596_081
-TRANSPORT_COMMIT = "a4a362c313e99386dd46c02d7d5fd67aa6057948"
-TRANSPORT_SHA = "67cd60fbca1ef441aa02e4408553f16cb676191809a0930bcaa7b42613462865"
+COMMIT = "6560641ba51a452f6bc2407baa4eb1b3be517ca8"
+SOURCE_SHA = "d7e3941b1fa0d9a779a0ed050e5df913ba9bdd6a2c15edd569d276b5e3af54c6"
+SOURCE_SIZE = 46_963_717
+TRANSPORT_COMMIT = "faa25063441b83f589caab505dfefda8932e4fe4"
+TRANSPORT_SHA = "0113c3695a06e2aee1cd0a520cd8bce096b2a85d40f5fd565d515af00204a698"
 STEAM_DLL_SIZE = 317_080
 STEAM_DLL_SHA = "eb17909a76668cf9ae0b92a618a34a50f6c73d3a6787cb4dd8ce36a8b10bfb75"
 PREFIX = f"horizon-{COMMIT[:7]}/"
@@ -31,7 +31,7 @@ SOURCE_PATHS = {
         "entry.rs", "lib.rs", "client_lib.rs", "game.rs", "game/no_resources.rs",
         "game/split/windows.rs", "game/integrated.rs", "game/lan.rs",
         "game/remote.rs", "game/screens.rs", "game/friends.rs", "game/dedicated.rs",
-        "game/lan_screen.rs", "lan/mod.rs",
+        "game/lan_screen.rs", "game/chat.rs", "lan/mod.rs",
         "lan/conn.rs", "lan/discovery.rs", "multiplayer.rs",
     )),
 }
@@ -67,7 +67,7 @@ def edit(files, path, old, new, count=1):
     old, new = old.encode("utf-8"), new.encode("utf-8")
     original = files[path]
     if original.count(old) != count:
-        raise ValueError(f"Exact overlay anchor missing or ambiguous in {path}")
+        raise ValueError(f"Exact overlay anchor missing or ambiguous in {path}: {old[:160]!r}")
     files[path] = original.replace(old, new, count)
 
 
@@ -85,17 +85,18 @@ def changes(inputs, transport):
          "[dependencies]\n",
          '[dependencies]\nlanmc_steam_native = { path = "../lanmc-steam-native" }\n')
     src("lib.rs", "pub mod entry;", "pub mod entry;\nmod lanmc_skins;\nmod lanmc_presentation;")
-    edit(patched, CLIENT + "build.rs", 'let ico = format!("{dir}/../../packaging/icons/horizon.ico");',
-         'let ico = format!("{dir}/../../packaging/icons/rust-edition.ico");')
+    edit(patched, CLIENT + "build.rs", '.join("packaging/icons/horizon.ico");',
+         '.join("packaging/icons/rust-edition.ico");')
     edit(patched, CLIENT + "build.rs",
          "//! Embeds Horizon's icon (`packaging/icons/horizon.ico`) in the Windows executables, as icon",
          "//! Embeds the pack icon (`packaging/icons/rust-edition.ico`) in the Windows executables, as icon")
     for path, count in (("game.rs", 2), ("game/no_resources.rs", 1)):
-        src(path, '.with_title("Horizon")\n            .with_window_icon(horizon_client::window::icon())',
-            '.with_title(crate::lanmc_presentation::title("Horizon"))\n'
-            '            .with_window_icon(crate::lanmc_presentation::icon())', count=count)
-    src("game/split/windows.rs", ".with_window_icon(horizon_client::window::icon())",
-        ".with_window_icon(crate::lanmc_presentation::icon())")
+        src(path, 'horizon_client::window::with_horizon_icon(\n'
+            '            Window::default_attributes().with_title("Horizon"),\n        )',
+            'Window::default_attributes().with_title(crate::lanmc_presentation::title("Horizon"))'
+            '.with_window_icon(crate::lanmc_presentation::icon())', count=count)
+    src("game/split/windows.rs", "horizon_client::window::with_horizon_icon(Window::default_attributes())",
+        "Window::default_attributes().with_window_icon(crate::lanmc_presentation::icon())")
     src("game/split/windows.rs", '.with_title(format!("Horizon {key}"))',
         '.with_title(crate::lanmc_presentation::title(format!("Horizon {key}")))')
     src("game/split/windows.rs", '.with_title("Horizon")',
@@ -182,15 +183,56 @@ def changes(inputs, transport):
             return Err(crate::lanmc_steam::steam_only_label().into());
         }
         if self.friends.is_some() {''')
-    src("game/friends.rs",
-        """    pub(super) fn tick_friends(&mut self) {""",
-        """    pub(super) fn tick_friends(&mut self) {
+    src("game.rs",
+        "    pub(super) fn idle(&mut self, event_loop: &dyn EventLoopCtl) {",
+        "    pub(super) fn idle(&mut self, event_loop: &dyn EventLoopCtl) {\n        self.poll_steam_sharing();")
+    src("game/friends.rs", "impl Game<'_> {", """impl Game<'_> {
+    pub(super) fn poll_steam_sharing(&mut self) {
         if let Some(message) = crate::lanmc_steam::sharing_notice() {
-            self.system_message(Text::literal(message));
+            self.system_message(message);
         }
         if crate::lanmc_steam::publication_failed() && self.lan_port().is_some() {
             self.lan_close(false);
-        }""")
+        }
+        if let Some(lobby) = crate::lanmc_steam::take_join_request() {
+            let result = (|| -> Result<()> {
+                if self.title.is_none() {
+                    self.close_world()?;
+                }
+                let address = crate::lanmc_steam::address(lobby);
+                let name = crate::lanmc_steam::owner_name().ok_or("Steam identity unavailable")?.to_owned();
+                self.connect_server_with_options(&address, &name, None, true)
+            })();
+            if let Err(error) = result {
+                log::warn!("Steam invitation could not be joined: {error}");
+                self.system_message(Text::literal(error.to_string()));
+            }
+        }
+    }
+""")
+    src("game/chat.rs",
+        """            Some(ClickEvent::Custom { id, payload }) => {
+                if let Some(remote) = &self.remote {
+                    remote.session.send_custom_click(&id, payload);
+                }
+            }""",
+        """            Some(ClickEvent::Custom { id, payload }) => {
+                if id.starts_with(crate::lanmc_steam::ACTION_PREFIX) {
+                    if self.integrated.is_some() {
+                        match crate::lanmc_steam::sharing_action(&id, payload.as_ref()) {
+                            Some(crate::lanmc_steam::SharingAction::Invite) => {
+                                if let Err(error) = crate::lanmc_steam::invite_friends() {
+                                    self.system_message(Text::literal(error));
+                                }
+                            }
+                            Some(crate::lanmc_steam::SharingAction::Close) => self.lan_close(true),
+                            None => {}
+                        }
+                    }
+                } else if let Some(remote) = &self.remote {
+                    remote.session.send_custom_click(&id, payload);
+                }
+            }""")
     src("game/lan_screen.rs", "    pub(super) fn open_world_options(&mut self) {",
         "    #[allow(dead_code)] // The pack uses Open to LAN directly in the pause menu.\n"
         "    pub(super) fn open_world_options(&mut self) {")
@@ -277,10 +319,17 @@ impl PauseNetwork {
                 PauseNetwork::Open => {
                     if let Err(error) = self.lan_open(super::lan::LanSettings {
                         port: 0,
-                        guest_commands: false,
+                        guest_commands: self.integrated.as_ref().map_or_else(
+                            || self.allow_commands(),
+                            |server| server.call(|game| game.allow_commands()).unwrap_or(false),
+                        ),
                         force_game_mode: true,
                     }) {
                         self.system_message(Text::literal(error.to_string()));
+                    } else {
+                        self.pause_focus = None;
+                        self.screen = Screen::Playing;
+                        self.capture(true);
                     }
                 }
             },
@@ -341,8 +390,8 @@ impl PauseNetwork {
     src("lan/conn.rs", "    let (mut name, mut address) = (hello.name.clone(), address);",
         """    let mut name = portable.as_ref().map_or_else(|| hello.name.clone(), |(_, name)| name.clone());
     let mut address = address;""")
-    src("lan/conn.rs", "    let (uuid, properties) = match (online, forwarding) {",
-        """    let (uuid, properties) = if let Some((uuid, _)) = portable {
+    src("lan/conn.rs", "    let (uuid, mut properties) = match (online, forwarding) {",
+        """    let (uuid, mut properties) = if let Some((uuid, _)) = portable {
         (uuid, Vec::new())
     } else { match (online, forwarding) {""")
     src("lan/conn.rs",
@@ -407,7 +456,7 @@ impl PauseNetwork {
         self.reset_tutorial();
         self.perf.world_opening();''',
         '''    ) -> Result<()> {
-        let steam_endpoint = if lan { crate::lanmc_steam::join(address)? } else { None };
+        let steam_endpoint = crate::lanmc_steam::join(address)?;
         let is_portable = steam_endpoint.is_some() || (local.is_some() && crate::lanmc_steam::owner_uuid(name).is_some());
         let steam_address = steam_endpoint.map(|endpoint| endpoint.to_string());
         let address = steam_address.as_deref().unwrap_or(address);
@@ -423,17 +472,16 @@ impl PauseNetwork {
             auth.as_ref().map_or(name, |a| a.name.as_str())
         };''')
     src("game/remote.rs",
-        '''                    horizon_protocol::crypto::offline_uuid(name),''',
-        '''                    if is_portable {
-                        crate::lanmc_steam::owner_uuid(name)
-                            .unwrap_or_else(|| horizon_protocol::crypto::offline_uuid(name))
-                    } else {
-                        horizon_protocol::crypto::offline_uuid(name)
-                    },''')
+        '        let user = auth.as_ref().map_or_else(\n            || {\n                (\n                    name.to_owned(),\n                    horizon_protocol::crypto::offline_uuid(name),\n                )\n            },\n            |a| (a.name.clone(), a.uuid),\n        );\n        self.server_packs_connect(local.is_none().then_some(address), user);',
+        '        let user = auth.as_ref().map_or_else(\n            || {\n                (\n                    name.to_owned(),\n                    if is_portable {\n                        crate::lanmc_steam::owner_uuid(name)\n                            .unwrap_or_else(|| horizon_protocol::crypto::offline_uuid(name))\n                    } else {\n                        horizon_protocol::crypto::offline_uuid(name)\n                    },\n                )\n            },\n            |a| (a.name.clone(), a.uuid),\n        );\n        self.server_packs_connect(local.is_none().then_some(address), user);')
     src("game/remote.rs", "pub(super) struct Remote {",
         "pub(super) struct Remote {\n    lanmc_portable: bool,")
-    src("game/remote.rs", "        self.remote = Some(Remote {",
-        "        self.remote = Some(Remote {\n            lanmc_portable: is_portable,")
+    src("game/remote.rs",
+        '        self.remote = Some(Remote {\n            session,\n            save_folder: None,\n            brand: "unknown".into(),',
+        '        self.remote = Some(Remote {\n            lanmc_portable: is_portable,\n            session,\n            save_folder: None,\n            brand: "unknown".into(),')
+    src("game/remote.rs",
+        '        self.remote = Some(Remote {\n            session,\n            save_folder: None,\n            brand: "horizon-studio".into(),',
+        '        self.remote = Some(Remote {\n            lanmc_portable: false,\n            session,\n            save_folder: None,\n            brand: "horizon-studio".into(),')
     src("game/remote.rs",
         '''        let mut capes: HashMap<u128, String> = HashMap::new();
         for (uuid, textures) in entries {''',

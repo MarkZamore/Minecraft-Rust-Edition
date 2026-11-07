@@ -126,8 +126,10 @@ def check_pause_menu(control):
     if any(widget.get("label", "").startswith(("World Settings", "World Options", "Настройки мира"))
            for widget in before["widgets"]):
         raise RuntimeError("The pause menu still offers World Settings")
-    if control("click", opened["id"])["screen"] != "paused":
-        raise RuntimeError("Opening to LAN left the pause menu")
+    if control("click", opened["id"])["screen"] != "playing":
+        raise RuntimeError("Opening to LAN did not return to the game")
+    control("key", "esc", "tap")
+    control("wait-for", "screen", "paused", "--timeout", "5")
     after = rendered_pause()
     reports = button(after, report_labels)
     if after["screen"] != "paused" or not reports or not reports["enabled"]:
@@ -139,7 +141,8 @@ def check_pause_menu(control):
         raise RuntimeError("Player Reporting did not open the social screen")
     control("key", "esc", "tap")
     control("resume")
-    return {"before": opened["label"], "after": reports["label"], "loopback": "PASS"}
+    return {"before": opened["label"], "after": reports["label"],
+            "returnedToGame": True, "loopback": "PASS"}
 
 
 def set_test_language(game, code):
@@ -165,8 +168,8 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
     def create(control):
         control("options", "mods")
         mods = control("ui")
-        if {widget["id"] for widget in mods["widgets"]} != {"open-mod-folder", "done"}:
-            raise RuntimeError("The native Mods page has entries outside the expected empty inventory")
+        if {widget["id"] for widget in mods["widgets"]} != {"browse-mods", "open-mod-folder", "done"}:
+            raise RuntimeError(f"The native Mods page differs from the reviewed empty inventory: {mods!r}")
         control("click", "done")
         world = [WORLD] if reuse_world else [WORLD, "137248", "creative"]
         control("open", *world)

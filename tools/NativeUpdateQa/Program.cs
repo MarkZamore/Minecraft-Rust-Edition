@@ -18,16 +18,20 @@ CheckOrdinaryPath(workspace, output);
 var previous = Release.Read(args[1]);
 var target = Release.Read(args[2]);
 const string pack = "Minecraft Rust Edition";
-const string bootstrap = "native/launch-rust-edition.exe";
 var source = new PackSyncSource("MarkZamore", "Minecraft-Rust-Edition", "pack-latest");
 Check(previous.Id == "minecraft-9" && target.Id == previous.Id && previous.RelativePath == pack
     && target.RelativePath == pack && target.Revision != previous.Revision,
     "The fixtures must be two revisions of the published Edition pack.");
-Check(previous.Files.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(target.Files.Keys)
-    && target.Files.Keys.Where(path => target.Files[path] != previous.Files[path]).SequenceEqual([bootstrap]),
-    "The Edition update should replace only its native bootstrap.");
-var previousAsset = previous.AssetFor(bootstrap);
-var targetAsset = target.AssetFor(bootstrap);
+var changed = target.Files.Keys.Where(path => !previous.Files.TryGetValue(path, out var old)
+    || target.Files[path] != old).ToHashSet(StringComparer.Ordinal);
+var removed = previous.Files.Keys.Except(target.Files.Keys, StringComparer.Ordinal).ToArray();
+var lockedPath = changed.Contains("native/horizon-client.exe") ? "native/horizon-client.exe"
+    : changed.FirstOrDefault(previous.Files.ContainsKey);
+Check(lockedPath is not null && changed.Count > 0, "The update must replace an existing managed native file.");
+var previousAsset = previous.AssetFor(lockedPath!);
+var targetAsset = target.AssetFor(lockedPath!);
+var downloadBytes = target.Assets.Values.Where(asset => asset.Covers.Any(changed.Contains))
+    .Sum(asset => asset.SizeBytes);
 previous.VerifyAssets();
 target.VerifyAssets();
 var json = new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true };
@@ -36,7 +40,7 @@ Directory.CreateDirectory(output);
 File.WriteAllText(Path.Combine(output, "RUN.json"), JsonSerializer.Serialize(new
 {
     owner = "NativeUpdateQa",
-    purpose = "Exact Edition native-bootstrap update and interrupted recovery",
+    purpose = "Exact Edition native-runtime update and interrupted recovery",
     createdUtc = started,
     deleteAfterUtc = started.AddHours(24),
     expectedBytes = 2L * (target.Files.Values.Sum(file => file.SizeBytes) + targetAsset.SizeBytes),
@@ -60,6 +64,9 @@ var report = new Dictionary<string, object?>
     ["newManifestSha256"] = Hash(target.Manifest),
     ["oldAssetSha256"] = previousAsset.Sha256,
     ["newAssetSha256"] = targetAsset.Sha256,
+    ["changedManagedFiles"] = changed.Count,
+    ["removedManagedFiles"] = removed.Length,
+    ["lockedPath"] = lockedPath,
     ["managedFileCount"] = target.Files.Count
 };
 try
@@ -82,8 +89,10 @@ try
     {
         ["options.txt"] = "fov:0.25\nkey_key.forward:key.keyboard.r\n",
         ["config/qa-user.ini"] = "keep=true",
+        ["servers.dat"] = "Synthetic manually saved server marker",
         ["saves/TechnicalUpdateQa/level.dat"] = "Synthetic QA marker, not a Minecraft world",
         ["saves/TechnicalUpdateQa/playerdata/qa.dat"] = "Synthetic player data marker",
+        ["saves/TechnicalUpdateQa/stats/qa.json"] = "Synthetic owner progress marker",
         ["screenshots/qa.png"] = "Synthetic screenshot marker"
     };
     foreach (var (relative, contents) in sentinels)
@@ -92,7 +101,7 @@ try
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, contents);
     }
-    var unchanged = previous.Files.Keys.Where(path => path != bootstrap)
+    var unchanged = previous.Files.Keys.Where(path => target.Files.ContainsKey(path) && !changed.Contains(path))
         .ToDictionary(path => path, path => File.GetLastWriteTimeUtc(Path.Combine(canonical, path)));
     handler.Release = target;
     handler.InterruptPayload = true;
@@ -108,7 +117,7 @@ try
 
     handler.InterruptPayload = false;
     // Windows can still read the old bytes, while the held file denies replacing them.
-    using (File.Open(Path.Combine(canonical, bootstrap), FileMode.Open, FileAccess.Read, FileShare.Read))
+    using (File.Open(Path.Combine(canonical, lockedPath!), FileMode.Open, FileAccess.Read, FileShare.Read))
         await MustThrow<PackApplyFailedException>(() => service.SyncAsync(pack, null, CancellationToken.None));
     Check(PortablePackSyncService.IsUpdatePending(canonical), "The apply failure did not leave a durable pending marker.");
     VerifyFiles(canonical, previous);
@@ -121,7 +130,7 @@ try
     handler.Offline = false;
     var updated = await service.SyncAsync(pack, null, CancellationToken.None);
     Check(updated.Outcome == PackSyncOutcome.Updated && updated.Revision == target.Revision
-        && updated.FilesChanged == 1 && updated.BytesDownloaded == targetAsset.SizeBytes
+        && updated.FilesChanged == changed.Count + removed.Length && updated.BytesDownloaded == downloadBytes
         && !PortablePackSyncService.IsUpdatePending(canonical), "Retry must converge to the exact new revision.");
     VerifyFiles(canonical, target);
     await instances.PrepareAsync(pack);

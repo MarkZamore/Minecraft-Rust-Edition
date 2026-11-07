@@ -1,4 +1,6 @@
 //! Host and admit a Horizon world through the launcher-owned Steam identity.
+use horizon_client::text::{ClickEvent, Style, Text};
+use horizon_world::nbt::Tag;
 use lanmc_steam_native::SteamBridge;
 use sha1::{Digest, Sha1};
 use std::{
@@ -7,9 +9,9 @@ use std::{
     sync::{Mutex, OnceLock},
 };
 
-const UPSTREAM_PIN: &str = "66f3981f522b24c250b21523a70080965b940424";
+const UPSTREAM_PIN: &str = "6560641ba51a452f6bc2407baa4eb1b3be517ca8";
 const UUID_NAMESPACE: u128 = 0x3b26fe30_fc0f_44d9_8a9e_08c3bde54df1;
-const ADDRESS_PREFIX: &str = "lanmc-steam:";
+pub const ACTION_PREFIX: &str = "lanminecraft:steam/";
 
 struct Identity {
     uuid: u128,
@@ -19,7 +21,7 @@ struct Identity {
 }
 
 static STATE: OnceLock<Identity> = OnceLock::new();
-static NOTICE: Mutex<(bool, Option<String>)> = Mutex::new((false, None));
+static NOTICE: Mutex<(Option<u64>, Option<String>)> = Mutex::new((None, None));
 
 pub fn init() -> Result<(), String> {
     let Some(id) = std::env::var_os("LANMINECRAFT_STEAM_ID") else {
@@ -89,7 +91,7 @@ pub fn bind_address() -> Option<IpAddr> {
 pub fn publish(port: u16, world: &str) -> Result<(), String> {
     if let Some(state) = STATE.get() {
         state.bridge.publish(port, world, &state.name)?;
-        *NOTICE.lock().unwrap() = (false, None);
+        *NOTICE.lock().unwrap() = (None, None);
     }
     Ok(())
 }
@@ -99,9 +101,9 @@ pub fn is_published() -> bool {
 }
 
 pub fn publication_failed() -> bool {
-    STATE.get().is_some_and(|state| {
-        !state.bridge.is_published() && state.bridge.last_error().is_some()
-    })
+    STATE
+        .get()
+        .is_some_and(|state| !state.bridge.is_published() && state.bridge.last_error().is_some())
 }
 
 pub fn unpublish() {
@@ -111,7 +113,7 @@ pub fn unpublish() {
 }
 
 pub fn address(lobby_id: u64) -> String {
-    format!("{ADDRESS_PREFIX}{lobby_id}")
+    lanmc_steam_native::lobby_address(lobby_id)
 }
 
 pub fn worlds() -> Vec<lanmc_steam_native::WorldOffer> {
@@ -121,10 +123,9 @@ pub fn worlds() -> Vec<lanmc_steam_native::WorldOffer> {
 }
 
 pub fn join(address: &str) -> Result<Option<SocketAddr>, String> {
-    let Some(lobby_id) = address.strip_prefix(ADDRESS_PREFIX) else {
+    let Some(lobby_id) = lanmc_steam_native::parse_lobby_address(address) else {
         return Ok(None);
     };
-    let lobby_id = lobby_id.parse().map_err(|_| "Invalid Steam world")?;
     let state = STATE.get().ok_or("Steam is unavailable")?;
     state.bridge.join(lobby_id).map(Some)
 }
@@ -140,20 +141,97 @@ pub fn claim_guest(address: SocketAddr) -> Option<(u128, String)> {
     Some((uuid, peer.nickname))
 }
 
-pub fn sharing_notice() -> Option<String> {
+pub fn sharing_notice() -> Option<Text> {
     let state = STATE.get()?;
     let mut seen = NOTICE.lock().ok()?;
-    let published = state.bridge.is_published();
+    let published = state.bridge.published_lobby();
     let error = state.bridge.last_error();
     let message = if error.is_some() && error != seen.1 {
-        error.clone()
-    } else if published && !seen.0 {
-        Some(opened_label().into())
+        error.clone().map(Text::literal)
+    } else if published.is_some() && published != seen.0 {
+        published.map(sharing_text)
     } else {
         None
     };
     *seen = (published, error);
     message
+}
+
+pub fn take_join_request() -> Option<u64> {
+    STATE.get()?.bridge.take_join_request()
+}
+
+fn sharing_text(lobby: u64) -> Text {
+    let action = |key, fallback, name, color| {
+        Text::translate_with_fallback(key, fallback, &[]).with_style(&Style {
+            color: Some(color),
+            underlined: Some(true),
+            click: Some(ClickEvent::Custom {
+                id: format!("{ACTION_PREFIX}{name}"),
+                payload: Some(Tag::String(lobby.to_string().as_str().into())),
+            }),
+            ..Style::default()
+        })
+    };
+    Text::translate_with_fallback(
+        "lanminecraft.steam.address_ready",
+        label("Steam address ready:", "Адрес Steam готов:"),
+        &[],
+    )
+    .append("\n")
+    .append(Text::copyable(address(lobby)))
+    .append("\n")
+    .append(action(
+        "lanminecraft.steam.invite",
+        label("[Invite friends (Steam)]", "[Пригласить друзей (Steam)]"),
+        "invite",
+        0x5555ff,
+    ))
+    .append(" ")
+    .append(action(
+        "lanminecraft.steam.close",
+        label("[Close sharing]", "[Закрыть общий доступ]"),
+        "close",
+        0xff5555,
+    ))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SharingAction {
+    Invite,
+    Close,
+}
+
+pub fn sharing_action(id: &str, payload: Option<&Tag>) -> Option<SharingAction> {
+    let state = STATE.get()?;
+    action_for_lobby(state.bridge.published_lobby(), id, payload)
+}
+
+fn action_for_lobby(
+    current: Option<u64>,
+    id: &str,
+    payload: Option<&Tag>,
+) -> Option<SharingAction> {
+    let Tag::String(value) = payload? else {
+        return None;
+    };
+    let lobby = value.to_string().ok()?.parse::<u64>().ok()?;
+    if current != Some(lobby) {
+        return None;
+    }
+    match id.strip_prefix(ACTION_PREFIX)? {
+        "invite" => Some(SharingAction::Invite),
+        "close" => Some(SharingAction::Close),
+        _ => None,
+    }
+}
+
+pub fn invite_friends() -> Result<(), String> {
+    STATE
+        .get()
+        .ok_or("Steam is unavailable")?
+        .bridge
+        .invite_friends()
 }
 
 fn label(en: &'static str, ru: &'static str) -> &'static str {
@@ -162,13 +240,6 @@ fn label(en: &'static str, ru: &'static str) -> &'static str {
     } else {
         en
     }
-}
-
-fn opened_label() -> &'static str {
-    label(
-        "World open to Steam friends",
-        "Мир открыт для друзей в Steam",
-    )
 }
 
 pub fn steam_only_label() -> &'static str {
@@ -227,6 +298,40 @@ fn portable_uuid(id: u64) -> u128 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn host_chat_actions_require_the_current_lobby_and_valid_payload() {
+        let payload = Tag::String("17".into());
+        let invite = format!("{ACTION_PREFIX}invite");
+        let close = format!("{ACTION_PREFIX}close");
+        assert_eq!(
+            action_for_lobby(Some(17), &invite, Some(&payload)),
+            Some(SharingAction::Invite)
+        );
+        assert_eq!(
+            action_for_lobby(Some(17), &close, Some(&payload)),
+            Some(SharingAction::Close)
+        );
+        assert_eq!(action_for_lobby(Some(23), &close, Some(&payload)), None);
+        assert_eq!(action_for_lobby(None, &close, Some(&payload)), None);
+        assert_eq!(
+            action_for_lobby(Some(17), "other:close", Some(&payload)),
+            None
+        );
+        assert_eq!(action_for_lobby(Some(17), &close, None), None);
+        assert_eq!(
+            action_for_lobby(Some(17), &close, Some(&Tag::Int(17))),
+            None
+        );
+        assert_eq!(
+            action_for_lobby(
+                Some(17),
+                &close,
+                Some(&Tag::String(horizon_world::nbt::JavaString(vec![0xd800])))
+            ),
+            None
+        );
+    }
 
     #[test]
     fn steam_uuid_matches_launcher_derivation() {
