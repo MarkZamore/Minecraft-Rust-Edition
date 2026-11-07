@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "recordedUtc": "2026-11-07T20:19:29.693558+00:00",
+  "recordedUtc": "2026-11-07T20:23:20.831315+00:00",
   "scope": "QA/source protection only; no new game, launcher or pack-manifest published",
   "runtimeRevisionUnchanged": "bb8302b206ed158e85aefead08bb78cd96606ba2",
   "checks": {
@@ -9,7 +9,8 @@
     "exactPublishedCandidateGates": "PASS",
     "qaHostCompilation": "PASS",
     "newWindowsGameRun": "NOT RUN: runtime unchanged",
-    "liveSteam": "NOT RUN: deferred by user"
+    "liveSteam": "NOT RUN: deferred by user",
+    "realProductionPacker": "PASS"
   },
   "sourceBaseWorktree": "Unchanged clean bb8302b, retained for Mods acceptance",
   "runtimeInputsUnchanged": [
@@ -20,5 +21,11 @@
     "tools/upstream-lock.json",
     "tools/steam-lock.json",
     "portable-pack.json"
-  ]
+  ],
+  "runtimeArchiveSha256": "4bf9598b4e87c9ea64d76b5358324db65138ef23ab40243e1683876df149ff42",
+  "runtimeArchiveUnchanged": true,
+  "newRuntimePublished": false,
+  "requiredLayerGroups": 11,
+  "requiredSourceFiles": 23,
+  "unitCases": 26
 }
