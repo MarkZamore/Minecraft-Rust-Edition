@@ -498,8 +498,11 @@ def exercise(session, report):
     session.capture("fullscreen-world", 1)
     checks["actualFullscreenVisibleNotice"] = "PASS"
     session.send(1)
-    before = session.window.inspect(session.renderer_pid)["foregroundHwnd"]
+    chat_window = session.window.inspect(session.renderer_pid)
+    before = chat_window["foregroundHwnd"]
     report["foregroundBeforeChat"] = before
+    if before <= 0 or before != chat_window["hwnd"]:
+        raise AssertionError("The tested native game window is not foreground before chat input")
     chat_before = session.control("chat-log", "8")["chat"]
     session.control("key", "t", "tap")
     session.control("type", "/list")
@@ -513,9 +516,10 @@ def exercise(session, report):
         if time.monotonic() >= deadline:
             raise AssertionError("T/type/Enter /list did not reach the integrated server with a card present")
         time.sleep(0.1)
-    after = session.window.inspect(session.renderer_pid)["foregroundHwnd"]
+    after_window = session.window.inspect(session.renderer_pid)
+    after = after_window["foregroundHwnd"]
     report["foregroundAfterChat"] = after
-    if before != after:
+    if before != after or after != after_window["hwnd"] or after_window["hwnd"] != chat_window["hwnd"]:
         raise AssertionError("Foreground input focus changed during notice/chat input")
     report["technicalChat"] = chat
     checks["worldAndChatInputWhileVisible"] = "PASS"

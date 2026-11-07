@@ -227,7 +227,10 @@ def verify_native_notices(report, files, context, name):
             and isinstance(before.get("widgets"), list) and before["widgets"] and before == after,
             "native notices changed game UI widgets or have no pause proof")
     require(_notice_int(report.get("foregroundBeforeChat"))
-            and report["foregroundBeforeChat"] == report.get("foregroundAfterChat")
+            and report["foregroundBeforeChat"] > 0
+            and _notice_int(report.get("foregroundAfterChat"))
+            and report["foregroundBeforeChat"] == report["foregroundAfterChat"]
+                == fullscreen["hwnd"] == by_name["world-chat-input-with-card.png"]["window"]["hwnd"]
             and isinstance(report.get("technicalChat"), list)
             and any("online" in str(line).casefold() for line in report["technicalChat"]),
             "native notice input/focus and actual chat proof missing")
@@ -277,11 +280,14 @@ def verify_startup(record, files, receipt, name):
             "public-server policy was not tested through ordinary startup")
     require(all(servers.get("checks", {}).get(key) == "PASS" for key in (
                 "cleanFirstLaunchAndRestart", "manualEntriesAndFieldsRetainedAcrossRestart",
-                "exactCandidateUnchanged")), "public-server policy or manual servers not verified")
+                "exactCandidateUnchanged", "steamDefaultAndExplicitSavedView",
+                "hiddenSavedSelectionCannotJoinEditOrDelete", "manualEditorAndDirectInputAccessible",
+                "titleReentryDefaultsToSteam", "legacyUnknownNbtPreservedByteForByte")),
+            "public-server policy or manual servers not verified")
     require(servers.get("fixtureRemoved") is True, "server-list fixture was not removed")
     runs = servers.get("runs", [])
     harness = ("--control", "--control-socket", "--frames", "--benchmark", "--offscreen")
-    require(len(runs) == 4 and all(run.get("exitCode") == 0 and run.get("arguments")
+    require(len(runs) == 6 and all(run.get("exitCode") == 0 and run.get("arguments")
                 and not any(argument == flag or argument.startswith(flag + "=")
                             for argument in run["arguments"] for flag in harness)
                 for run in runs), "server-list report used harness startup or incomplete runs")

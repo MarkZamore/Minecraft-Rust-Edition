@@ -226,6 +226,9 @@ class NativeNoticeEvidenceTests(unittest.TestCase):
             "windowed-proof": lambda r: next(c for c in r["captures"] if c["file"] == "fullscreen-world.png")["window"].update(monitor=[0, 0, 1920, 1080]),
             "ui-captured-input": lambda r: r["pauseUiAfter"]["widgets"].append({"id": "notice"}),
             "focus-changed": lambda r: r.update(foregroundAfterChat=99),
+            "no-foreground": lambda r: r.update(foregroundBeforeChat=0, foregroundAfterChat=0),
+            "foreign-foreground": lambda r: r.update(foregroundBeforeChat=99, foregroundAfterChat=99),
+            "chat-captured-another-window": lambda r: next(c for c in r["captures"] if c["file"] == "world-chat-input-with-card.png")["window"].update(hwnd=99),
             "no-real-chat": lambda r: r.update(technicalChat=[]),
         }
         for name, mutate in mutations.items():
