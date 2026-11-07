@@ -44,7 +44,15 @@ def run_client(executable, controller, resources, qa, index, action, standalone=
     arguments = [str(executable), "--resources", str(resources), "--home", str(game), "--name", PLAYER]
     if standalone:
         bootstrap, minecraft, java, cache = standalone
-        arguments = [str(bootstrap), "--minecraft-dir", str(minecraft), "--java-home", str(java)]
+        arguments = [str(bootstrap)]
+        if minecraft:
+            arguments.extend(["--minecraft-dir", str(minecraft)])
+        else:
+            environment["APPDATA"] = str(qa / "empty-profile")
+        if java:
+            arguments.extend(["--java-home", str(java)])
+        else:
+            environment.pop("JAVA_HOME", None)
         environment["LANMINECRAFT_NATIVE_CACHE"] = str(cache)
     arguments.extend(["--game-dir", str(game), "--control-socket", str(endpoint)])
     with (qa / f"client-{index}.log").open("wb") as output:
@@ -61,7 +69,7 @@ def run_client(executable, controller, resources, qa, index, action, standalone=
             return reply
 
         try:
-            deadline = time.monotonic() + (360 if standalone else 90)
+            deadline = time.monotonic() + (1200 if standalone else 90)
             while not endpoint.is_file():
                 if process.poll() is not None:
                     raise RuntimeError(f"Native client exited before ready, code {process.returncode}")
@@ -163,6 +171,8 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         world = [WORLD] if reuse_world else [WORLD, "137248", "creative"]
         control("open", *world)
         photograph(control, preview)
+        control("release")
+        control("pause")
         control("save")
         return control("state"), mods
 
@@ -238,7 +248,14 @@ def photograph(control, preview):
     control("command", "gamemode spectator")
     control("command", "time set noon")
     control("command", "weather clear")
-    control("tp", "26.5", "94", "-8.5")
+    # The control socket's tp only moves the client. Use the server command
+    # and wait for its acknowledgement before measuring save/reopen position.
+    control("command", "tp @s 26.5 94 -8.5")
+    deadline = time.monotonic() + 15
+    while any(abs(a - b) > 0.1 for a, b in zip(control("state")["player"]["position"], (26.5, 94, -8.5))):
+        if time.monotonic() >= deadline:
+            raise TimeoutError("The server did not confirm the technical player's teleport")
+        time.sleep(0.1)
     control("look", "-20", "29")
     control("key", "f1", "tap")
     control("wait-for", "loaded", "--timeout", "90")
@@ -262,15 +279,15 @@ def main():
     parser.add_argument("--check-pause-menu", action="store_true")
     args = parser.parse_args()
     standalone_paths = (args.bootstrap, args.minecraft, args.java, args.cache)
-    if any(standalone_paths) and not all(standalone_paths):
-        parser.error("Standalone smoke requires bootstrap, Minecraft, Java and cache paths")
+    if bool(args.bootstrap) != bool(args.cache) or ((args.minecraft or args.java) and not args.bootstrap):
+        parser.error("Standalone smoke requires bootstrap and cache; Minecraft and Java sources are optional")
     if bool(args.bootstrap) == bool(args.resources):
         parser.error("Supply either prepared resources or the standalone bootstrap")
     if (args.expect_title or args.expect_cold) and not args.bootstrap:
         parser.error("Window title or cold preparation verification requires the standalone bootstrap")
     if args.refresh_preview and args.reuse_world:
         parser.error("Choose either a new smoke run with the existing world or a preview refresh")
-    standalone = tuple(path.resolve() for path in standalone_paths) if args.bootstrap else None
+    standalone = tuple(path.resolve() if path else None for path in standalone_paths) if args.bootstrap else None
     qa = args.qa.resolve()
     try:
         executable = args.client.resolve(strict=True)

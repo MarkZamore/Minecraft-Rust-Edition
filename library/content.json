@@ -2,8 +2,9 @@
   "id": "minecraft-9",
   "relativePath": "Minecraft Rust Edition",
   "name": "Minecraft Rust Edition",
-  "summary": "Minecraft 26.3 на нативном движке Horizon, написанном на Rust.",
-  "description": "Исследуйте мир, стройте, добывайте ресурсы и играйте в режимах выживания и творчества. Сборка использует Horizon, неофициальную реализацию Minecraft 26.3 на Rust с форматом миров Java Edition. Для первой подготовки нужны файлы установленной лицензионной копии Minecraft Java Edition 26.3. Игровые ресурсы подготавливаются локально.",
+  "summary": "",
+  "description": "Исследуйте мир, стройте, добывайте ресурсы и играйте в режимах выживания и творчества.",
+  "showNativeProject": false,
   "nativeProject": {
     "name": "Horizon",
     "version": "Nightly 2026-11-05",

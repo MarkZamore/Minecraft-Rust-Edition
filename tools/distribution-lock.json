@@ -7,7 +7,7 @@
   },
   "library/loaded-mods.json": {
     "sizeBytes": 71960,
-    "sha256": "22b074f470b499cc255b17195b1881b07ea1b68f3a463bf9eb06275727e5c6af"
+    "sha256": "d75f0ed69d33f1cd0ebdd2981487c82ac2aa3f19e9190dae5bd695000f0949b6"
   },
   "tools/overlay-receipt.json": {
     "sizeBytes": 4095,
@@ -407,8 +407,8 @@
       "sha256": "007836f4354d51241314f564d0ac184ca70fa2d39ea4c56a2a699162f9707d48"
     },
     "native/launch-rust-edition.exe": {
-      "sizeBytes": 2841600,
-      "sha256": "eae0fed81b35b489d8669aac5175123b473c532eefd5770b72a0cf371149cbb2"
+      "sizeBytes": 2885120,
+      "sha256": "41e8adeb1560a4cb14d3809f225505edbbf581449c11fb638ec6b597ed75cf11"
     },
     "native/mods/horizon/src/test/java/dev/horizonlab/parity/ElderCurseTranscript.java": {
       "sizeBytes": 2076,

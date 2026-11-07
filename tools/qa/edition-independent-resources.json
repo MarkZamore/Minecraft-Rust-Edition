@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "checkedUtc": "2026-11-07T15:18:19.900593+00:00",
+  "basePackRevision": "597328c9c60a3e36ae09b08f5a6669367d1d30ac",
+  "upstreamCommit": "66f3981f522b24c250b21523a70080965b940424",
+  "upstreamEd25519AndArchiveHashes": "PASS",
+  "bootstrap": {
+    "sizeBytes": 2885120,
+    "sha256": "41e8adeb1560a4cb14d3809f225505edbbf581449c11fb638ec6b597ed75cf11"
+  },
+  "bootstrapSources": {
+    "main.rs": "ff8ca27e4efe8f7330fba51ca91a09928d3ab196dbbed2133eb7fc8f5c57e8b0",
+    "minecraft_inputs.rs": "74e9ba0e78504c37705825b61c30af8016d0ab07edbe4fc3044211f1316d61ec",
+    "prepared_data.rs": "3bbd23cb1f6ba2edce231756b8236745ca44b735a5c35370388acf2d44806f8e"
+  },
+  "client": {
+    "sizeBytes": 86248960,
+    "sha256": "3e677bd8522635f72e367756024ede1e50ee6ac7807edb5282155c03b3b14c9c"
+  },
+  "steamOverlayReceipt": {
+    "sizeBytes": 4095,
+    "sha256": "ed006a6010970d4c581df8aed12a4d34f763170a470a67cbd4da6f1e01fbf4c3"
+  },
+  "minecraftVersion": "26.3",
+  "independentPreparation": {
+    "result": "PASS",
+    "externalMinecraftInstallation": false,
+    "externalJava": false,
+    "sourceMetadata": "research-lock.json exact version JSON SHA-1, authenticated client/libraries/asset index and per-object hashes",
+    "inputFiles": 5258,
+    "preparedFiles": 28178,
+    "javaVersion": "25.0.4.1",
+    "coldLogSha256": "12fb7e750ef10a0f8e50495e25c16d55fff8d5e8f02005c2c75a3b62ed66a53d",
+    "downloadRetry": "Initial 360-second QA deadline expired before client start. Verified downloads were retained. The 1200-second scenario completed resource preparation without any external installation."
+  },
+  "runtime": {
+    "result": "PASS",
+    "windowTitle": "Minecraft Rust Edition",
+    "mods": [],
+    "saveAndReopen": "PASS",
+    "firstPosition": [
+      29.603336620312337,
+      94.0,
+      0.02831076842723046
+    ],
+    "reopenedPosition": [
+      29.620091684570895,
+      94.0,
+      0.07435553005789755
+    ],
+    "warmCacheReuse": {
+      "coldPrepared": false,
+      "secondLaunchReused": true,
+      "receipt": {
+        "sizeBytes": 3564115,
+        "sha256": "e7e30f2e17b2a75d8178ecec7ba67d4c1f3780f4e8b2bb59e268d4ba153862cf"
+      }
+    },
+    "pauseMenu": {
+      "before": "Открыть для сети",
+      "after": "Жалобы",
+      "loopback": "PASS"
+    },
+    "narrator": "PASS, pinned disabled first-run onboarding source checked by stage_runtime.py",
+    "qaCorrection": "Use server teleport acknowledgement and pause before save. The control socket tp only moves the client and caused the first positional comparison to fail."
+  },
+  "rustTests": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0
+  },
+  "libraryTests": {
+    "passed": 19,
+    "failed": 0
+  },
+  "launcher": {
+    "revision": "6fba25f690c0667a81ec680caef9ad42cc7db13d",
+    "release": 466,
+    "releaseGate": {
+      "passed": 546,
+      "failed": 0,
+      "skipped": 0
+    },
+    "nativeProjectPresentation": "PASS"
+  },
+  "scope": {
+    "gameplaySettings": "No pack-owned settings changed. All managed files except the bootstrap retain their prior hashes.",
+    "packOwnedPreparation": "Minecraft inputs, Java acquisition, resource preparation and caching belong to the standalone bootstrap.",
+    "launcherPackSettingExceptions": [],
+    "liveTwoAccountSteam": "NOT RUN",
+    "liveWorldTransferOwners": "NOT RUN"
+  }
+}

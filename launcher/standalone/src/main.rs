@@ -4,6 +4,7 @@
     target_feature = "crt-static"
 )))]
 compile_error!("The portable Windows x64 bootstrap requires the static MSVC runtime.");
+mod minecraft_inputs;
 mod prepared_data;
 
 use anyhow::{Context, Result, bail, ensure};
@@ -251,9 +252,13 @@ fn prepare(
         && !old.files.is_empty()
         && verify_inventory(&resources, &old.files)?
     {
-        if server.is_some() {
-            let input = find_minecraft(&pins, minecraft)?;
-            server_jar(cache, &input.manifest, &pins, server)?;
+        if let Some(path) = &server {
+            ensure!(
+                path.is_file() && hash::<Sha1>(path)? == pins.server_sha1,
+                "--server-jar does not match Minecraft {}: {}",
+                pins.version,
+                path.display()
+            );
         }
         prepared_data::reconcile(&resources, &old.files)?;
         eprintln!(
@@ -264,7 +269,7 @@ fn prepare(
         return Ok(resources);
     }
 
-    let input = find_minecraft(&pins, minecraft)?;
+    let input = find_minecraft(&pins, minecraft, cache)?;
     let server = server_jar(cache, &input.manifest, &pins, server)?;
     let jdk = java_home(cache, java, pins.java_major)?;
     let scratch = child(cache, "preparation")?;
@@ -342,7 +347,8 @@ fn prepare(
     Ok(resources)
 }
 
-fn find_minecraft(pins: &Pins, explicit: Option<PathBuf>) -> Result<Minecraft> {
+fn find_minecraft(pins: &Pins, explicit: Option<PathBuf>, cache: &Path) -> Result<Minecraft> {
+    let required = explicit.is_some();
     let candidates = if let Some(explicit) = explicit {
         vec![explicit]
     } else {
@@ -371,13 +377,15 @@ fn find_minecraft(pins: &Pins, explicit: Option<PathBuf>) -> Result<Minecraft> {
             || pins.accepted_manifest_sha1.contains(&manifest_hash))
             && hash::<Sha1>(&input.client)? == pins.client_sha1
         {
-            return Ok(input);
+            return minecraft_inputs::acquire(pins, cache, Some(input));
         }
     }
-    bail!(
-        "Local Minecraft Java Edition {} files are required. Point --minecraft-dir at a complete installation.",
+    ensure!(
+        !required,
+        "--minecraft-dir does not contain verified Minecraft {} files",
         pins.version
-    )
+    );
+    minecraft_inputs::acquire(pins, cache, None)
 }
 
 fn server_jar(
@@ -420,7 +428,7 @@ fn server_jar(
             return Ok(candidate);
         }
     }
-    download::<Sha1>(&url, size, expected, &cached)
+    download::<Sha1>(&url, Some(size), expected, &cached)
 }
 
 fn java_home(cache: &Path, explicit: Option<PathBuf>, major: u32) -> Result<PathBuf> {
@@ -456,7 +464,7 @@ fn java_home(cache: &Path, explicit: Option<PathBuf>, major: u32) -> Result<Path
     }
     let archive = child(cache, "java-25.zip")?;
     if !verified_file::<Sha256>(&archive, JAVA_SIZE, JAVA_HASH)? {
-        download::<Sha256>(JAVA_URL, JAVA_SIZE, JAVA_HASH, &archive)?;
+        download::<Sha256>(JAVA_URL, Some(JAVA_SIZE), JAVA_HASH, &archive)?;
     }
     let staging = child(cache, "java-25-stage")?;
     remove_tree(&staging)?;
@@ -525,22 +533,33 @@ fn verified_file<D: Digest>(path: &Path, size: u64, expected: &str) -> Result<bo
     Ok(path.is_file() && path.metadata()?.len() == size && hash::<D>(path)? == expected)
 }
 
-fn download<D: Digest>(url: &str, size: u64, expected: &str, target: &Path) -> Result<PathBuf> {
+fn download<D: Digest>(
+    url: &str,
+    size: Option<u64>,
+    expected: &str,
+    target: &Path,
+) -> Result<PathBuf> {
     let partial = target.with_extension("part");
     ensure_unlinked(&partial)?;
     let result = (|| {
-        let agent = ureq::AgentBuilder::new()
-            .timeout_connect(Duration::from_secs(30))
-            .timeout_read(Duration::from_secs(60))
-            .build();
+        static AGENT: std::sync::OnceLock<ureq::Agent> = std::sync::OnceLock::new();
+        let agent = AGENT.get_or_init(|| {
+            ureq::AgentBuilder::new()
+                .timeout_connect(Duration::from_secs(30))
+                .timeout_read(Duration::from_secs(60))
+                .build()
+        });
         let response = agent
             .get(url)
             .set("User-Agent", "LANMinecraft-Rust-Edition")
             .call()?;
-        let mut reader = response.into_reader().take(size + 1);
+        let limit = size.unwrap_or(4 * 1024 * 1024);
+        let mut reader = response.into_reader().take(limit + 1);
         let written = io::copy(&mut reader, &mut File::create(&partial)?)?;
         ensure!(
-            written == size && hash::<D>(&partial)? == expected,
+            written <= limit
+                && size.is_none_or(|size| written == size)
+                && hash::<D>(&partial)? == expected,
             "Download failed verification: {url}"
         );
         if target.exists() {
