@@ -88,7 +88,61 @@ def ui_summary(state):
             for node in state["widgets"]]
 
 
-def check_server_views(control, game, original):
+class DesktopKeys:
+    """Ask the UI driver for real keys without changing the tested client.
+
+    The native control protocol rejects key commands while the title is up.
+    Each atomic request must be serviced against the observed, owned window;
+    the UI driver writes a matching acknowledgement only after its key action.
+    """
+
+    def __init__(self, directory, process, client, title, run):
+        self.directory, self.process = directory, process
+        self.client, self.title, self.run = client, title, run
+        self.evidence = []
+
+    def press(self, key):
+        if self.directory is None:
+            raise ValueError("Server-view keys require --ui-key-requests and a desktop UI driver")
+        self.directory.mkdir(parents=True, exist_ok=True)
+        identifier = f"run-{self.run}-key-{len(self.evidence) + 1}"
+        created = time.time_ns() // 1_000_000
+        request = {"id": identifier, "action": "press_key", "key": key,
+                   "processId": self.process.pid, "executable": str(self.client),
+                   "title": self.title, "run": self.run,
+                   "createdUnixMs": created, "timeoutMs": 120_000}
+        path = self.directory / f"{identifier}.request.json"
+        acknowledgement = self.directory / f"{identifier}.ack.json"
+        if path.exists() or acknowledgement.exists():
+            raise ValueError("Stale desktop-key checkpoint: " + identifier)
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(request, ensure_ascii=False) + "\n", encoding="utf-8")
+        os.replace(temporary, path)
+        print(json.dumps({"desktopKeyRequest": str(path), **request}), flush=True)
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
+            if self.process.poll() is not None:
+                raise RuntimeError("Owned client exited while waiting for desktop key " + identifier)
+            try:
+                ack = json.loads(acknowledgement.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                time.sleep(0.1)
+                continue
+            performed = ack.get("performedUnixMs")
+            if (ack.get("id") != identifier or ack.get("status") != "PASS"
+                    or ack.get("processId") != self.process.pid or ack.get("key") != key
+                    or not isinstance(performed, int) or isinstance(performed, bool)
+                    or not created <= performed <= created + request["timeoutMs"]):
+                raise RuntimeError("Desktop key was not acknowledged for the owned native window: " + repr(ack))
+            self.evidence.append({"request": request, "acknowledgement": ack})
+            # Wait for the window event to reach the ordinary UI before querying
+            # a new widget tree; the UI query still waits for the next draw.
+            time.sleep(0.25)
+            return
+        raise TimeoutError("Desktop key acknowledgement timed out: " + identifier)
+
+
+def check_server_views(control, game, original, desktop_keys):
     """Exercise actual drawn rows and ordinary click/key routes, without joining a server."""
     evidence = {}
     expected_names = {row["name"] for row in LEGACY_SERVERS}
@@ -139,14 +193,14 @@ def check_server_views(control, game, original):
     steam_default(state)
     evidence["defaultSteam"] = ui_summary(state)
     # A stale hidden selection must not activate a saved row via Enter.
-    control("key", "enter", "tap")
+    desktop_keys.press("Enter")
     steam_default(ui())
-    control("key", "delete", "tap")
+    desktop_keys.press("Delete")
     steam_default(ui())
     evidence["defaultEnterAndDeleteStayedInSteamView"] = True
     click_id(REFRESH_WIDGET)
     steam_default(ui())
-    control("key", "f5", "tap")
+    desktop_keys.press("F5")
     steam_default(ui())
     evidence["defaultRefreshStayedInSteamView"] = True
     click_id(SAVED_WIDGET)
@@ -162,7 +216,7 @@ def check_server_views(control, game, original):
     state = ui()
     if widget_id(state, SAVED_WIDGET).get("selected") is not True and widget_id(state, SAVED_WIDGET)["enabled"]:
         raise RuntimeError("Refreshing Saved implicitly returned to the Steam view")
-    control("key", "f5", "tap")
+    desktop_keys.press("F5")
     state = ui()
     if widget_id(state, SAVED_WIDGET).get("selected") is not True and widget_id(state, SAVED_WIDGET)["enabled"]:
         raise RuntimeError("F5 in Saved implicitly returned to the Steam view")
@@ -186,12 +240,8 @@ def check_server_views(control, game, original):
     click({"Direct Connection"}, "button")
     field = widget(ui(), {"Server Address"}, "field")
     control("click", field["id"])
-    control("key", "ctrl", "down")
-    try:
-        control("key", "a", "tap")
-    finally:
-        control("key", "ctrl", "up")
-    control("key", "backspace", "tap")
+    desktop_keys.press("Ctrl+A")
+    desktop_keys.press("Backspace")
     if widget(ui(), {"Join Server"}, "button")["enabled"]:
         raise RuntimeError("Direct-address field did not clear")
     control("type", MANUAL_ADDRESS)
@@ -211,7 +261,7 @@ def check_server_views(control, game, original):
         click({MANUAL_NAME}, "row")
     click_id(STEAM_WIDGET)
     steam_default(ui())
-    control("key", "enter", "tap")
+    desktop_keys.press("Enter")
     steam_default(ui())
     evidence["selectionResetOnSteamSwitch"] = True
     # Re-enter through the actual title button, even after the last view was Saved.
@@ -223,11 +273,12 @@ def check_server_views(control, game, original):
     click_id(BACK_WIDGET)
     unchanged()
     evidence["unknownNbtRetainedByteForByte"] = True
+    evidence["desktopKeys"] = desktop_keys.evidence
     return evidence
 
 
 def ordinary_launch(client, controller, resources, qa, game, index, build_name, visual_check=False,
-                    view_original=None):
+                    view_original=None, ui_key_requests=None):
     endpoint = qa / f"control-{index}.json"
     log = qa / f"client-{index}.log"
     environment = dict(os.environ)
@@ -268,7 +319,9 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
                 print("Ready for visual window-icon check", flush=True)
                 time.sleep(40)
             servers = control("servers")["servers"]
-            views = check_server_views(control, game, view_original) if view_original is not None else None
+            views = check_server_views(control, game, view_original,
+                                       DesktopKeys(ui_key_requests, process, client, build_name, index)) \
+                if view_original is not None else None
             control("quit", timeout=20)
             if process.wait(timeout=45) != 0:
                 raise RuntimeError(f"Client exited with code {process.returncode}; see {log}")
@@ -297,6 +350,8 @@ def main():
     parser.add_argument("--controller", required=True, type=Path)
     parser.add_argument("--resources", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--ui-key-requests", type=Path,
+                        help="Desktop-key request/acknowledgement directory inside --out; required for view checks")
     parser.add_argument("--visual-check", action="store_true",
                         help="Hold the first ordinary title screen for 40 seconds for visual review")
     args = parser.parse_args()
@@ -309,6 +364,9 @@ def main():
     if qa.exists():
         raise ValueError("Use a fresh QA output directory in a registered task stand")
     qa.mkdir(parents=True)
+    ui_key_requests = args.ui_key_requests.resolve() if args.ui_key_requests else None
+    if ui_key_requests is not None and not ui_key_requests.is_relative_to(qa):
+        raise ValueError("Desktop-key checkpoints must stay inside the fresh QA output directory")
     game = qa / "game"
     game.mkdir()
     # Fixture-only setting; it leaves the normal public-server startup path active.
@@ -359,7 +417,7 @@ def main():
             (game / name).write_bytes(data)
         for index in (5, 6):
             run = ordinary_launch(client, controller, resources, qa, game, index, build_name,
-                                  view_original=original)
+                                  view_original=original, ui_key_requests=ui_key_requests)
             report["runs"].append(run)
             if run["servers"] != LEGACY_SERVERS or server_file.read_bytes() != original:
                 raise RuntimeError("Legacy/manual data changed across ordinary view-check startup")

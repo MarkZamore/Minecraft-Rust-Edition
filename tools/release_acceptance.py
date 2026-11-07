@@ -335,7 +335,7 @@ def main():
     parser.add_argument("--smoke", required=True, type=Path)
     parser.add_argument("--multiplayer", required=True, type=Path)
     parser.add_argument("--servers", required=True, type=Path,
-                        help="Four ordinary launches proving no public seeding and manual-list preservation")
+                        help="Six ordinary launches proving Steam-first views and saved-list preservation")
     parser.add_argument("--native-notices", required=True, type=Path,
                         help="Exact bootstrap child, final UI pixel/heartbeat/fullscreen/input acceptance")
     parser.add_argument("--preparation", type=Path, help="Separate cold proof, or coldPreparation in the smoke report")
