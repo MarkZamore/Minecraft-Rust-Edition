@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "revision": "bb8302b206ed158e85aefead08bb78cd96606ba2",
+  "recordedUtc": "2026-11-07T19:11:37.610511+00:00",
+  "manifestUploaded": true,
+  "assetsBeforeManifest": {
+    "minecraft-rust-edition-windows-x64-4bf9598b4e87c9ea64d76b5358324db65138ef23ab40243e1683876df149ff42.zip": {
+      "sizeBytes": 38665544,
+      "sha256": "4bf9598b4e87c9ea64d76b5358324db65138ef23ab40243e1683876df149ff42"
+    },
+    "launcher-df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b.zip": {
+      "sizeBytes": 972,
+      "sha256": "df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b"
+    },
+    "library-c7492dda762b0226eba83c9dec6de510ef9fb9c656052bf6bb32450aca55b250.zip": {
+      "sizeBytes": 1021194,
+      "sha256": "c7492dda762b0226eba83c9dec6de510ef9fb9c656052bf6bb32450aca55b250"
+    }
+  },
+  "upstreamMirror": {
+    "horizon-windows-x64.zip": {
+      "sizeBytes": 43661445,
+      "sha256": "0a97372d1a0699e88e65104d8ee4c8dc91abae55728279623095372c09711a09"
+    },
+    "horizon-source.tar.gz": {
+      "sizeBytes": 46963717,
+      "sha256": "d7e3941b1fa0d9a779a0ed050e5df913ba9bdd6a2c15edd569d276b5e3af54c6"
+    },
+    "SHA256SUMS": {
+      "sizeBytes": 643,
+      "sha256": "f0b3371b72ee2673cbd99231c3619c95e1e057c08703d4540e6cd4db0f296fba"
+    },
+    "SHA256SUMS.sig": {
+      "sizeBytes": 89,
+      "sha256": "f976ca0cd3322344dd969569c9c73c4f8beb1a75dea228d30de1cef1bc555338"
+    }
+  },
+  "library": {
+    "websiteUrlAbsent": true,
+    "summaryAndAboutMatch": true,
+    "modCount": 0,
+    "nativeProject": {
+      "name": "Horizon",
+      "version": "Nightly 2026-11-07",
+      "revision": "6560641ba51a452f6bc2407baa4eb1b3be517ca8"
+    }
+  },
+  "completedUtc": "2026-11-07T19:15:12.152144+00:00",
+  "manifest": {
+    "sizeBytes": 151183,
+    "sha256": "f5b0b0575f9a8d89e00d0c18ae91356645dbc97d02a4ba6ff116206d24388485"
+  },
+  "manifestUploadedLast": true,
+  "tagMatchesRevision": true,
+  "runtimeArchiveEqualsAcceptedUpdatePayload": true,
+  "steamLiveAcceptance": "NOT RUN by explicit user choice",
+  "status": "PASS"
+}

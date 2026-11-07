@@ -31,7 +31,9 @@
     "launcherCompactRelease551": "PASS",
     "liveSteamOverlayAndTwoAccounts": "NOT RUN (user chose Steam later)",
     "nativeArchiveUpdateAndRecovery": "PASS",
-    "personalSettingsAndManualServersPreserved": "PASS"
+    "personalSettingsAndManualServersPreserved": "PASS",
+    "publicArchivesSha256": "PASS",
+    "manifestUploadedLastAndReadBack": "PASS"
   },
   "nativeUnitCases": 10,
   "packIdentityActionCases": 3,
@@ -107,5 +109,8 @@
     "fixtureRemoved": true
   },
   "launcherReleaseSourceRevision": "79a398437c7f8987a4adc983f731063adbd9d1f6",
-  "publicVerificationPending": true
+  "publicVerificationPending": false,
+  "publishedRevision": "bb8302b206ed158e85aefead08bb78cd96606ba2",
+  "publicManifestSha256": "f5b0b0575f9a8d89e00d0c18ae91356645dbc97d02a4ba6ff116206d24388485",
+  "sourceRecipePayloadUnchangedAfterArchiveAcceptance": true
 }
