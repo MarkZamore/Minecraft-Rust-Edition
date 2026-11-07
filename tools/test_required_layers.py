@@ -40,7 +40,7 @@ def recipe_fixture():
     tree = ast.parse((STEAM / "apply_horizon_overlay.py").read_text(encoding="utf-8"))
     function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "changes")
 
-    def walk(statements, values):
+    def walk(statements, values, notice=False):
         for node in statements:
             if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
                 try:
@@ -57,7 +57,7 @@ def recipe_fixture():
                     local = dict(values)
                     bindings = item if isinstance(node.target, ast.Tuple) else [item]
                     local.update((target.id, value) for target, value in zip(targets, bindings))
-                    walk(node.body, local)
+                    walk(node.body, local, notice)
             elif isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
                 call = node.value
                 if not isinstance(call.func, ast.Name):
@@ -67,15 +67,28 @@ def recipe_fixture():
                         path = "crates/horizon-client/src/" + literal(call.args[0], values)
                         replacement = literal(call.args[2], values)
                     elif call.func.id == "edit":
-                        path = literal(call.args[1], values)
-                        replacement = literal(call.args[3], values)
+                        if notice:
+                            path = "crates/horizon-client-render/src/" + literal(call.args[0], values)
+                            replacement = literal(call.args[2], values)
+                        else:
+                            path = literal(call.args[1], values)
+                            replacement = literal(call.args[3], values)
                     else:
                         continue
-                    files[path] = files.get(path, b"") + replacement.encode("utf-8") + b"\n"
+                    count = next((literal(keyword.value, values) for keyword in call.keywords
+                                  if keyword.arg == "count"), 1)
+                    files[path] = files.get(path, b"") + (replacement.encode("utf-8") + b"\n") * count
                 except (KeyError, TypeError, ValueError):
                     continue
 
     walk(function.body, {"CLIENT": "crates/horizon-client/", "CLIENT_LIB": "crates/horizon-client-lib/"})
+    notice_tree = ast.parse((STEAM / "notice_overlay.py").read_text(encoding="utf-8"))
+    notice_apply = next(node for node in notice_tree.body
+                        if isinstance(node, ast.FunctionDef) and node.name == "apply")
+    walk(notice_apply.body, {}, notice=True)
+    for name in ["lanmc_notices.rs", "lanmc_notice_protocol.rs", "lanmc_notice_state.rs",
+                 "lanmc_notice_raster.rs", "lanmc_notice_render.rs", "lanmc_notice_layout.rs"]:
+        files["crates/horizon-client-render/src/gfx/" + name] = (STEAM / name).read_bytes()
     for name in ["lanmc_steam.rs", "lanmc_skins.rs", "lanmc_presentation.rs"]:
         files["crates/horizon-client/src/" + name] = (STEAM / name).read_bytes()
     files["crates/horizon-client/src/lanmc_rust_logo.png"] = (STEAM / "rust-logo/rust-logo.png").read_bytes()
@@ -133,7 +146,7 @@ class RequiredLayersTests(unittest.TestCase):
             "steam-startup-identity", "steam-authenticated-profile", "steam-publish-close-loopback",
             "steam-frontend-invitations", "pause-and-host-command-permission", "current-host-chat-actions",
             "steam-world-list", "steam-peer-owner-and-membership", "sharing-cancellation-and-ready-claim",
-            "portable-skins", "pack-window-title-and-icon",
+            "portable-skins", "pack-window-title-and-icon", "native-launcher-notices",
         })
         guard.validate_receipt_coverage(self.receipt)
 
@@ -251,6 +264,117 @@ class RequiredLayersTests(unittest.TestCase):
         self.patched = {path: data.replace(b"\n", b"\r\n") if path.endswith(".rs") else data
                         for path, data in self.patched.items()}
         guard.validate_patched_sources(self.patched)
+
+    def test_removed_notice_module_or_final_ui_hook_is_rejected(self):
+        for path in ["crates/horizon-client-render/src/gfx/lanmc_notice_state.rs",
+                     "crates/horizon-client-render/src/gfx/lanmc_notice_protocol.rs",
+                     "crates/horizon-client-render/src/gfx/lanmc_notice_raster.rs",
+                     "crates/horizon-client-render/src/gfx/lanmc_notice_render.rs",
+                     "crates/horizon-client-render/src/gfx/lanmc_notice_layout.rs"]:
+            with self.subTest(path=path):
+                broken = dict(self.patched)
+                del broken[path]
+                with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+                    guard.validate_patched_sources(broken)
+        self.lose("crates/horizon-client-render/src/gfx.rs", b"self.lanmc_notices.draw(")
+        with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+            guard.validate_patched_sources(self.patched)
+
+    def test_notice_callback_cannot_move_before_present_on_any_presenter(self):
+        for path, present, callback in [
+            ("crates/horizon-client-render/src/gfx.rs", b"self.queue.present(surface_frame);",
+             b"if let Some(callback) = after_present {\n                callback();\n            }"),
+            ("crates/horizon-client-render/src/gfx/compositor.rs", b"self.queue.present(frame);",
+             b"if let Some(callback) = after_present {\n            callback();\n        }"),
+            ("crates/horizon-client-render/src/gfx/submit.rs", b"queue.present(surface);",
+             b"if let Some(callback) = job.after_present {\n                            callback();\n                        }"),
+        ]:
+            with self.subTest(path=path):
+                broken = dict(self.patched)
+                self.assertIn(callback, broken[path])
+                self.assertIn(present, broken[path])
+                broken[path] = broken[path].replace(callback, b"").replace(present, callback + b"\n" + present)
+                with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+                    guard.validate_patched_sources(broken)
+
+    def test_commented_notice_draw_and_unguarded_generated_frame_ack_are_rejected(self):
+        path = "crates/horizon-client-render/src/gfx.rs"
+        data = self.patched[path]
+        start = data.index(b"if self.surface.is_some()")
+        end = data.index(b"        readback", start) + len(b"        readback")
+        commented = dict(self.patched)
+        commented[path] = data[:start] + b"/*" + data[start:end] + b"*/" + data[end:]
+        with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+            guard.validate_patched_sources(commented)
+        for path, old, new in [
+            ("crates/horizon-client-render/src/gfx.rs", b"self.lanmc_notices.draw(", b"/* self.lanmc_notices.draw( */ removed("),
+            ("crates/horizon-client-render/src/gfx/frame_gen.rs", b"if show(&pair.second)", b"if true"),
+            ("crates/horizon-client-render/src/gfx.rs", b"if self.surface.is_some()", b"if true"),
+        ]:
+            with self.subTest(path=path):
+                broken = dict(self.patched)
+                self.assertIn(old, broken[path])
+                broken[path] = broken[path].replace(old, new)
+                with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+                    guard.validate_patched_sources(broken)
+
+    def test_each_frame_generation_envelope_keeps_its_present_callback(self):
+        path = "crates/horizon-client-render/src/gfx/frame_gen.rs"
+        original = b"interval: self.interval,\n                after_present,"
+        self.assertEqual(self.patched[path].count(original), 3)
+        self.patched[path] = self.patched[path].replace(
+            original, b"interval: self.interval,\n                removed,", 1)
+        with self.assertRaisesRegex(ValueError, "lost a frame-generation presentation callback"):
+            guard.validate_patched_sources(self.patched)
+
+    def test_frame_generation_uses_the_callback_for_the_image_actually_shown(self):
+        path = "crates/horizon-client-render/src/gfx.rs"
+        for old, new in [
+            (b"if frame_gen::generated_only() {\n                notice_generated_callback",
+             b"if frame_gen::generated_only() {\n                after_present"),
+            (b"else if frame_gen::generated_only() && self.surface.is_some()",
+             b"else if false"),
+        ]:
+            with self.subTest(token=old):
+                broken = dict(self.patched)
+                self.assertIn(old, broken[path])
+                broken[path] = broken[path].replace(old, new)
+                with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+                    guard.validate_patched_sources(broken)
+
+    def test_notice_protocol_or_dpi_contract_cannot_be_relaxed(self):
+        for path, old in [
+            ("lanmc_notice_protocol.rs", b"title.encode_utf16().count() > 160"),
+            ("lanmc_notice_protocol.rs", b"now_ms.saturating_add(2_000)"),
+            ("lanmc_notice_state.rs", b"transformations=0"),
+            ("lanmc_notice_state.rs", b"std::env::var_os(\"LANMINECRAFT_NOTICE_DIRECTORY\")?"),
+            ("lanmc_notice_raster.rs", b"s.width as f64 * dpi"),
+            ("lanmc_notice_layout.rs", b"width: card.width as f32,"),
+        ]:
+            path = "crates/horizon-client-render/src/gfx/" + path
+            with self.subTest(path=path, token=old):
+                broken = dict(self.patched)
+                self.assertIn(old, broken[path])
+                broken[path] = broken[path].replace(old, b"removed")
+                with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+                    guard.validate_patched_sources(broken)
+
+    def test_notice_modules_left_on_disk_cannot_be_orphaned_from_runtime(self):
+        for filename, old, new in [
+            ("lanmc_notices.rs", b"service: state::service(),", b"service: None,"),
+            ("lanmc_notice_state.rs", b"protocol::parse_snapshot(style, notices, now)",
+             b"unchecked_snapshot(style, notices, now)"),
+            ("lanmc_notice_state.rs", b"raster::rasterize(&snapshot, width)", b"old_raster(&snapshot, width)"),
+            ("lanmc_notice_render.rs", b"layout::layout(dimensions, &sizes, motion, now_ms)",
+             b"scaled_twice(dimensions, &sizes, motion, now_ms)"),
+        ]:
+            path = "crates/horizon-client-render/src/gfx/" + filename
+            with self.subTest(path=path):
+                broken = dict(self.patched)
+                self.assertIn(old, broken[path])
+                broken[path] = broken[path].replace(old, new)
+                with self.assertRaisesRegex(ValueError, "native-launcher-notices"):
+                    guard.validate_patched_sources(broken)
 
 
 if __name__ == "__main__":

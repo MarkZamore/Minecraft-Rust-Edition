@@ -53,6 +53,8 @@ RECIPE_FILES = (
     "lanmc_notice_raster.rs",
     "lanmc_notice_render.rs",
     "lanmc_notice_layout.rs",
+    "notice-platform/Cargo.toml",
+    "notice-platform/src/lib.rs",
     "rust-logo/NOTICE.txt",
     "rust-logo/artwork-lock.json",
     "rust-logo/render.py",
