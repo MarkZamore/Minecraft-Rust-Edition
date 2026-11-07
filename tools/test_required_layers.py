@@ -158,7 +158,7 @@ class RequiredLayersTests(unittest.TestCase):
             "steam-startup-identity", "steam-authenticated-profile", "steam-publish-close-loopback",
             "steam-frontend-invitations", "pause-and-host-command-permission", "current-host-chat-actions",
             "steam-world-list", "steam-peer-owner-and-membership", "sharing-cancellation-and-ready-claim",
-            "portable-skins", "pack-window-title-and-icon", "native-launcher-notices",
+            "portable-skins", "pack-window-title-and-icon", "native-launcher-notices", "steam-default-and-saved-view",
         })
         guard.validate_receipt_coverage(self.receipt)
 
@@ -172,6 +172,40 @@ class RequiredLayersTests(unittest.TestCase):
                 del broken[path]
                 with self.assertRaises(ValueError):
                     guard.validate_patched_sources(broken)
+
+    def test_steam_default_saved_access_and_join_guards_cannot_be_removed(self):
+        root = "crates/horizon-client/src/"
+        for path, old, new in [
+            (root + "multiplayer.rs", b"Self::list_view(saves, false)", b"Self::list_view(saves, true)"),
+            (root + "multiplayer.rs", b"if saved_view { servers::load", b"if true { servers::load"),
+            (root + "multiplayer.rs", b"if saved_view {\n            ping_all", b"if true {\n            ping_all"),
+            (root + "multiplayer.rs", "Сохранённые серверы".encode(), b"removed"),
+            (root + "multiplayer.rs", b"lan.games().iter().any(|g| g.address == address)", b"true"),
+            (root + "multiplayer.rs", b"*selected_steam_address = lan.then(|| address.clone());", b""),
+            (root + "title.rs", b'49 => "saved-servers"', b'49 => "legacy"'),
+            (root + "title.rs", b"screen.refresh(&self.saves);", b"ignored();"),
+            (root + "game/ui_control.rs", b"title.multiplayer_node_ids(w, h)", b"ignored()"),
+        ]:
+            with self.subTest(path=path, token=old):
+                broken = dict(self.patched)
+                self.assertIn(old, broken[path])
+                broken[path] = broken[path].replace(old, new)
+                with self.assertRaisesRegex(ValueError, "steam-default-and-saved-view"):
+                    guard.validate_patched_sources(broken)
+
+    def test_a_surviving_bound_join_hook_does_not_cover_a_missing_second_hook(self):
+        path = "crates/horizon-client/src/multiplayer.rs"
+        hook = b"selected_entry_address(servers, lan, *selected, selected_steam_address.as_deref())"
+        self.assertEqual(self.patched[path].count(hook), 2)
+        self.patched[path] = self.patched[path].replace(hook, b"unguarded_index_join()", 1)
+        with self.assertRaisesRegex(ValueError, "bound-address join guard"):
+            guard.validate_patched_sources(self.patched)
+
+    def test_automatic_favicon_write_cannot_rewrite_unknown_saved_nbt(self):
+        path = "crates/horizon-client/src/multiplayer.rs"
+        self.patched[path] += b"\nsave_icon(&file, &address, icon);\n"
+        with self.assertRaisesRegex(ValueError, "favicon writes"):
+            guard.validate_patched_sources(self.patched)
 
     def test_vanilla_file_still_listed_does_not_count_as_steam_auth(self):
         self.patched["crates/horizon-client/src/lan/conn.rs"] = b"if !valid_name(&hello.name) { return Ok(()); }"

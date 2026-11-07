@@ -83,6 +83,31 @@ LAYERS = {
         (SRC + "multiplayer.rs", "batch.text(atlas, &game.motd, cx + 35.0, cy + 1.0, u32::MAX, false);"),
         (SRC + "multiplayer.rs", "batch.text(atlas, host, cx + 35.0, cy + 12.0, gray, false);"),
     ),
+    "steam-default-and-saved-view": (
+        (SRC + "multiplayer.rs", "pub fn list(saves: &Path) -> Self { Self::list_view(saves, false) }"),
+        (SRC + "multiplayer.rs", "let servers = if saved_view { servers::load(&servers_file(saves)) } else { Vec::new() };"),
+        (SRC + "multiplayer.rs", "if saved_view { ping_all(&servers, &pings, &icons); }"),
+        (SRC + "multiplayer.rs", "lan: if !saved_view && crate::lanmc_steam::active() { Scanner::start() } else { Scanner::empty() },"),
+        (SRC + "multiplayer.rs", 'b(x, VIEW_Y, 152.0, "Миры Steam", *saved_view, 48),'),
+        (SRC + "multiplayer.rs", 'b(x + 156.0, VIEW_Y, 152.0, "Сохранённые серверы", !*saved_view, 49),'),
+        (SRC + "multiplayer.rs", "(Self::List { .. }, Some(48)) => *self = Self::list(saves),"),
+        (SRC + "multiplayer.rs", "(Self::List { .. }, Some(49)) => *self = Self::list_view(saves, true),"),
+        (SRC + "multiplayer.rs", "let saved_view = matches!(self, Self::List { saved_view: true, .. }); *self = Self::list_view(saves, saved_view);"),
+        (SRC + "multiplayer.rs", "*self = Self::list_view(saves, true); if let Self::List { selected, .. } = self { *selected = updated; }"),
+        (SRC + "multiplayer.rs", "if let Some(address) = steam { games.iter().position(|g| g.address == address).map(|i| servers.len() + i) } else { selected.filter(|&i| i < servers.len()) }"),
+        (SRC + "multiplayer.rs", "if let Some(address) = steam { lan.games().iter().any(|g| g.address == address).then(|| (address.to_owned(), true)) } else { selected.and_then(|i| servers.get(i)).map(|s| (s.ip.clone(), false)) }"),
+        (SRC + "multiplayer.rs", "let selected_row = selected_row_index(servers, &games, *selected, selected_steam_address.as_deref()); let selected = &selected_row;"),
+        (SRC + "multiplayer.rs", "*selected_steam_address = lan.then(|| address.clone()); *selected = Some(index);"),
+        (SRC + "multiplayer.rs", "*selected_steam_address = next.and_then(|i| i.checked_sub(servers.len())).and_then(|i| games.get(i)).map(|g| g.address.clone());"),
+        (SRC + "lan/discovery.rs", "pub fn empty() -> Self { Self { enabled: false,"),
+        (SRC + "lan/discovery.rs", "pub fn games(&self) -> Vec<LanGame> { if !self.enabled { return Vec::new(); }"),
+        (SRC + "title.rs", '48 => "steam-worlds", 49 => "saved-servers",'),
+        (SRC + "title.rs", '45 => "server-list-refresh", 46 => "server-list-back",'),
+        (SRC + "title.rs", "screen.refresh(&self.saves);"),
+        (SRC + "title.rs", "if hit.is_none() || matches!(hit, Some(48 | 49)) { self.focused_button = None; }"),
+        (SRC + "game/ui_control.rs", "for (id, rect) in title.multiplayer_node_ids(w, h) {"),
+        (SRC + "game/ui_control.rs", "node.id = id.to_owned();"),
+    ),
     "steam-peer-owner-and-membership": (
         (NATIVE + "worker.rs", "if matchmaking.lobby_owner(lobby) != owner || !matchmaking.lobby_members(lobby).contains(&self.local_id) || self.world_offer(lobby, owner).is_none()"),
         (NATIVE + "worker.rs", "matchmaking.lobby_data(lobby, VARIANT_KEY).as_deref() != Some(self.variant.as_str())"),
@@ -253,6 +278,11 @@ def validate_patched_sources(patched):
     for call in (b"add_official_server(", b"add_partner_servers("):
         if call in game:
             raise ValueError("Mandatory layer steam-world-list forbids automatic public server seeding")
+    multiplayer = sources[SRC + "multiplayer.rs"]
+    if b"save_icon(&file, &address, icon)" in multiplayer:
+        raise ValueError("Mandatory layer steam-default-and-saved-view forbids saved-view favicon writes")
+    if multiplayer.count(b"selected_entry_address(servers, lan, *selected, selected_steam_address.as_deref())") < 2:
+        raise ValueError("Mandatory layer steam-default-and-saved-view lost a bound-address join guard")
     # Every presenter mode retains its callback. One surviving envelope is not
     # enough when the generated-frame presenter has three submission branches.
     if sources[NOTICE + "frame_gen.rs"].count(b"interval: self.interval, after_present,") < 3:
