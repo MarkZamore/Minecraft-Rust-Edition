@@ -57,7 +57,6 @@ def describe_candidate(candidate):
     content = read_json(ROOT / "library/content.json")
     if content["nativeProject"] != {
         "name": "Horizon", "version": upstream["displayVersion"], "revision": upstream["commit"],
-        "websiteUrl": f"https://github.com/{upstream['project']}",
     }:
         raise ValueError("Library metadata does not describe the pinned project")
     if read_json(candidate / "native/presentation.json") != {"name": content["name"]}:
