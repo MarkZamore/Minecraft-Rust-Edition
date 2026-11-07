@@ -461,7 +461,7 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
             })();
             if let Err(error) = result {
                 log::warn!("Steam invitation could not be joined: {error}");
-                self.system_message(Text::literal(error.to_string()));
+                self.system_message(crate::text::Text::literal(error.to_string()));
             }
         }
     }
