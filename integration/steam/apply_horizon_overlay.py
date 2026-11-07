@@ -137,6 +137,8 @@ def changes(inputs, transport):
             servers,''')
     src("multiplayer.rs", "            lan: Scanner::start(),",
         "            lan: if !saved_view && crate::lanmc_steam::active() { Scanner::start() } else { Scanner::empty() },")
+    src("multiplayer.rs", "        let max = self.max_length();\n        crate::widgets::begin_screen", "        let saved_list_view = matches!(self, Self::List { saved_view: true, .. });\n        let max = self.max_length();\n        crate::widgets::begin_screen")
+    src("multiplayer.rs", "                for (i, row) in rows(servers.len(), games.len()).enumerate() {", "                for (i, row) in rows(servers.len(), games.len()).enumerate() {\n                    if saved_list_view && matches!(&row, Row::LanHeader) { continue; }")
     src("multiplayer.rs", '''fn ping_all(servers: &[ServerEntry], pings: &Pings, icons: &Icons, file: &Path) {''',
         '''fn ping_all(servers: &[ServerEntry], pings: &Pings, icons: &Icons) {''')
     src("multiplayer.rs", "        let (pings, icons, file) = (pings.clone(), icons.clone(), file.to_owned());",
@@ -730,14 +732,11 @@ impl PauseNetwork {
                                 "lanServer.scanning",
                                 "Scanning for games on your local network",
                             );''',
-        '''                            let label = if crate::lanmc_steam::active() {
-                                crate::lanmc_steam::scan_label().to_owned()
-                            } else {
-                                crate::lang::get_or(
-                                    "lanServer.scanning",
-                                    "Scanning for games on your local network",
-                                )
-                            };''')
+        '''                            let label = crate::lanmc_steam::scan_label().to_owned();''')
+    src("multiplayer.rs", '''                            Row::LanHeader => crate::lang::get_or(
+                                "lanServer.scanning",
+                                "Scanning for games on your local network",
+                            ),''', '''                            Row::LanHeader => crate::lanmc_steam::scan_label().to_owned(),''')
     src("multiplayer.rs", '''                                &[&lan_narration(&games[k].motd).plain()],''',
         '''                                &[&match &games[k].steam_host {
                                     Some(host) => format!("{} {host}", games[k].motd),
