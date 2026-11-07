@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "verifiedAtUtc": "2026-11-07T23:13:55.711700+00:00",
+  "releaseNumber": 478,
+  "commitSha": "98e3146e5bc469e54deedf3512681a9a351320ed",
+  "assetId": 722162871,
+  "sizeBytes": 157872128,
+  "sha256": "3338b80f0eb01c6247ca2b5847199c68a6250eb5465736bb4063c94df40ff6c7",
+  "url": "https://github.com/MarkZamore/LANMinecraft/releases/download/latest/LANMinecraft.exe",
+  "requiredFeature": "native-launcher-notices-v1",
+  "minimumSupportingRelease": 477,
+  "executedByThisPackTask": false
+}

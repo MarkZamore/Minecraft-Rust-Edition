@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "scope": "Visual observations from actual returned native Windows window through sky.get_window_state",
+  "observedUnixMs": 1794094052198,
+  "clientSha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3",
+  "window": {
+    "app": "process:C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\candidate-2eb\\native\\horizon-client.exe",
+    "id": 27856374,
+    "title": "Minecraft Rust Edition"
+  },
+  "captionIcon": {
+    "status": "PASS",
+    "observation": "White circular backplate and black Rust gear are clearly visible against the black Windows titlebar next to Minecraft Rust Edition"
+  },
+  "taskbarIcon": {
+    "status": "NOT RUN",
+    "reason": "Bounded window capture did not include the Windows taskbar"
+  },
+  "sourceViewObservations": {
+    "steamDefault": {
+      "observedUnixMs": 1794094065670,
+      "status": "PASS",
+      "observation": "Selected Steam-world tab shows Looking for Steam worlds, no saved rows and no local-network search label"
+    },
+    "savedView": {
+      "observedUnixMs": 1794094110351,
+      "status": "PASS",
+      "observation": "Selected Saved tab contains all three fixture rows; no synthetic discovery header, spinner or LAN search text is drawn beneath saved rows"
+    }
+  },
+  "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc"
+}

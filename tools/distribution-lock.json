@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "upstreamCommit": "6560641ba51a452f6bc2407baa4eb1b3be517ca8",
+  "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
   "preview": {
     "sizeBytes": 1020556,
     "sha256": "d0e3d1791891c38848f3a76d84bade5f3e24c8cd5ffff0c7f739647ab13215a7"
   },
   "library/loaded-mods.json": {
     "sizeBytes": 75039,
-    "sha256": "5c2f1122eb6a55824075fb2ffd3a7e7fd715c593c2868a3078c9864716a452ba"
+    "sha256": "91840c24d4259bb73ad3e8d605907988f322ea0ef3162c1fa1f81d15d9503295"
   },
   "tools/overlay-receipt.json": {
-    "sizeBytes": 4209,
-    "sha256": "5d679a2a0961555f270cb0029221e6285971c2f123ee7d89b8117bfbb2c2d9c0"
+    "sizeBytes": 6456,
+    "sha256": "66f5ed1fef591b1792d8b6cf959cb342fd9c656aa0b4fb2dc787163b08c3a569"
   },
   "files": {
     "configureddefaults/options.txt": {
@@ -27,8 +27,8 @@
       "sha256": "06b767be20580df3cd9ad6231aa9e775451d21bdf7f594fddb94523b7e363fb9"
     },
     "native/THIRD_PARTY_NOTICES.md": {
-      "sizeBytes": 14350,
-      "sha256": "faac9b2a7f47ae45714afc1dc8cc4ab26b6618910a3beb7ddc77d2c87c3f236b"
+      "sizeBytes": 14420,
+      "sha256": "f4154f6519b3c9061c5e9792f3747a2327da571fa8f911a990297333351c90aa"
     },
     "native/crates/horizon-prepare/Cargo.toml": {
       "sizeBytes": 715,
@@ -132,7 +132,7 @@
     },
     "native/exporters/manifest.json": {
       "sizeBytes": 10131,
-      "sha256": "3114aed70f687ddcad33316b94824f0d7b1a9f6a1e0f2d6156805b684f03ee85"
+      "sha256": "5ccdc5ee5ad67d3d3ea87436f5800a3095e90d66a632b4a13855aacc1b50d8ad"
     },
     "native/exporters/server/dev/horizonlab/parity/ParityData.class": {
       "sizeBytes": 10836,
@@ -399,12 +399,12 @@
       "sha256": "d2cc6c600e0e25428b3cdc1249abbb935792798c929a222de121a8e3727504d6"
     },
     "native/horizon-client.exe": {
-      "sizeBytes": 92301824,
-      "sha256": "1ef39eed0270d0cdfe02c590fed6654c35ec9a39bad0ac42394822dfdbcdf4db"
+      "sizeBytes": 92608512,
+      "sha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3"
     },
     "native/horizon-prepare.exe": {
       "sizeBytes": 2339840,
-      "sha256": "e3b2cc3d03ab8befad0fbeb7fa86731fb1d6744631b1820980233be4ea3a8bac"
+      "sha256": "01265064b7b82b339362f86309610acc876427d1d6bcc55aff40b683be3ffb50"
     },
     "native/launch-rust-edition.exe": {
       "sizeBytes": 2885120,
@@ -739,8 +739,8 @@
       "sha256": "fca4823402dbe6666f385a538e76c08d4ef9519abcc58c9334c6409b20df0604"
     },
     "native/mods/horizon/src/test/java/dev/horizonlab/parity/VanillaCommandExecOracle.java": {
-      "sizeBytes": 98181,
-      "sha256": "3e8e311ff04d7172de5618b20359160d66b297cfd3fcbf15c459b1a5550b54bf"
+      "sizeBytes": 99655,
+      "sha256": "7c072863704bee5169a9d31bea6224bd67a7282a61978f6453e98f13ad0ea732"
     },
     "native/mods/horizon/src/test/java/dev/horizonlab/parity/VanillaCommandParseOracle.java": {
       "sizeBytes": 25976,
@@ -1907,12 +1907,12 @@
       "sha256": "dc0d97139e8205818c703741c7be7cb3b96888bd5917b8d6fc6133731e403c21"
     },
     "native/third_party/rust/NOTICE.txt": {
-      "sizeBytes": 658,
-      "sha256": "3284fb2533a265da032feb35eefaaf22a141e941e044f51b6908672c45741695"
+      "sizeBytes": 981,
+      "sha256": "d3dd53a19eea48c8e5ae7412e76e795c7a892f9995f2db643f2afcf5bf59d22c"
     },
     "native/third_party/rust/artwork-lock.json": {
-      "sizeBytes": 962,
-      "sha256": "7c29e459874bfb52576c37e9a0dc3e85893db4238526df1911a3de4270f54be2"
+      "sizeBytes": 1097,
+      "sha256": "17d0d1acb22bc67c67b749bf5584fc8ca1c6e18d6a1bf34d52690b5da8d374fc"
     },
     "native/third_party/rust/rust-logo.svg": {
       "sizeBytes": 3297,
@@ -1927,8 +1927,8 @@
       "sha256": "dc0d97139e8205818c703741c7be7cb3b96888bd5917b8d6fc6133731e403c21"
     },
     "portable-pack.json": {
-      "sizeBytes": 242,
-      "sha256": "59f69a23ec6517e794a80238fb48c84de52bfe60255eb95032650cdcfb425bc9"
+      "sizeBytes": 252,
+      "sha256": "7c8475a14fb5f7ef785ff4fabe2b5e414f4e9cffa90dcf3f14d1a9ebdb78cd64"
     }
   }
 }

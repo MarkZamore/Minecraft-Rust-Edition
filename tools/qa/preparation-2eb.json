@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "narration": "off",
+  "bootstrap": {
+    "sizeBytes": 2885120,
+    "sha256": "41e8adeb1560a4cb14d3809f225505edbbf581449c11fb638ec6b597ed75cf11"
+  },
+  "preparer": {
+    "sizeBytes": 2339840,
+    "sha256": "01265064b7b82b339362f86309610acc876427d1d6bcc55aff40b683be3ffb50"
+  },
+  "researchLock": {
+    "sizeBytes": 3415,
+    "sha256": "eac45913fbfef00bf8902548511593e413b097644c4c1761b74839081c83bbac"
+  },
+  "resourceReceipt": {
+    "sizeBytes": 3564115,
+    "sha256": "3c8a8b4672bd3ee675d3e02f51d9775931e39cf2ba2d2d5f05ef5f3aca51caca"
+  },
+  "resourceFiles": 28178,
+  "selfContainedInputs": true,
+  "provenance": {
+    "kind": "Actual autonomous cold bootstrap preparation, reused only with identical bootstrap/preparer/research/resource receipt",
+    "observedClient": {
+      "sizeBytes": 92562944,
+      "sha256": "217b80aff8607aa55cfe3be87fb57e1d20a654df151e920b325d55bf00e39a06"
+    },
+    "sourceRecipeSha256": "c58edfaf313a5affc98fa83c7f978196e7c794b845ed84b60e01decbad6198fd"
+  }
+}
