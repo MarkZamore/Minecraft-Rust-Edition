@@ -1,23 +1,21 @@
 {
   "schemaVersion": 1,
   "status": "PASS",
-  "verifiedAtUtc": "2026-11-07T23:51:03.414302+00:00",
+  "verifiedAtUtc": "2026-11-07T23:59:39.531412+00:00",
   "owner": "codex/Edition-repairs",
-  "removedBytes": 6929617141,
-  "retainedBytes": 246765669,
-  "evidenceBytes": 29349797,
-  "heldForMods": {
-    "archives-2eb": 90741533,
-    "upstream/horizon-2ebf00a": 126674339
-  },
-  "holdDeadline": "2026-11-09",
-  "holdReason": "Mods chat verifies its completed corrective build against these immutable inputs",
+  "removedBytes": 7147033013,
+  "retainedBytes": 29350568,
+  "evidenceBytes": 29350568,
+  "heldForMods": {},
   "processesRemaining": 0,
   "cleanupErrors": [],
   "workspaceStorage": {
-    "uniqueGiB": 8.351,
     "budgetGiB": 50,
-    "withinBudget": true
+    "withinBudget": true,
+    "lastCheckBeforeReleasedInputCleanupGiB": 10.022
   },
-  "requiredResults": "13 native-notice PNGs plus compact source/build/acceptance/public-delivery records"
+  "requiredResults": "13 native-notice PNGs plus compact source/build/acceptance/public-delivery records",
+  "sharedInputsReleasedAtUtc": "2026-11-07T23:58:32.723576+00:00",
+  "sharedInputReleaseConfirmation": "Minecraft Rust Mods chat: corrective build66d74e95/recipe1d112 complete; both temporary inputs no longer needed; signed permanent mirror remains",
+  "protectedSourceCheckoutPreserved": true
 }
