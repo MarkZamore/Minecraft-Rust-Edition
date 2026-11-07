@@ -184,6 +184,10 @@ def validate_patched_sources(patched):
         for path, fragment in rules:
             if _compact(fragment.encode("utf-8")) not in sources.get(path, b""):
                 raise ValueError(f"Mandatory layer {layer} is missing its reviewed outcome in {path}: {fragment[:90]}")
+    game = sources[SRC + "game.rs"]
+    for call in (b"add_official_server(", b"add_partner_servers("):
+        if call in game:
+            raise ValueError("Mandatory layer steam-world-list forbids automatic public server seeding")
     for path, magic in ASSETS.items():
         data = patched.get(path)
         if not isinstance(data, bytes) or not data.startswith(magic) or len(data) <= len(magic):

@@ -75,6 +75,22 @@ def verify_startup(record, files, receipt, name):
     pause = smoke["pauseMenu"]
     require(pause["loopback"] == "PASS" and pause["returnedToGame"] is True
             and (pause["before"], pause["after"]) == ("Открыть для сети", "Жалобы"), "Russian pause menu not verified")
+    servers = record.get("serverList")
+    require(isinstance(servers, dict) and servers.get("status") == "PASS",
+            "ordinary-startup server-list QA missing")
+    require(servers.get("acceptanceContext") == context, "server-list report has another payload")
+    require(servers.get("startup") == "ordinary client; Agent Control enabled only in technical extras",
+            "public-server policy was not tested through ordinary startup")
+    require(all(servers.get("checks", {}).get(key) == "PASS" for key in (
+                "cleanFirstLaunchAndRestart", "manualEntriesAndFieldsRetainedAcrossRestart",
+                "exactCandidateUnchanged")), "public-server policy or manual servers not verified")
+    require(servers.get("fixtureRemoved") is True, "server-list fixture was not removed")
+    runs = servers.get("runs", [])
+    harness = ("--control", "--control-socket", "--frames", "--benchmark", "--offscreen")
+    require(len(runs) == 4 and all(run.get("exitCode") == 0 and run.get("arguments")
+                and not any(argument == flag or argument.startswith(flag + "=")
+                            for argument in run["arguments"] for flag in harness)
+                for run in runs), "server-list report used harness startup or incomplete runs")
     # Steam deferral cannot waive any of the required checks above.
     steam = record["liveSteam"]
     require(steam["status"] in ("PASS", "NOT RUN"), "unknown live Steam status")
@@ -117,6 +133,8 @@ def main():
     parser.add_argument("--candidate", required=True, type=Path)
     parser.add_argument("--smoke", required=True, type=Path)
     parser.add_argument("--multiplayer", required=True, type=Path)
+    parser.add_argument("--servers", required=True, type=Path,
+                        help="Four ordinary launches proving no public seeding and manual-list preservation")
     parser.add_argument("--preparation", type=Path, help="Separate cold proof, or coldPreparation in the smoke report")
     parser.add_argument("--update", type=Path)
     parser.add_argument("--out", required=True, type=Path)
@@ -126,6 +144,7 @@ def main():
     args = parser.parse_args()
     record = {"schemaVersion": 1, "context": execution_context(args.candidate),
               **{key: read_json(getattr(args, key)) for key in ("smoke", "multiplayer")},
+              "serverList": read_json(args.servers),
               "update": read_json(args.update) if args.update else None,
               "liveSteam": {"status": "NOT RUN", "userDecision": args.defer_live_steam or ""}}
     record["preparation"] = read_json(args.preparation) if args.preparation else record["smoke"]["coldPreparation"]

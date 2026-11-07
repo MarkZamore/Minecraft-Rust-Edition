@@ -81,6 +81,20 @@ class ReleaseAcceptanceTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     gate.verify_startup(record, self.files, self.receipt, self.content["name"])
 
+    def test_public_server_policy_requires_fresh_ordinary_startup_and_manual_preservation(self):
+        for mutation in ("absent", "old-payload", "manual", "harness", "incomplete"):
+            with self.subTest(mutation=mutation):
+                record = copy.deepcopy(self.record)
+                if mutation == "absent": record.pop("serverList")
+                elif mutation == "old-payload": record["serverList"]["acceptanceContext"] = {}
+                elif mutation == "manual":
+                    record["serverList"]["checks"]["manualEntriesAndFieldsRetainedAcrossRestart"] = "FAIL"
+                elif mutation == "harness":
+                    record["serverList"]["runs"][0]["arguments"].append("--control-socket=test.json")
+                else: record["serverList"]["runs"].pop()
+                with self.assertRaises(ValueError):
+                    gate.verify_startup(record, self.files, self.receipt, self.content["name"])
+
     def test_update_report_cannot_accept_another_archive_or_incomplete_recovery(self):
         for key, value in (("newAssetSha256", "0" * 64), ("retry", "FAIL"),
                            ("personalSentinelsPreserved", 0), ("fixtureRemoved", False)):

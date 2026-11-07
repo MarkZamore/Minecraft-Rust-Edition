@@ -189,6 +189,16 @@ class RequiredLayersTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "steam-publish-close-loopback"):
             guard.validate_patched_sources(self.patched)
 
+    def test_public_server_seeding_cannot_return_to_normal_startup(self):
+        for name in ("add_official_server", "add_partner_servers"):
+            with self.subTest(name=name):
+                broken = dict(self.patched)
+                broken["crates/horizon-client/src/game.rs"] += (
+                    "\nhorizon_client::multiplayer::" + name + "(&player_dir);"
+                ).encode()
+                with self.assertRaisesRegex(ValueError, "automatic public server seeding"):
+                    guard.validate_patched_sources(broken)
+
     def test_commented_out_frontend_hook_does_not_count(self):
         self.lose("crates/horizon-client/src/game.rs", b"self.poll_steam_sharing();",
                   b"/* retired /* nested note */ self.poll_steam_sharing(); */")

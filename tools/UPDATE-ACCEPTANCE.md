@@ -35,12 +35,23 @@
    Для неизменившегося подготовщика можно использовать прежний отдельный cold
    proof, только если SHA bootstrap/preparer/research и resource receipt совпадают.
 
-4. Записать пакет доказательств; coldPreparation берётся из холодного smoke,
+4. Запустить `tools/server_list_qa.py --candidate $candidate --controller $controller
+   --resources $resources --out $serverQa`, затем использовать
+   `$serverQa/server-list-qa.json` как `$serverList`. Проверка делает четыре обычных
+   запуска без CLI-флагов harness: пустой новый список и повторный запуск, затем
+   побайтовая сохранность ручного NBT и старых неоднозначных маркеров дважды.
+   Обычный smoke с `--control-socket` пропускает авторский startup seeding и не
+   заменяет эту проверку. Source guard запрещает возвращение обоих startup-вызовов,
+   а выпуск требует свежий отчёт обычного запуска для полного candidate. При
+   обновлении автора новый seeding или каталог надо проверить и перенести этот
+   эффект, не очищая личный список по именам/адресам/маркерам.
+
+   Записать пакет доказательств; coldPreparation берётся из холодного smoke,
    либо отдельного --preparation. До проверки обновления --update можно опустить.
 
    ```powershell
    python tools/release_acceptance.py --candidate $candidate --smoke $smoke `
-       --multiplayer $multiplayer --out tools/release-acceptance.json `
+       --multiplayer $multiplayer --servers $serverList --out tools/release-acceptance.json `
        --defer-live-steam 'Точное сохранённое решение пользователя'
    ```
 
