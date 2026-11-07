@@ -37,7 +37,7 @@ SOURCE_PATHS = {
         "game/split/windows.rs", "game/integrated.rs", "game/lan.rs",
         "game/remote.rs", "game/screens.rs", "game/friends.rs", "game/dedicated.rs",
         "game/lan_screen.rs", "game/chat.rs", "lan/mod.rs",
-        "lan/conn.rs", "lan/discovery.rs", "multiplayer.rs",
+        "lan/conn.rs", "lan/discovery.rs", "multiplayer.rs", "title.rs", "game/ui_control.rs",
     )),
 }
 
@@ -112,6 +112,237 @@ def changes(inputs, transport):
         if let Some(name) = crate::lanmc_presentation::name() {
             return name.to_owned();
         }""")
+    # The main multiplayer page is a Steam-world view, not a filtered drawing of
+    # the saved list. Hidden entries never enter its selection or ping state.
+    src("multiplayer.rs", "        servers: Vec<ServerEntry>,\n",
+        "        saved_view: bool,\n        selected_steam_address: Option<String>,\n        servers: Vec<ServerEntry>,\n")
+    src("multiplayer.rs", '''    pub fn list(saves: &Path) -> Self {
+        let servers = servers::load(&servers_file(saves));''', '''    pub fn list(saves: &Path) -> Self {
+        Self::list_view(saves, false)
+    }
+    pub fn refresh(&mut self, saves: &Path) {
+        let saved_view = matches!(self, Self::List { saved_view: true, .. });
+        *self = Self::list_view(saves, saved_view);
+    }
+    fn list_view(saves: &Path, saved_view: bool) -> Self {
+        let servers = if saved_view { servers::load(&servers_file(saves)) } else { Vec::new() };''')
+    src("multiplayer.rs", '''        ping_all(&servers, &pings, &icons, &servers_file(saves));
+        Self::List {
+            servers,''', '''        if saved_view {
+            ping_all(&servers, &pings, &icons);
+        }
+        Self::List {
+            saved_view,
+            selected_steam_address: None,
+            servers,''')
+    src("multiplayer.rs", "            lan: Scanner::start(),",
+        "            lan: if !saved_view && crate::lanmc_steam::active() { Scanner::start() } else { Scanner::empty() },")
+    src("multiplayer.rs", '''fn ping_all(servers: &[ServerEntry], pings: &Pings, icons: &Icons, file: &Path) {''',
+        '''fn ping_all(servers: &[ServerEntry], pings: &Pings, icons: &Icons) {''')
+    src("multiplayer.rs", "        let (pings, icons, file) = (pings.clone(), icons.clone(), file.to_owned());",
+        "        let (pings, icons) = (pings.clone(), icons.clone());")
+    src("multiplayer.rs", '''                            let icon = pixels.map(|_| encoded);
+                            if icon != saved {
+                                save_icon(&file, &address, icon);
+                            }''', '''                            // Viewing a saved list never rewrites user-owned NBT.
+                            // Keep status favicons in memory until the player edits or connects.
+                            let _ = (pixels, encoded);''')
+    src("multiplayer.rs", "const HEADER: f32 = 33.0;",
+        "const VIEW_Y: f32 = 33.0;\nconst HEADER: f32 = VIEW_Y + 24.0;")
+    src("multiplayer.rs", "((HEADER - 9.0) / 2.0).floor(),", "((VIEW_Y - 9.0) / 2.0).floor(),")
+    src("multiplayer.rs", '''            Self::List {
+                servers, selected, ..
+            } => {
+                let (w, h) = (w.ceil(), h.ceil());''', '''            Self::List {
+                saved_view, servers, selected, selected_steam_address, lan, ..
+            } => {
+                let selected = selected_row_index(servers, &lan.games(), *selected, selected_steam_address.as_deref());
+                let (w, h) = (w.ceil(), h.ceil());''')
+    src("multiplayer.rs", '''                vec![
+                    b(
+                        x,
+                        h - 52.0,''', '''                vec![
+                    b(x, VIEW_Y, 152.0, "Миры Steam", *saved_view, 48),
+                    b(x + 156.0, VIEW_Y, 152.0, "Сохранённые серверы", !*saved_view, 49),
+                    b(
+                        x,
+                        h - 52.0,''')
+    src("multiplayer.rs", '''                icons,
+                lan,
+                scroll,
+                ..
+            } => {''', '''                icons,
+                lan,
+                scroll,
+                selected_steam_address,
+                ..
+            } => {''')
+    src("multiplayer.rs", '''                let games = lan.games();
+                let (top, bottom, left) = list_area(w, h);''', '''                let games = lan.games();
+                let selected_row = selected_row_index(servers, &games, *selected, selected_steam_address.as_deref());
+                let selected = &selected_row;
+                let (top, bottom, left) = list_area(w, h);''')
+    src("multiplayer.rs", '''                selected,
+                lan,
+                ..
+            } => match selected.and_then(|i| entry_address(servers, lan, i)) {''', '''                selected,
+                lan,
+                selected_steam_address,
+                ..
+            } => match selected_entry_address(servers, lan, *selected, selected_steam_address.as_deref()) {''')
+    src("multiplayer.rs", '''                    selected,
+                    lan,
+                    ..
+                },
+                Some(40),''', '''                    selected,
+                    lan,
+                    selected_steam_address,
+                    ..
+                },
+                Some(40),''')
+    src("multiplayer.rs", "                if let Some((address, lan)) = selected.and_then(|i| entry_address(servers, lan, i))",
+        "                if let Some((address, lan)) = selected_entry_address(servers, lan, *selected, selected_steam_address.as_deref())")
+    src("multiplayer.rs", "            (Self::List { .. }, Some(41)) => {", '''            (Self::List { .. }, Some(48)) => *self = Self::list(saves),
+            (Self::List { .. }, Some(49)) => *self = Self::list_view(saves, true),
+            (Self::List { .. }, Some(41)) => {''')
+    src("multiplayer.rs", "            (Self::List { .. }, Some(45)) => *self = Self::list(saves),",
+        "            (Self::List { .. }, Some(45)) => self.refresh(saves),")
+    src("multiplayer.rs", '''                    scroll,
+                    held,
+                    ..
+                },
+                None,''', '''                    scroll,
+                    held,
+                    selected_steam_address,
+                    ..
+                },
+                None,''')
+    src("multiplayer.rs", '''                    Some(Row::LanHeader) => {
+                        *selected = None;''', '''                    Some(Row::LanHeader) => {
+                        *selected = None;
+                        *selected_steam_address = None;''')
+    src("multiplayer.rs", '''                    if *selected == Some(index) {
+                        return Outcome::Connect { address, lan };
+                    }
+                    *selected = Some(index);''', '''                    if (lan && selected_steam_address.as_deref() == Some(address.as_str()))
+                        || (!lan && *selected == Some(index)) {
+                        return Outcome::Connect { address, lan };
+                    }
+                    *selected_steam_address = lan.then(|| address.clone());
+                    *selected = Some(index);''')
+    src("multiplayer.rs", '''                let _ = servers::save(&servers_file(saves), &list);
+                *self = Self::list(saves);''', '''                let updated = (*index).filter(|&i| i < list.len()).or_else(|| list.len().checked_sub(1));
+                let _ = servers::save(&servers_file(saves), &list);
+                *self = Self::list_view(saves, true);
+                if let Self::List { selected, .. } = self { *selected = updated; }''')
+    src("multiplayer.rs", '''            (
+                Self::Edit { .. }
+                | Self::Direct { .. }''', '''            (Self::Edit { .. }, Some(51)) => *self = Self::list_view(saves, true),
+            (
+                Self::Direct { .. }''')
+    src("multiplayer.rs", '''            scroll,
+            ..
+        } = self
+        else {
+            return false;
+        };
+        let total = servers.len() + lan.games().len();''', '''            scroll,
+            selected_steam_address,
+            ..
+        } = self
+        else {
+            return false;
+        };
+        let games = lan.games();
+        let total = servers.len() + games.len();''')
+    src("multiplayer.rs", "        let next = match *selected {",
+        "        let next = match selected_row_index(servers, &games, *selected, selected_steam_address.as_deref()) {")
+    src("multiplayer.rs", "        *selected = next;",
+        "        *selected_steam_address = next.and_then(|i| i.checked_sub(servers.len())).and_then(|i| games.get(i)).map(|g| g.address.clone());\n        *selected = next;")
+    src("multiplayer.rs", '''            _ => {
+                *self = Self::list(saves);
+                false
+            }
+        }
+    }
+}''', '''            Self::Edit { .. } => {
+                *self = Self::list_view(saves, true);
+                false
+            }
+            _ => {
+                *self = Self::list(saves);
+                false
+            }
+        }
+    }
+}''')
+    src("multiplayer.rs", "fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option<(String, bool)> {", '''// A Steam selection belongs to an address/lobby, never to a mutable discovery row.
+fn selected_row_index(servers: &[ServerEntry], games: &[crate::lan::discovery::LanGame], selected: Option<usize>, steam: Option<&str>) -> Option<usize> {
+    if let Some(address) = steam {
+        games.iter().position(|g| g.address == address).map(|i| servers.len() + i)
+    } else {
+        selected.filter(|&i| i < servers.len())
+    }
+}
+fn selected_entry_address(servers: &[ServerEntry], lan: &Scanner, selected: Option<usize>, steam: Option<&str>) -> Option<(String, bool)> {
+    if let Some(address) = steam {
+        lan.games().iter().any(|g| g.address == address).then(|| (address.to_owned(), true))
+    } else {
+        selected.and_then(|i| servers.get(i)).map(|s| (s.ip.clone(), false))
+    }
+}
+fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option<(String, bool)> {''')
+    src("multiplayer.rs", '''        let mut screen = Screen::List {
+            servers: vec!''', '''        let mut screen = Screen::List {
+            saved_view: true,
+            selected_steam_address: None,
+            servers: vec!''')
+    src("multiplayer.rs", "        let mut screen = Screen::list(&saves);",
+        "        let mut screen = Screen::list_view(&saves, true);", count=6)
+    src("multiplayer.rs", '''            if let Screen::List { selected, .. } = &mut screen {
+                *selected = Some(index);
+            }''', '''            if let Screen::List { selected, selected_steam_address, .. } = &mut screen {
+                *selected = Some(index);
+                *selected_steam_address = expected_lan.then(|| address.to_owned());
+            }''')
+    src("lan/discovery.rs", "pub struct Scanner {\n    inner: Arc<ScanInner>,\n}",
+        "pub struct Scanner {\n    inner: Arc<ScanInner>,\n    enabled: bool,\n}")
+    src("lan/discovery.rs", "impl Scanner {", '''impl Scanner {
+    /// A saved-server view has no automatic discovery channel.
+    pub fn empty() -> Self {
+        Self { enabled: false, inner: Arc::new(ScanInner {
+            games: Arc::default(), stop: Arc::new(AtomicBool::new(true)), taken: Mutex::new(0),
+        }) }
+    }''')
+    src("lan/discovery.rs", "        Self {\n            inner: Arc::new(ScanInner {",
+        "        Self {\n            enabled: true,\n            inner: Arc::new(ScanInner {", count=2)
+    src("lan/discovery.rs", "    pub fn take_found(&self) -> Vec<(usize, LanGame)> {",
+        "    pub fn take_found(&self) -> Vec<(usize, LanGame)> {\n        if !self.enabled { return Vec::new(); }")
+    src("lan/discovery.rs", "        let scanner = Scanner {\n            inner: Arc::new(ScanInner {",
+        "        let scanner = Scanner {\n            enabled: true,\n            inner: Arc::new(ScanInner {")
+    src("title.rs", "            *screen = crate::multiplayer::Screen::list(&self.saves);",
+        "            screen.refresh(&self.saves);")
+    src("title.rs", "        let outcome = screen.click(hit, x, y, size, &self.saves);",
+        "        let outcome = screen.click(hit, x, y, size, &self.saves);\n        if hit.is_none() || matches!(hit, Some(48 | 49)) { self.focused_button = None; }")
+    src("title.rs", "    pub fn refresh_servers(&mut self) {", '''    pub fn multiplayer_node_ids(&self, w: f32, h: f32) -> Vec<(&'static str, [f32; 4])> {
+        let Mode::Multiplayer(screen @ crate::multiplayer::Screen::List { .. }) = &self.mode else { return Vec::new(); };
+        screen.buttons(w, h).into_iter().filter_map(|(x, y, width, _, _, id)| {
+            let name = match id {
+                48 => "steam-worlds", 49 => "saved-servers",
+                45 => "server-list-refresh", 46 => "server-list-back", _ => return None,
+            };
+            Some((name, [x, y, width, 20.0]))
+        }).collect()
+    }
+    pub fn refresh_servers(&mut self) {''')
+    src("game/ui_control.rs", "        let mut nodes = widgets::tree(&widgets::last_labelled(), &widgets::last_targets(), size);", '''        let mut nodes = widgets::tree(&widgets::last_labelled(), &widgets::last_targets(), size);
+        if let (Some(title), Some([w, h])) = (&self.title, size) {
+            for (id, rect) in title.multiplayer_node_ids(w, h) {
+                if let Some(node) = nodes.iter_mut().find(|node| node.rect.iter().zip(rect).all(|(a, b)| (*a - b).abs() < 0.5)) {
+                    node.id = id.to_owned();
+                }
+            }
+        }''')
     src("game.rs", '''        let player_dir = horizon_client::logging::player_dir();
         if let Err(e) = horizon_client::multiplayer::add_official_server(&player_dir) {
             log::warn!("could not add the official server to servers.dat: {e}");
@@ -441,6 +672,7 @@ impl PauseNetwork {
         self.inner.games.lock().unwrap().clone()
     }''',
         '''    pub fn games(&self) -> Vec<LanGame> {
+        if !self.enabled { return Vec::new(); }
         if crate::lanmc_steam::active() {
             return crate::lanmc_steam::worlds().into_iter().map(|offer| LanGame {
                 motd: offer.title,
