@@ -11,7 +11,8 @@
     "CairoSVG": "2.9.1",
     "Cairo": "1.18.6",
     "Pillow": "12.3.0",
-    "mask": "explicit-luminance-composition-v1"
+    "mask": "explicit-luminance-composition-v1",
+    "presentation": "white-circle-six-percent-inset-4x-v1"
   },
   "files": {
     "rust-logo.svg": {
@@ -19,12 +20,12 @@
       "sizeBytes": 3297
     },
     "rust-logo.png": {
-      "sha256": "26e506f0ef47dfdebffcb21a8eabe0b34c997cffb076bde2030b52a9dbbe9f33",
-      "sizeBytes": 8024
+      "sha256": "be60522fcb4c37697eea7140b3028099cf0208355b73bcbd492ad1d14f7841ec",
+      "sizeBytes": 22681
     },
     "rust-edition.ico": {
-      "sha256": "9e332b7baf1ada8847b2948a64d709cdf369f7f02a94e03d6b9f4a3f09918215",
-      "sizeBytes": 17044
+      "sha256": "7544306e6d3193a12c64ecaedf4c81d982c6a4601ef1e62abd24b875767631ee",
+      "sizeBytes": 45946
     }
   }
 }

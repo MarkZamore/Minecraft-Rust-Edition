@@ -26,16 +26,16 @@ class RustArtworkTests(unittest.TestCase):
 
     def test_letter_ring_and_all_five_mount_holes_are_visible(self):
         image = Image.open(FOLDER / "rust-logo.png").convert("RGBA")
-        alpha = image.getchannel("A")
-        at = lambda x, y: alpha.getpixel((round(x * 256 / 106), round(y * 256 / 106)))
-        # These coordinates come from the official 106-unit source drawing.
-        self.assertGreater(at(33, 48), 240)  # R stem, not merely an empty gear.
-        self.assertLess(at(49, 42), 16)  # R counter.
-        self.assertGreater(at(53, 7), 240)  # Gear ring.
+        at = lambda x, y: image.getpixel((round(256 * (0.06 + 0.88 * x / 106)),
+                                          round(256 * (0.06 + 0.88 * y / 106))))
+        # Source geometry is unchanged, scaled into the backplate's six-percent inset.
+        self.assertLess(max(at(33, 48)[:3]), 16)  # R stem, not merely an empty gear.
+        self.assertGreater(min(at(49, 42)[:3]), 240)  # R counter shows the white backplate.
+        self.assertLess(max(at(53, 7)[:3]), 16)  # Gear ring.
         for x, y in [(53, 13), (91.04, 40.64), (76.51, 85.36),
                      (29.49, 85.36), (14.96, 40.64)]:
             with self.subTest(hole=(x, y)):
-                self.assertLess(at(x, y), 16)
+                self.assertGreater(min(at(x, y)[:3]), 240)
         self.assertEqual(image.getpixel((0, 0))[3], 0)
         self.assertEqual(image.getpixel((255, 255))[3], 0)
 
@@ -59,6 +59,23 @@ class RustArtworkTests(unittest.TestCase):
     def test_previous_white_mask_rectangle_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "transparent background"):
             artwork.validate_frame(Image.new("RGBA", (256, 256), "white"))
+
+    def test_smallest_window_frame_has_visible_artwork_on_both_caption_themes(self):
+        frame = Image.open(io.BytesIO(artwork.render_frame((FOLDER / "rust-logo.svg").read_bytes(), 16)))
+        for background in ("black", "white"):
+            with self.subTest(background=background):
+                composite = Image.new("RGBA", (16, 16), background)
+                composite.alpha_composite(frame)
+                luminance = list(composite.convert("L").get_flattened_data())
+                self.assertGreater(sum(value > 200 for value in luminance), 32)
+                self.assertGreater(sum(value < 64 for value in luminance), 32)
+
+    def test_monochrome_dark_caption_regression_is_rejected(self):
+        frame = Image.open(FOLDER / "rust-logo.png").convert("RGBA")
+        black = Image.new("RGBA", frame.size, "black")
+        black.putalpha(frame.getchannel("A"))
+        with self.assertRaisesRegex(ValueError, "contrast"):
+            artwork.validate_frame(black)
 
     def test_missing_r_cannot_pass_as_an_intact_gear(self):
         svg = (FOLDER / "rust-logo.svg").read_bytes()

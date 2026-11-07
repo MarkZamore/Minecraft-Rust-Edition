@@ -6,5 +6,6 @@ Trademark policy: https://rustfoundation.org/policy/rust-trademark-policy/
 
 The original logo was rasterized for PNG and Windows ICO. The artwork's shape and colors were preserved.
 The source SVG's luminance mask is composed explicitly because CairoSVG does not support it.
+A white circular contrast backplate and a six-percent inset were added for visibility on light and dark Windows title bars and taskbars. The original foreground geometry and black color are preserved; the source SVG is unchanged.
 The logo identifies the Rust programming language used to build the game.
 Minecraft Rust Edition is an unofficial fan project, unaffiliated with the Rust Project or Rust Foundation.
