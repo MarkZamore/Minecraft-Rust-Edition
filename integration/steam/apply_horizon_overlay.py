@@ -107,6 +107,21 @@ def changes(inputs, transport):
         if let Some(name) = crate::lanmc_presentation::name() {
             return name.to_owned();
         }""")
+    src("game.rs", '''        let player_dir = horizon_client::logging::player_dir();
+        if let Err(e) = horizon_client::multiplayer::add_official_server(&player_dir) {
+            log::warn!("could not add the official server to servers.dat: {e}");
+        }
+        if let Err(e) = horizon_client::multiplayer::add_partner_servers(&player_dir) {
+            log::warn!("could not add the partner servers to servers.dat: {e}");
+        }
+''', "")
+    src("game.rs", '''    // Someone is playing: the anonymous ping behind the launcher's "N playing now", and the
+    // official server in their list (servers.dat in the game folder, the working directory). Not
+    // for a server, a benchmark, a run that quits by itself, a harness's fixture or a run that
+    // horizon-ctl drives: those start in a source checkout and wrote the list there.
+''', '''    // Keep Horizon's normal player heartbeat. The pack never seeds or migrates public
+    // recommendations into the player's saved server list; Steam discovery is separate.
+''')
     src("client_lib.rs", "pub mod lan;", "pub mod lan;\npub mod lanmc_steam;")
     src("entry.rs", '        crash::install(home.clone(), side);',
         '''        crash::install(home.clone(), side);
