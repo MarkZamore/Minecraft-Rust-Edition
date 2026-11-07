@@ -1,0 +1,27 @@
+{
+  "scope": "Component checks only; real native game/fullscreen acceptance belongs to parent exact-runtime QA",
+  "contractStateLayout": {
+    "passed": 23,
+    "failed": 0,
+    "ignored": 0,
+    "includes": "11 parser,6 state,5 layout,1 connected future-pending regression; forbid unsafe game harness"
+  },
+  "platform": {
+    "passed": 6,
+    "failed": 0,
+    "ignored": 0,
+    "actualWindowsGdi": true
+  },
+  "safeAdapterForbidUnsafe": "PASS",
+  "wholeBridgeMetadataForbidUnsafe": "PASS",
+  "fullRuntime": "NOT RUN by this agent",
+  "sources": {
+    "lanmc_notice_protocol.rs": "7c9d2fddb9aa650ec9f6751aac048d19d4166fd48a477aa3f8d256d39433d48f",
+    "lanmc_notice_state.rs": "1f693184ae77dc69923f403d046189e88692203e4b3be719868a7ffd9e8649ec",
+    "lanmc_notice_raster.rs": "770e118c24f9d2480fd2b895b52bb79897a37d687c3fd785083ee63c95c4978d",
+    "lanmc_notice_render.rs": "7f09731194d55b814830bb134565ecb92f947dce06fb2021052e66baf0fc0f30",
+    "lanmc_notice_layout.rs": "07e97f1d1716f3bd6699c0df2b4c5c8eec8615dfe150ce7876db5af528b24f67",
+    "lanmc_notices.rs": "11002348d63f3af4fb709519f67b80c278de53dccd17726d155bc716c7d2c87c",
+    "notice-platform/src/lib.rs": "0cbaf8337b4ed6f4b587f63a7a50d28dfe99c49d69f8d3056d9203d914e84469"
+  }
+}
