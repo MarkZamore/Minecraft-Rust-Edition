@@ -16,7 +16,7 @@ from stage_runtime import (
 )
 
 
-FEATURES = ["native-runtime-v1", "native-steam-v1", "minecraft-26-world-layout-v1"]
+FEATURES = ["native-runtime-v1", "native-steam-v1", "minecraft-26-world-layout-v1", "native-launcher-notices-v1"]
 RELEASE_LOCK = ROOT / "tools/distribution-lock.json"
 
 

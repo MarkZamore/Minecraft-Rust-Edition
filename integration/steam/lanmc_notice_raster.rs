@@ -36,8 +36,8 @@ fn geometry(snapshot: &Snapshot, viewport_width: u32) -> Result<Geometry, String
         || s.font_family.chars().any(char::is_control)
         || snapshot.notices.len() > 3
         || snapshot.notices.iter().any(|notice| {
-            notice.title.chars().count() > 160
-                || notice.body.chars().count() > 320
+            notice.title.encode_utf16().count() > 160
+                || notice.body.encode_utf16().count() > 320
                 || notice.title.contains('\0')
                 || notice.body.contains('\0')
         })

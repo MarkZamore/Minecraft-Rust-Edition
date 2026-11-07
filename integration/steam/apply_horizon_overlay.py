@@ -2,6 +2,7 @@
 """Apply the LANMinecraft integration to one independently verified Horizon source tree."""
 
 import argparse
+import importlib.util
 import hashlib
 import json
 import os
@@ -11,6 +12,9 @@ import tarfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+NOTICE_SPEC = importlib.util.spec_from_file_location("edition_notice_overlay", HERE / "notice_overlay.py")
+NOTICE_OVERLAY = importlib.util.module_from_spec(NOTICE_SPEC)
+NOTICE_SPEC.loader.exec_module(NOTICE_OVERLAY)
 COMMIT = "6560641ba51a452f6bc2407baa4eb1b3be517ca8"
 SOURCE_SHA = "d7e3941b1fa0d9a779a0ed050e5df913ba9bdd6a2c15edd569d276b5e3af54c6"
 SOURCE_SIZE = 46_963_717
@@ -27,6 +31,7 @@ SOURCE_PATHS = {
     "Cargo.lock",
     CLIENT_LIB + "Cargo.toml",
     CLIENT + "build.rs",
+    *NOTICE_OVERLAY.SOURCES,
     *(CLIENT + "src/" + path for path in (
         "entry.rs", "lib.rs", "client_lib.rs", "game.rs", "game/no_resources.rs",
         "game/split/windows.rs", "game/integrated.rs", "game/lan.rs",
@@ -540,6 +545,7 @@ impl PauseNetwork {
     if tree_sha(index(steam_files)) != TRANSPORT_SHA:
         raise ValueError("Shared Steam transport does not match the reviewed source pin")
     patched.update((TRANSPORT + name, data) for name, data in steam_files.items())
+    NOTICE_OVERLAY.apply(patched, HERE)
     return patched
 
 
@@ -580,6 +586,7 @@ def tree_sha(files):
 def recipe_sha():
     return tree_sha(index({name: (HERE / name).read_bytes() for name in (
         Path(__file__).name, "lanmc_steam.rs", "lanmc_skins.rs", "lanmc_presentation.rs",
+        "notice_overlay.py", *NOTICE_OVERLAY.COPY_FILES,
         "horizon-cargo.lock", "rust-logo/artwork-lock.json", "rust-logo/render.py",
         "rust-logo/NOTICE.txt", "rust-logo/rust-logo.svg", "rust-logo/rust-logo.png",
         "rust-logo/rust-edition.ico",
