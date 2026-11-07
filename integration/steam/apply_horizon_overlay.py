@@ -93,10 +93,11 @@ def changes(inputs, transport):
     for path, count in (("game.rs", 2), ("game/no_resources.rs", 1)):
         src(path, 'horizon_client::window::with_horizon_icon(\n'
             '            Window::default_attributes().with_title("Horizon"),\n        )',
-            'Window::default_attributes().with_title(crate::lanmc_presentation::title("Horizon"))'
-            '.with_window_icon(crate::lanmc_presentation::icon())', count=count)
+            'crate::lanmc_presentation::with_icon(\n'
+            '            Window::default_attributes().with_title(crate::lanmc_presentation::title("Horizon")),\n'
+            '        )', count=count)
     src("game/split/windows.rs", "horizon_client::window::with_horizon_icon(Window::default_attributes())",
-        "Window::default_attributes().with_window_icon(crate::lanmc_presentation::icon())")
+        "crate::lanmc_presentation::with_icon(Window::default_attributes())")
     src("game/split/windows.rs", '.with_title(format!("Horizon {key}"))',
         '.with_title(crate::lanmc_presentation::title(format!("Horizon {key}")))')
     src("game/split/windows.rs", '.with_title("Horizon")',
@@ -169,7 +170,11 @@ def changes(inputs, transport):
             "menu.multiplayerOptions.publish.started.lan",
             &[Text::literal(port.to_string())],
         ));''',
-        '''        if !crate::lanmc_steam::active() {
+        '''        if crate::lanmc_steam::active() {
+            self.system_message(Text::literal(format!(
+                "Локальный порт сервера: {port} (внутренний порт Steam; друзья подключаются по адресу .steam)"
+            )));
+        } else {
             self.system_message(Text::translate(
                 "menu.multiplayerOptions.publish.started.lan",
                 &[Text::literal(port.to_string())],

@@ -5,5 +5,6 @@ License: https://creativecommons.org/licenses/by/4.0/
 Trademark policy: https://rustfoundation.org/policy/rust-trademark-policy/
 
 The original logo was rasterized for PNG and Windows ICO. The artwork's shape and colors were preserved.
+The source SVG's luminance mask is composed explicitly because CairoSVG does not support it.
 The logo identifies the Rust programming language used to build the game.
 Minecraft Rust Edition is an unofficial fan project, unaffiliated with the Rust Project or Rust Foundation.
