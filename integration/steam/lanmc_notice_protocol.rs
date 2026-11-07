@@ -99,8 +99,10 @@ pub fn parse_snapshot(
         let prefix = format!("{index}.");
         let title = required(&notices, &(prefix.clone() + "title"))?.to_owned();
         let body = required(&notices, &(prefix.clone() + "body"))?.to_owned();
-        if title.chars().count() > 160 || body.chars().count() > 320 {
-            return Err("Notice text exceeds its character limit".into());
+        // Match C# String.Length and Java String.length(): supplementary
+        // characters occupy two UTF-16 code units on both launcher paths.
+        if title.encode_utf16().count() > 160 || body.encode_utf16().count() > 320 {
+            return Err("Notice text exceeds its UTF-16 limit".into());
         }
         if title.contains('\0') || body.contains('\0') {
             return Err("Notice text contains NUL".into());
@@ -421,6 +423,26 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn literal_and_escaped_emoji_share_the_launcher_utf16_boundaries() {
+        for emoji in ["😀", r"\uD83D\uDE00"] {
+            for (title_count, body_count, accepted) in
+                [(80, 160, true), (81, 160, false), (80, 161, false)]
+            {
+                let notices = format!(
+                    "count=1\ndpiScale=1\n0.title={}\n0.body={}\n0.createdUnixMs=10000\n",
+                    emoji.repeat(title_count),
+                    emoji.repeat(body_count)
+                );
+                assert_eq!(
+                    parse(STYLE, &notices, 10_000).is_ok(),
+                    accepted,
+                    "emoji={emoji:?}, title={title_count}, body={body_count}"
+                );
+            }
+        }
     }
 
     #[test]
