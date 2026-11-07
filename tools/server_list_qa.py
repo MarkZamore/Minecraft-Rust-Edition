@@ -1,4 +1,4 @@
-"""Check public-server seeding and manual-list preservation in ordinary Windows launches.
+"""Check Steam-first server views and saved-list preservation in ordinary Windows launches.
 
 Unlike --control-socket, enabling Agent Control only in the technical profile's
 extras does not select synchronous/harness startup, so this exercises the path
@@ -20,6 +20,15 @@ from release_acceptance import execution_context
 
 MANUAL_NAME = "Manual preservation QA"
 MANUAL_ADDRESS = "manual.example.invalid:25565"
+STEAM_WIDGET = "steam-worlds"
+SAVED_WIDGET = "saved-servers"
+REFRESH_WIDGET = "server-list-refresh"
+BACK_WIDGET = "server-list-back"
+LEGACY_SERVERS = [
+    {"name": "Horizon Official", "address": "play.playhorizon.dev"},
+    {"name": "Afri-Network (South Africa)", "address": "afri-network.co.za"},
+    {"name": MANUAL_NAME, "address": MANUAL_ADDRESS},
+]
 
 
 def manual_servers():
@@ -37,7 +46,188 @@ def manual_servers():
     return b"\x0a\x00\x00\x09" + text("servers") + b"\x0a\x00\x00\x00\x01" + entry + b"\x00"
 
 
-def ordinary_launch(client, controller, resources, qa, game, index, build_name, visual_check=False):
+def legacy_servers():
+    """Two author-seeded entries and an unrelated manual row with unknown NBT."""
+    def text(value):
+        value = value.encode("utf-8")
+        return struct.pack(">H", len(value)) + value
+
+    def string(name, value):
+        return b"\x08" + text(name) + text(value)
+
+    entries = []
+    for row in LEGACY_SERVERS:
+        entry = string("name", row["name"]) + string("ip", row["address"])
+        if row["name"] == MANUAL_NAME:
+            entry += (b"\x01" + text("acceptTextures") + b"\x00"
+                      + b"\x03" + text("acceptedCodeOfConduct") + struct.pack(">i", 123456)
+                      + string("futureEditionMetadata", "preserve-unknown-row-v1"))
+        entries.append(entry + b"\x00")
+    unknown_root = b"\x04" + text("unownedFutureCounter") + struct.pack(">q", 1234567890123)
+    return (b"\x0a\x00\x00\x09" + text("servers") + b"\x0a"
+            + struct.pack(">i", len(entries)) + b"".join(entries) + unknown_root + b"\x00")
+
+
+def widget(state, labels, kind=None):
+    matches = [node for node in state["widgets"]
+               if node.get("label") in labels and (kind is None or node["kind"] == kind)]
+    if len(matches) != 1:
+        raise RuntimeError(f"Expected one widget {labels!r}, got {matches!r}; ui={state!r}")
+    return matches[0]
+
+
+def widget_id(state, identifier):
+    matches = [node for node in state["widgets"] if node["id"] == identifier]
+    if len(matches) != 1:
+        raise RuntimeError(f"Expected one stable widget {identifier!r}; ui={state!r}")
+    return matches[0]
+
+
+def ui_summary(state):
+    return [{key: node[key] for key in ("id", "kind", "label", "enabled", "selected") if key in node}
+            for node in state["widgets"]]
+
+
+def check_server_views(control, game, original):
+    """Exercise actual drawn rows and ordinary click/key routes, without joining a server."""
+    evidence = {}
+    expected_names = {row["name"] for row in LEGACY_SERVERS}
+
+    def ui():
+        return control("ui")
+
+    def click(labels, kind=None):
+        node = widget(ui(), labels, kind)
+        if not node["enabled"]:
+            raise RuntimeError(f"Expected enabled widget {node!r}")
+        control("click", node["id"])
+        return ui()
+
+    def click_id(identifier):
+        node = widget_id(ui(), identifier)
+        if not node["enabled"]:
+            raise RuntimeError(f"Expected enabled widget {node!r}")
+        control("click", node["id"])
+        return ui()
+
+    def unchanged():
+        if control("servers")["servers"] != LEGACY_SERVERS:
+            raise RuntimeError("Stored legacy/manual rows changed during view navigation")
+        if (game / "servers.dat").read_bytes() != original:
+            raise RuntimeError("View navigation or status pings rewrote unknown/saved NBT")
+
+    def steam_default(state):
+        steam = widget_id(state, STEAM_WIDGET)
+        saved = widget_id(state, SAVED_WIDGET)
+        for identifier in (REFRESH_WIDGET, BACK_WIDGET):
+            if not widget_id(state, identifier)["enabled"]:
+                raise RuntimeError(f"List navigation widget is disabled: {identifier}")
+        if steam.get("selected") is not True and steam["enabled"]:
+            raise RuntimeError("Steam view is not selected by default")
+        if saved.get("selected") is True or not saved["enabled"]:
+            raise RuntimeError("Saved servers opened implicitly")
+        shown_names = {node.get("label") for node in state["widgets"] if node["kind"] == "row"}
+        if shown_names & expected_names:
+            raise RuntimeError("A saved server is drawn in the default Steam view")
+        for names in ({"Join Server"}, {"Edit"}, {"Delete"}):
+            if widget(state, names, "button")["enabled"]:
+                raise RuntimeError(f"Unselected/hidden saved entry can trigger {names!r}")
+        unchanged()
+
+    click({"Multiplayer"}, "button")
+    state = ui()
+    steam_default(state)
+    evidence["defaultSteam"] = ui_summary(state)
+    # A stale hidden selection must not activate a saved row via Enter.
+    control("key", "enter", "tap")
+    steam_default(ui())
+    control("key", "delete", "tap")
+    steam_default(ui())
+    evidence["defaultEnterAndDeleteStayedInSteamView"] = True
+    click_id(REFRESH_WIDGET)
+    steam_default(ui())
+    control("key", "f5", "tap")
+    steam_default(ui())
+    evidence["defaultRefreshStayedInSteamView"] = True
+    click_id(SAVED_WIDGET)
+    state = ui()
+    if widget_id(state, SAVED_WIDGET).get("selected") is not True and widget_id(state, SAVED_WIDGET)["enabled"]:
+        raise RuntimeError("Explicit Saved view was not selected")
+    shown_names = {node.get("label") for node in state["widgets"] if node["kind"] == "row"}
+    if not expected_names.issubset(shown_names):
+        raise RuntimeError(f"Explicit Saved view lost rows: {expected_names - shown_names!r}")
+    evidence["savedView"] = ui_summary(state)
+    unchanged()
+    click_id(REFRESH_WIDGET)
+    state = ui()
+    if widget_id(state, SAVED_WIDGET).get("selected") is not True and widget_id(state, SAVED_WIDGET)["enabled"]:
+        raise RuntimeError("Refreshing Saved implicitly returned to the Steam view")
+    control("key", "f5", "tap")
+    state = ui()
+    if widget_id(state, SAVED_WIDGET).get("selected") is not True and widget_id(state, SAVED_WIDGET)["enabled"]:
+        raise RuntimeError("F5 in Saved implicitly returned to the Steam view")
+    shown_names = {node.get("label") for node in state["widgets"] if node["kind"] == "row"}
+    if not expected_names.issubset(shown_names):
+        raise RuntimeError("Refreshing Saved lost stored entries")
+    unchanged()
+    evidence["savedRefreshPreservedViewAndData"] = True
+    click({MANUAL_NAME}, "row")
+    state = ui()
+    for names in ({"Join Server"}, {"Edit"}, {"Delete"}):
+        if not widget(state, names, "button")["enabled"]:
+            raise RuntimeError(f"Selected manual entry cannot use {names!r}")
+    evidence["savedSelection"] = ui_summary(state)
+    # Opening editors and cancelling is read-only with respect to servers.dat.
+    click({"Edit"}, "button")
+    state = ui()
+    if len([node for node in state["widgets"] if node["kind"] == "field"]) != 2:
+        raise RuntimeError("The saved-server editor is not accessible")
+    click({"Cancel"}, "button")
+    click({"Direct Connection"}, "button")
+    field = widget(ui(), {"Server Address"}, "field")
+    control("click", field["id"])
+    control("key", "ctrl", "down")
+    try:
+        control("key", "a", "tap")
+    finally:
+        control("key", "ctrl", "up")
+    control("key", "backspace", "tap")
+    if widget(ui(), {"Join Server"}, "button")["enabled"]:
+        raise RuntimeError("Direct-address field did not clear")
+    control("type", MANUAL_ADDRESS)
+    if not widget(ui(), {"Join Server"}, "button")["enabled"]:
+        raise RuntimeError("Manual direct-address input no longer enables joining")
+    evidence["manualDirectInput"] = ui_summary(ui())
+    click({"Cancel"}, "button")
+    click({"Add Server"}, "button")
+    if len([node for node in ui()["widgets"] if node["kind"] == "field"]) != 2:
+        raise RuntimeError("Adding a manual server is not accessible")
+    click({"Cancel"}, "button")
+    # Leave Saved with a selected row; avoid a second click on an existing
+    # selection, which would join it through the author's double-click route.
+    if widget_id(ui(), SAVED_WIDGET)["enabled"]:
+        click_id(SAVED_WIDGET)
+    if not widget(ui(), {"Join Server"}, "button")["enabled"]:
+        click({MANUAL_NAME}, "row")
+    click_id(STEAM_WIDGET)
+    steam_default(ui())
+    control("key", "enter", "tap")
+    steam_default(ui())
+    evidence["selectionResetOnSteamSwitch"] = True
+    # Re-enter through the actual title button, even after the last view was Saved.
+    click_id(SAVED_WIDGET)
+    click_id(BACK_WIDGET)
+    click({"Multiplayer"}, "button")
+    steam_default(ui())
+    evidence["titleReentryDefaultsToSteam"] = True
+    click_id(BACK_WIDGET)
+    unchanged()
+    evidence["unknownNbtRetainedByteForByte"] = True
+    return evidence
+
+
+def ordinary_launch(client, controller, resources, qa, game, index, build_name, visual_check=False,
+                    view_original=None):
     endpoint = qa / f"control-{index}.json"
     log = qa / f"client-{index}.log"
     environment = dict(os.environ)
@@ -78,10 +268,12 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
                 print("Ready for visual window-icon check", flush=True)
                 time.sleep(40)
             servers = control("servers")["servers"]
+            views = check_server_views(control, game, view_original) if view_original is not None else None
             control("quit", timeout=20)
             if process.wait(timeout=45) != 0:
                 raise RuntimeError(f"Client exited with code {process.returncode}; see {log}")
-            return {"servers": servers, "arguments": arguments, "exitCode": process.returncode}
+            return {"servers": servers, "arguments": arguments, "exitCode": process.returncode,
+                    **({"serverViews": views} if views is not None else {})}
         finally:
             if process.poll() is None:
                 process.kill()
@@ -121,6 +313,9 @@ def main():
     game.mkdir()
     # Fixture-only setting; it leaves the normal public-server startup path active.
     (game / "horizon-extras.txt").write_text("agentControl:true\n", encoding="utf-8")
+    (game / "options.txt").write_text(
+        "version:5023\nlang:en_us\nonboardAccessibility:false\nskipMultiplayerWarning:true\nnarrator:0\n",
+        encoding="utf-8")
     context = execution_context(candidate)
     report = {"schemaVersion": 1, "status": "FAIL", "acceptanceContext": context,
               "startup": "ordinary client; Agent Control enabled only in technical extras",
@@ -156,6 +351,26 @@ def main():
                 raise RuntimeError("Legacy recommendation markers were rewritten")
         report["checks"]["manualEntriesAndFieldsRetainedAcrossRestart"] = "PASS"
         report["manualServersSha256"] = hashlib.sha256(original).hexdigest()
+        original = legacy_servers()
+        server_file.write_bytes(original)
+        markers = {"horizon_official_server.txt": b"play.playhorizon.dev\n",
+                   "horizon_partner_servers.txt": b"afri-network.co.za\n"}
+        for name, data in markers.items():
+            (game / name).write_bytes(data)
+        for index in (5, 6):
+            run = ordinary_launch(client, controller, resources, qa, game, index, build_name,
+                                  view_original=original)
+            report["runs"].append(run)
+            if run["servers"] != LEGACY_SERVERS or server_file.read_bytes() != original:
+                raise RuntimeError("Legacy/manual data changed across ordinary view-check startup")
+            if any((game / name).read_bytes() != data for name, data in markers.items()):
+                raise RuntimeError("View navigation changed ambiguous legacy markers")
+        report["checks"]["steamDefaultAndExplicitSavedView"] = "PASS"
+        report["checks"]["hiddenSavedSelectionCannotJoinEditOrDelete"] = "PASS"
+        report["checks"]["manualEditorAndDirectInputAccessible"] = "PASS"
+        report["checks"]["titleReentryDefaultsToSteam"] = "PASS"
+        report["checks"]["legacyUnknownNbtPreservedByteForByte"] = "PASS"
+        report["legacyServersSha256"] = hashlib.sha256(original).hexdigest()
         if execution_context(candidate) != context:
             raise RuntimeError("Candidate changed during acceptance")
         report["checks"]["exactCandidateUnchanged"] = "PASS"
@@ -168,7 +383,7 @@ def main():
         if succeeded:
             clean_fixture(game, qa)
             report["fixtureRemoved"] = True
-            for index in (1, 2, 3, 4):
+            for index in (1, 2, 3, 4, 5, 6):
                 (qa / f"client-{index}.log").unlink(missing_ok=True)
                 (qa / f"control-{index}.json").unlink(missing_ok=True)
         (qa / "server-list-qa.json").write_text(
