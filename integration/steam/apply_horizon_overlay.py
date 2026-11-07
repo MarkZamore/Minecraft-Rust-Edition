@@ -305,6 +305,38 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
                 *selected = Some(index);
                 *selected_steam_address = expected_lan.then(|| address.to_owned());
             }''')
+    # Preserve the author's exact geometry assertions for the extra 24-pixel
+    # view row. Footer clipping stays at y=180 in the 427x240 test window.
+    for old, new, count in (
+        ("(349.0, 37.0)", "(349.0, 61.0)", 5),
+        ("(358.9, 44.9)", "(358.9, 68.9)", 1),
+        ("(348.9, 37.0)", "(348.9, 61.0)", 1),
+        ("(359.0, 37.0)", "(359.0, 61.0)", 1),
+        ("(349.0, 36.9)", "(349.0, 60.9)", 1),
+        ("(349.0, 45.0)", "(349.0, 69.0)", 1),
+        ("(100.0, 40.0)", "(100.0, 64.0)", 1),
+        ("(349.0, 32.0)", "(349.0, 56.0)", 1),
+        ("(349.0, 34.0)", "(349.0, 58.0)", 1),
+        ("(349.0, 33.0)", "(349.0, 57.0)", 1),
+        ("(324.0, 37.0)", "(324.0, 61.0)", 3),
+        ("(343.9, 44.9)", "(343.9, 68.9)", 1),
+        ("(323.9, 37.0)", "(323.9, 61.0)", 1),
+        ("(344.0, 37.0)", "(344.0, 61.0)", 1),
+        ("(324.0, 36.9)", "(324.0, 60.9)", 1),
+        ("(324.0, 45.0)", "(324.0, 69.0)", 1),
+        ("(33.0, 180.0, 61.0)", "(57.0, 180.0, 61.0)", 1),
+        ("(100.0, 35.0)", "(100.0, 59.0)", 2),
+        ("(100.0, 143.0)", "(100.0, 167.0)", 1),
+        ("(60.0, 40.0)", "(60.0, 64.0)", 1),
+        ("(100.0, 32.0)", "(100.0, 56.0)", 1),
+        ("37.0 + 10.0 + i * ROW_HEIGHT", "61.0 + 10.0 + i * ROW_HEIGHT", 1),
+        ("(63.0, 37.0)", "(63.0, 61.0)", 1),
+        ("The first bar is at (349, 37)", "The first bar is at (349, 61)", 1),
+        ("bars at (349, 37)", "bars at (349, 61)", 1),
+        ("the first at y 35", "the first at y 59", 1),
+        ("the first icon at (63, 37)", "the first icon at (63, 61)", 1),
+    ):
+        src("multiplayer.rs", old, new, count=count)
     src("lan/discovery.rs", "pub struct Scanner {\n    inner: Arc<ScanInner>,\n}",
         "pub struct Scanner {\n    inner: Arc<ScanInner>,\n    enabled: bool,\n}")
     src("lan/discovery.rs", "impl Scanner {", '''impl Scanner {
