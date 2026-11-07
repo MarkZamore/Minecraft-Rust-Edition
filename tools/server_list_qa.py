@@ -37,7 +37,7 @@ def manual_servers():
     return b"\x0a\x00\x00\x09" + text("servers") + b"\x0a\x00\x00\x00\x01" + entry + b"\x00"
 
 
-def ordinary_launch(client, controller, resources, qa, game, index):
+def ordinary_launch(client, controller, resources, qa, game, index, build_name, visual_check=False):
     endpoint = qa / f"control-{index}.json"
     log = qa / f"client-{index}.log"
     environment = dict(os.environ)
@@ -47,7 +47,8 @@ def ordinary_launch(client, controller, resources, qa, game, index):
             "HORIZON_COMMAND_SCRIPT", "HORIZON_NET_REPORT",
         }:
             del environment[key]
-    environment.update(HORIZON_CONTROL=str(endpoint), HORIZON_NO_DISCORD="1")
+    environment.update(HORIZON_CONTROL=str(endpoint), HORIZON_NO_DISCORD="1",
+                       LANMINECRAFT_BUILD_NAME=build_name)
     # No --control, --frames, --benchmark, --offscreen or fixture flag: normal startup.
     arguments = [str(client), "--resources", str(resources), "--game-dir", str(game),
                  "--home", str(game), "--name", "RustEditionServerListQA"]
@@ -73,6 +74,9 @@ def ordinary_launch(client, controller, resources, qa, game, index):
                     raise TimeoutError("Ordinary startup did not open the technical control endpoint")
                 time.sleep(0.25)
             control("wait-for", "screen", "title", "--timeout", "90")
+            if visual_check:
+                print("Ready for visual window-icon check", flush=True)
+                time.sleep(40)
             servers = control("servers")["servers"]
             control("quit", timeout=20)
             if process.wait(timeout=45) != 0:
@@ -101,9 +105,12 @@ def main():
     parser.add_argument("--controller", required=True, type=Path)
     parser.add_argument("--resources", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--visual-check", action="store_true",
+                        help="Hold the first ordinary title screen for 40 seconds for visual review")
     args = parser.parse_args()
     candidate = args.candidate.resolve(strict=True)
     client = candidate / "native/horizon-client.exe"
+    build_name = json.loads((candidate / "native/presentation.json").read_text(encoding="utf-8"))["name"]
     controller = args.controller.resolve(strict=True)
     resources = args.resources.resolve(strict=True)
     qa = args.out.resolve()
@@ -121,7 +128,8 @@ def main():
     succeeded = False
     try:
         for index in (1, 2):
-            run = ordinary_launch(client, controller, resources, qa, game, index)
+            run = ordinary_launch(client, controller, resources, qa, game, index,
+                                  build_name, args.visual_check and index == 1)
             report["runs"].append(run)
             if run["servers"]:
                 raise RuntimeError("A clean profile acquired automatic public-server entries")
@@ -138,7 +146,7 @@ def main():
         for name, data in markers.items():
             (game / name).write_bytes(data)
         for index in (3, 4):
-            run = ordinary_launch(client, controller, resources, qa, game, index)
+            run = ordinary_launch(client, controller, resources, qa, game, index, build_name)
             report["runs"].append(run)
             if run["servers"] != [{"name": MANUAL_NAME, "address": MANUAL_ADDRESS}]:
                 raise RuntimeError("Manual server list changed across ordinary startup")

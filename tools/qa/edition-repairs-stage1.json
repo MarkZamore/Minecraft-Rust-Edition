@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 1,
+  "scope": "Intermediate bugfix candidate; native launcher notice bridge pending; not published",
+  "client": {
+    "sizeBytes": 92303360,
+    "sha256": "543319c46481097dced64943c900054276ea7e7c8a7628f13d2f919f2f69d2c3"
+  },
+  "context": {
+    "upstreamCommit": "6560641ba51a452f6bc2407baa4eb1b3be517ca8",
+    "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+    "recipeSha256": "dc8c969c8ae8080b09dac5f4a0bbe402e543d347ac820079ba3da3c6b930c27c",
+    "overlayReceiptSha256": "9a83edc1bae87f4131717fcf8ca195353b972b0fc846b17c65ad9ff3bb1d2825",
+    "payloadInventorySha256": "d22631fe315f85edcfd9888ec56d8fd0b227e6f5e87fa6199ed1c4bd6567ae47"
+  },
+  "nativeUnitCases": 20,
+  "nativeUnitResult": "PASS",
+  "clippy": "PASS",
+  "liveSteam": "NOT RUN: user chose Steam later",
+  "coldPreparation": "Prior exact unchanged bootstrap/preparer/research proof reused; not a new cold run",
+  "checks": {
+    "saveReopenAndWarmBootstrap": "PASS",
+    "narratorOff": "PASS",
+    "emptyModsPage": "PASS",
+    "pauseReturnsAndReports": "PASS",
+    "guestCommandsAllowedAndDeniedViaChat": "PASS",
+    "normalStartupWithoutPublicSeeding": "PASS",
+    "manualServersAndFieldsByteIdentical": "PASS",
+    "oldClientRegressionDetected": "PASS"
+  },
+  "evidence": {
+    "smoke": {
+      "schemaVersion": 1,
+      "acceptanceContext": {
+        "upstreamCommit": "6560641ba51a452f6bc2407baa4eb1b3be517ca8",
+        "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+        "recipeSha256": "dc8c969c8ae8080b09dac5f4a0bbe402e543d347ac820079ba3da3c6b930c27c",
+        "overlayReceiptSha256": "9a83edc1bae87f4131717fcf8ca195353b972b0fc846b17c65ad9ff3bb1d2825",
+        "payloadInventorySha256": "d22631fe315f85edcfd9888ec56d8fd0b227e6f5e87fa6199ed1c4bd6567ae47"
+      },
+      "client": {
+        "sizeBytes": 92303360,
+        "sha256": "543319c46481097dced64943c900054276ea7e7c8a7628f13d2f919f2f69d2c3"
+      },
+      "preview": {
+        "sizeBytes": 5533588,
+        "sha256": "5a52cb1891dbadde7bc2b6708ab720b748df7052a6783f5bba605896912d431e"
+      },
+      "modsPage": {
+        "frame": 62,
+        "gui_size": [
+          427.0,
+          240.0
+        ],
+        "screen": "title",
+        "widgets": [
+          {
+            "bounds": [
+              58.0,
+              37.0,
+              310.0,
+              20.0
+            ],
+            "enabled": true,
+            "id": "browse-mods",
+            "kind": "button",
+            "label": "Browse Mods..."
+          },
+          {
+            "bounds": [
+              59.0,
+              213.0,
+              150.0,
+              20.0
+            ],
+            "enabled": true,
+            "id": "open-mod-folder",
+            "kind": "button",
+            "label": "Open Mod Folder"
+          },
+          {
+            "bounds": [
+              217.0,
+              213.0,
+              150.0,
+              20.0
+            ],
+            "enabled": true,
+            "id": "done",
+            "kind": "button",
+            "label": "Done"
+          }
+        ]
+      },
+      "firstState": {
+        "busy": null,
+        "dialog": {
+          "open": null,
+          "screen": null
+        },
+        "dimension": "minecraft:overworld",
+        "gamemode": "spectator",
+        "held": null,
+        "input": {
+          "counts": {
+            "agent": 14,
+            "game": 0,
+            "user": 0
+          },
+          "events": 14,
+          "last_origin": "agent",
+          "last_user_age_s": null,
+          "recording": null,
+          "replay": null,
+          "user_since_agent": 0
+        },
+        "looking_at": {
+          "block": null,
+          "entity": null,
+          "kind": "none"
+        },
+        "menu": null,
+        "mining": null,
+        "paused": true,
+        "player": {
+          "absorption": 0.0,
+          "air": 300,
+          "block_pos": [
+            26,
+            94,
+            -9
+          ],
+          "death_time": null,
+          "effects": [],
+          "eye": [
+            26.5,
+            95.62000000476836,
+            -8.5
+          ],
+          "fall_flying": false,
+          "flying": true,
+          "food": 20,
+          "fov_modifier": 1.0999999046325684,
+          "health": 20.0,
+          "hurt_time": 0,
+          "on_ground": false,
+          "pitch": 29.0,
+          "portal_effect": 0.0,
+          "position": [
+            26.5,
+            94.0,
+            -8.5
+          ],
+          "saturation": 5.0,
+          "shield_cooldown": 0,
+          "sneaking": false,
+          "sprinting": false,
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "xp": {
+            "level": 0,
+            "progress": 0.0,
+            "total": 0
+          },
+          "yaw": -20.0
+        },
+        "pointer_grabbed": false,
+        "screen": "paused",
+        "selected": 1,
+        "sleeping": null,
+        "swings": 0,
+        "ticks": 44,
+        "time": {
+          "day": 0,
+          "day_time": 6020,
+          "time_of_day": 6020
+        },
+        "using": null,
+        "weather": {
+          "raining": false,
+          "thundering": false
+        },
+        "world": "RustEditionSmoke"
+      },
+      "worldsOnReopen": {
+        "worlds": [
+          {
+            "commands": true,
+            "corrupted": false,
+            "folder": "RustEditionSmoke",
+            "last_played": 1794086941979,
+            "mode": "survival",
+            "name": "RustEditionSmoke",
+            "version": "26.3"
+          }
+        ]
+      },
+      "reopenedState": {
+        "busy": null,
+        "dialog": {
+          "open": null,
+          "screen": null
+        },
+        "dimension": "minecraft:overworld",
+        "gamemode": "spectator",
+        "held": null,
+        "input": {
+          "counts": {
+            "agent": 1,
+            "game": 0,
+            "user": 0
+          },
+          "events": 1,
+          "last_origin": "agent",
+          "last_user_age_s": null,
+          "recording": null,
+          "replay": null,
+          "user_since_agent": 0
+        },
+        "looking_at": {
+          "block": null,
+          "entity": null,
+          "kind": "none"
+        },
+        "menu": null,
+        "mining": null,
+        "paused": false,
+        "player": {
+          "absorption": 0.0,
+          "air": 300,
+          "block_pos": [
+            26,
+            94,
+            -9
+          ],
+          "death_time": null,
+          "effects": [],
+          "eye": [
+            26.5,
+            95.62000000476836,
+            -8.5
+          ],
+          "fall_flying": false,
+          "flying": true,
+          "food": 20,
+          "fov_modifier": 0.999755859375,
+          "health": 20.0,
+          "hurt_time": 0,
+          "on_ground": false,
+          "pitch": 29.0,
+          "portal_effect": 0.0,
+          "position": [
+            26.5,
+            94.0,
+            -8.5
+          ],
+          "saturation": 5.0,
+          "shield_cooldown": 0,
+          "sneaking": false,
+          "sprinting": false,
+          "velocity": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "xp": {
+            "level": 0,
+            "progress": 0.0,
+            "total": 0
+          },
+          "yaw": -20.0
+        },
+        "pointer_grabbed": false,
+        "screen": "playing",
+        "selected": 1,
+        "sleeping": null,
+        "swings": 0,
+        "ticks": 12,
+        "time": {
+          "day": 0,
+          "day_time": 6021,
+          "time_of_day": 6021
+        },
+        "using": null,
+        "weather": {
+          "raining": false,
+          "thundering": false
+        },
+        "world": "RustEditionSmoke"
+      },
+      "bootstrap": {
+        "sizeBytes": 2885120,
+        "sha256": "41e8adeb1560a4cb14d3809f225505edbbf581449c11fb638ec6b597ed75cf11"
+      },
+      "cacheEntries": [
+        "process-home",
+        "resources",
+        "resources.json",
+        "session.lock"
+      ],
+      "cacheReuse": {
+        "coldPrepared": false,
+        "secondLaunchReused": true,
+        "receipt": {
+          "sizeBytes": 3564115,
+          "sha256": "80a0e0493d0ee874b96670f00d63c3e06b104895a79c87f3f3a515d869432f9a"
+        }
+      },
+      "windowTitle": "Minecraft Rust Edition",
+      "pauseMenu": {
+        "before": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0434\u043b\u044f \u0441\u0435\u0442\u0438",
+        "after": "\u0416\u0430\u043b\u043e\u0431\u044b",
+        "returnedToGame": true,
+        "loopback": "PASS"
+      }
+    },
+    "multiplayer": {
+      "schemaVersion": 1,
+      "client": {
+        "sizeBytes": 92303360,
+        "sha256": "543319c46481097dced64943c900054276ea7e7c8a7628f13d2f919f2f69d2c3"
+      },
+      "acceptanceContext": {
+        "upstreamCommit": "6560641ba51a452f6bc2407baa4eb1b3be517ca8",
+        "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+        "recipeSha256": "dc8c969c8ae8080b09dac5f4a0bbe402e543d347ac820079ba3da3c6b930c27c",
+        "overlayReceiptSha256": "9a83edc1bae87f4131717fcf8ca195353b972b0fc846b17c65ad9ff3bb1d2825",
+        "payloadInventorySha256": "d22631fe315f85edcfd9888ec56d8fd0b227e6f5e87fa6199ed1c4bd6567ae47"
+      },
+      "transport": "Windows loopback; real Horizon server; guest T/type/Enter input",
+      "twoAccountSteam": "NOT RUN",
+      "status": "PASS",
+      "commandsAllowed": {
+        "result": "PASS",
+        "hostAllowsCommands": true,
+        "pauseMenu": {
+          "before": "Open to LAN",
+          "after": "Player Reporting",
+          "returnedToGame": true,
+          "loopback": "PASS"
+        },
+        "guestFinalMode": "creative",
+        "guestChat": [
+          "Set own game mode to Creative Mode",
+          "Set own game mode to Survival Mode"
+        ]
+      },
+      "commandsDenied": {
+        "result": "PASS",
+        "hostAllowsCommands": false,
+        "pauseMenu": {
+          "before": "Open to LAN",
+          "after": "Player Reporting",
+          "returnedToGame": true,
+          "loopback": "PASS"
+        },
+        "guestFinalMode": "survival",
+        "guestChat": [
+          "gamemode creative<--[HERE]",
+          "Unknown or incomplete command. See below for error"
+        ]
+      }
+    },
+    "serverList": {
+      "schemaVersion": 1,
+      "status": "PASS",
+      "acceptanceContext": {
+        "upstreamCommit": "6560641ba51a452f6bc2407baa4eb1b3be517ca8",
+        "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+        "recipeSha256": "dc8c969c8ae8080b09dac5f4a0bbe402e543d347ac820079ba3da3c6b930c27c",
+        "overlayReceiptSha256": "9a83edc1bae87f4131717fcf8ca195353b972b0fc846b17c65ad9ff3bb1d2825",
+        "payloadInventorySha256": "d22631fe315f85edcfd9888ec56d8fd0b227e6f5e87fa6199ed1c4bd6567ae47"
+      },
+      "startup": "ordinary client; Agent Control enabled only in technical extras",
+      "runs": [
+        {
+          "servers": [],
+          "arguments": [
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\candidate\\native\\horizon-client.exe",
+            "--resources",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\cache\\resources",
+            "--game-dir",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\server-list\\game",
+            "--home",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\server-list\\game",
+            "--name",
+            "RustEditionServerListQA"
+          ],
+          "exitCode": 0
+        },
+        {
+          "servers": [],
+          "arguments": [
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\candidate\\native\\horizon-client.exe",
+            "--resources",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\cache\\resources",
+            "--game-dir",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\server-list\\game",
+            "--home",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\server-list\\game",
+            "--name",
+            "RustEditionServerListQA"
+          ],
+          "exitCode": 0
+        },
+        {
+          "servers": [
+            {
+              "address": "manual.example.invalid:25565",
+              "name": "Manual preservation QA"
+            }
+          ],
+          "arguments": [
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\candidate\\native\\horizon-client.exe",
+            "--resources",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\cache\\resources",
+            "--game-dir",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\server-list\\game",
+            "--home",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\server-list\\game",
+            "--name",
+            "RustEditionServerListQA"
+          ],
+          "exitCode": 0
+        },
+        {
+          "servers": [
+            {
+              "address": "manual.example.invalid:25565",
+              "name": "Manual preservation QA"
+            }
+          ],
+          "arguments": [
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\candidate\\native\\horizon-client.exe",
+            "--resources",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\cache\\resources",
+            "--game-dir",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\server-list\\game",
+            "--home",
+            "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-repairs-20261108\\server-list\\game",
+            "--name",
+            "RustEditionServerListQA"
+          ],
+          "exitCode": 0
+        }
+      ],
+      "checks": {
+        "cleanFirstLaunchAndRestart": "PASS",
+        "manualEntriesAndFieldsRetainedAcrossRestart": "PASS",
+        "exactCandidateUnchanged": "PASS"
+      },
+      "manualServersSha256": "65dec0c0a7a0fa0368a54cf42dbeb1f06893473006a0287e0e9674bea7795424",
+      "fixtureRemoved": true
+    }
+  }
+}
