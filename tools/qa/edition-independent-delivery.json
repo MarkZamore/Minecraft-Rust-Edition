@@ -1,0 +1,87 @@
+{
+  "revision": "4757a85113b2b6b6f806901588572ca5fc82a0f0",
+  "checkedUtc": "2026-11-07T15:21:34.153332+00:00",
+  "archivesBeforeManifest": true,
+  "assets": [
+    {
+      "name": "minecraft-rust-edition-windows-x64-3ea59d0d96a26f7608bf516910e9b397ac8a40adfa0e476c96fab03c0e3c9ebf.zip",
+      "sizeBytes": 36393616,
+      "sha256": "3ea59d0d96a26f7608bf516910e9b397ac8a40adfa0e476c96fab03c0e3c9ebf",
+      "readback": "PASS"
+    },
+    {
+      "name": "launcher-df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b.zip",
+      "sizeBytes": 972,
+      "sha256": "df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b",
+      "readback": "PASS"
+    },
+    {
+      "name": "library-5941b8646da8ad23fd7a2d1a9d831f928b5c8936f6a0ded23d1cf9af60b5c301.zip",
+      "sizeBytes": 520407,
+      "sha256": "5941b8646da8ad23fd7a2d1a9d831f928b5c8936f6a0ded23d1cf9af60b5c301",
+      "readback": "PASS"
+    }
+  ],
+  "manifestPublished": true,
+  "publicReadback": "PASS",
+  "manifest": {
+    "name": "pack-manifest.json",
+    "sizeBytes": 145039,
+    "sha256": "dd4f557d105c94d9d5efb6c2569f2ba4a2747ddf992bed7b5bf02cb9862a8d9c"
+  },
+  "launcher": {
+    "revision": "6fba25f690c0667a81ec680caef9ad42cc7db13d",
+    "release": 466,
+    "sha256": "baad5418a3d756354fe57ed28d7471687cc88543e58a37a9e5d0e7b4123c494d",
+    "publicReadback": "PASS"
+  },
+  "updateRecovery": {
+    "status": "PASS",
+    "launcherSourceRevision": "6fba25f690c0667a81ec680caef9ad42cc7db13d",
+    "launcherAssemblySha256": "3a8e9532ac921a737995b0b55424ee376691a8b08dd7f5b2eb1213c16c0db8ba",
+    "oldRevision": "597328c9c60a3e36ae09b08f5a6669367d1d30ac",
+    "newRevision": "4757a85113b2b6b6f806901588572ca5fc82a0f0",
+    "oldManifestSha256": "6534b07173b9119eeb8f79e47a9dda1029f1e45f40cca9521eb74a658e2fa259",
+    "newManifestSha256": "dd4f557d105c94d9d5efb6c2569f2ba4a2747ddf992bed7b5bf02cb9862a8d9c",
+    "oldAssetSha256": "e46c5e58836517658333aeb32cc7d2a9fb79b2af58dd159fdfc46b1d9d52abfe",
+    "newAssetSha256": "3ea59d0d96a26f7608bf516910e9b397ac8a40adfa0e476c96fab03c0e3c9ebf",
+    "managedFileCount": 460,
+    "transferFallback": "PASS",
+    "interruptedRequests": 3,
+    "interruptedBytes": 3,
+    "persistentPendingAndOfflineRefusal": "PASS",
+    "retry": "PASS",
+    "retryPayloadBytes": 36393616,
+    "unchangedPayloadFiles": 459,
+    "idempotence": "PASS",
+    "repeatPayloadBytes": 0,
+    "personalSentinelsPreserved": 5,
+    "fixtureRemoved": true
+  },
+  "warmExplicitServerRefusal": {
+    "result": "PASS",
+    "exitCode": 1,
+    "receiptUnchanged": true,
+    "externalInstallationRequired": false
+  },
+  "launcherCi": {
+    "runId": 42385465438,
+    "attempt": 2,
+    "result": "PASS",
+    "note": "First hosted attempt timed out waiting for an existing UI test's bundle gates. Full retry passed."
+  },
+  "manualLauncherWindow": {
+    "result": "NOT RUN",
+    "reason": "An existing launcher held the session-wide single-instance guard. The isolated 466 bootstrap verified and launched its private .NET runtime, then the managed application exited 0 without a second window."
+  },
+  "realWpfPresentation": {
+    "result": "PASS",
+    "checks": [
+      "Standard Minecraft version and zero mods",
+      "No project URL in the detail view",
+      "Project provenance retained for native runtime routing"
+    ]
+  },
+  "liveTwoAccountSteam": "NOT RUN",
+  "liveWorldTransferOwners": "NOT RUN"
+}
