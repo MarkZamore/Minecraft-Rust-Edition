@@ -230,6 +230,25 @@ class RequiredLayersTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "steam-frontend-invitations"):
             guard.validate_patched_sources(self.patched)
 
+    def test_steam_polling_cannot_move_back_into_optional_author_friends(self):
+        game_path = "crates/horizon-client/src/game.rs"
+        friends_path = "crates/horizon-client/src/game/friends.rs"
+        game = self.patched[game_path]
+        start = game.index(b"    pub(super) fn poll_steam_sharing(&mut self) {")
+        end = game.index(b"    pub(super) fn idle(", start)
+        moved = game[start:end]
+        self.assertNotIn(b"fn poll_steam_sharing", self.patched[friends_path])
+        self.patched[game_path] = game[:start] + game[end:]
+        self.patched[friends_path] += moved
+        with self.assertRaisesRegex(ValueError, "steam-frontend-invitations"):
+            guard.validate_patched_sources(self.patched)
+
+    def test_author_friends_stays_disabled_in_steam_mode(self):
+        self.lose("crates/horizon-client/src/game/friends.rs",
+                  b"return Err(crate::lanmc_steam::steam_only_label().into());", b"return Ok(());")
+        with self.assertRaisesRegex(ValueError, "steam-frontend-invitations"):
+            guard.validate_patched_sources(self.patched)
+
     def test_callback_or_cancellation_regression_is_rejected(self):
         for path, token in [("crates/lanmc-steam-native/src/worker.rs", b"GameRichPresenceJoinRequested"),
                             ("crates/lanmc-steam-native/src/lib.rs", b"sharing_epoch.fetch_add")]:

@@ -15,9 +15,9 @@ HERE = Path(__file__).resolve().parent
 NOTICE_SPEC = importlib.util.spec_from_file_location("edition_notice_overlay", HERE / "notice_overlay.py")
 NOTICE_OVERLAY = importlib.util.module_from_spec(NOTICE_SPEC)
 NOTICE_SPEC.loader.exec_module(NOTICE_OVERLAY)
-COMMIT = "6560641ba51a452f6bc2407baa4eb1b3be517ca8"
-SOURCE_SHA = "d7e3941b1fa0d9a779a0ed050e5df913ba9bdd6a2c15edd569d276b5e3af54c6"
-SOURCE_SIZE = 46_963_717
+COMMIT = "2ebf00a0281c592f79191e76fce0e7d522c6f425"
+SOURCE_SHA = "90479a75b886e0b39663c1116c0424e90d0d0ea4e9633668c1c3fed09bc7d645"
+SOURCE_SIZE = 47_015_509
 TRANSPORT_COMMIT = "89b0ce80b31366601906e69ba5fb0c4a323ec9c6"
 TRANSPORT_SHA = "f0d3f400397aaae5f56b508575019dd7fbed30e22dbf60cd6a67cd2cce505033"
 STEAM_DLL_SIZE = 317_080
@@ -208,11 +208,11 @@ def changes(inputs, transport):
             return Err(crate::lanmc_steam::steam_only_label().into());
         }
         if self.friends.is_some() {''')
+    # Steam is independent of Horizon's optional `friends` feature. Keep this
+    # frontend method in the unconditional Game impl, not game/friends.rs.
     src("game.rs",
         "    pub(super) fn idle(&mut self, event_loop: &dyn EventLoopCtl) {",
-        "    pub(super) fn idle(&mut self, event_loop: &dyn EventLoopCtl) {\n        self.poll_steam_sharing();")
-    src("game/friends.rs", "impl Game<'_> {", """impl Game<'_> {
-    pub(super) fn poll_steam_sharing(&mut self) {
+        """    pub(super) fn poll_steam_sharing(&mut self) {
         if let Some(message) = crate::lanmc_steam::sharing_notice() {
             self.system_message(message);
         }
@@ -234,7 +234,9 @@ def changes(inputs, transport):
             }
         }
     }
-""")
+
+    pub(super) fn idle(&mut self, event_loop: &dyn EventLoopCtl) {
+        self.poll_steam_sharing();""")
     src("game/chat.rs",
         """            Some(ClickEvent::Custom { id, payload }) => {
                 if let Some(remote) = &self.remote {

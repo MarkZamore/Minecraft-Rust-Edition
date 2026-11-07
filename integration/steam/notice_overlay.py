@@ -1,4 +1,4 @@
-"""Exact Horizon 656 integration for the launcher's built-in native UI notices.
+"""Exact Horizon 2ebf00a integration for the launcher's built-in native UI notices.
 
 This augments the pack's existing mandatory source overlay. It is not a mod and
 never changes the window, input, author graphics settings or game's GUI scale.
