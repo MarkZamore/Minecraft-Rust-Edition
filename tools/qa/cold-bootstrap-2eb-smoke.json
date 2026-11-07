@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "acceptanceContext": {
+    "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
+    "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+    "recipeSha256": "c58edfaf313a5affc98fa83c7f978196e7c794b845ed84b60e01decbad6198fd",
+    "overlayReceiptSha256": "00f648692f7194a456a24a256b6a8aca72df5936fad6dfc15d86a3f483d14a95",
+    "payloadInventorySha256": "61d9a478365f96b44df5d95541080d863fb47e993be2e71775ab6a054c5e2399"
+  },
+  "client": {
+    "sizeBytes": 92562944,
+    "sha256": "217b80aff8607aa55cfe3be87fb57e1d20a654df151e920b325d55bf00e39a06"
+  },
+  "preview": {
+    "sizeBytes": 5251428,
+    "sha256": "ae49a8c182828a567ec48c654a8bcd7cb64fa91a656a35a009d59a34ab7922b5"
+  },
+  "modsPage": {
+    "frame": 60,
+    "gui_size": [
+      427.0,
+      240.0
+    ],
+    "screen": "title",
+    "widgets": [
+      {
+        "bounds": [
+          58.0,
+          37.0,
+          310.0,
+          20.0
+        ],
+        "enabled": true,
+        "id": "browse-mods",
+        "kind": "button",
+        "label": "Browse Mods..."
+      },
+      {
+        "bounds": [
+          59.0,
+          213.0,
+          150.0,
+          20.0
+        ],
+        "enabled": true,
+        "id": "open-mod-folder",
+        "kind": "button",
+        "label": "Open Mod Folder"
+      },
+      {
+        "bounds": [
+          217.0,
+          213.0,
+          150.0,
+          20.0
+        ],
+        "enabled": true,
+        "id": "done",
+        "kind": "button",
+        "label": "Done"
+      }
+    ]
+  },
+  "firstState": {
+    "busy": null,
+    "dialog": {
+      "open": null,
+      "screen": null
+    },
+    "dimension": "minecraft:overworld",
+    "gamemode": "spectator",
+    "held": null,
+    "input": {
+      "counts": {
+        "agent": 14,
+        "game": 0,
+        "user": 0
+      },
+      "events": 14,
+      "last_origin": "agent",
+      "last_user_age_s": null,
+      "recording": null,
+      "replay": null,
+      "user_since_agent": 0
+    },
+    "looking_at": {
+      "block": null,
+      "entity": null,
+      "kind": "none"
+    },
+    "menu": null,
+    "mining": null,
+    "paused": true,
+    "player": {
+      "absorption": 0.0,
+      "air": 300,
+      "block_pos": [
+        26,
+        94,
+        -9
+      ],
+      "death_time": null,
+      "effects": [],
+      "eye": [
+        26.5,
+        95.62000000476836,
+        -8.5
+      ],
+      "fall_flying": false,
+      "flying": true,
+      "food": 20,
+      "fov_modifier": 1.0999999046325684,
+      "health": 20.0,
+      "hurt_time": 0,
+      "on_ground": false,
+      "pitch": 29.0,
+      "portal_effect": 0.0,
+      "position": [
+        26.5,
+        94.0,
+        -8.5
+      ],
+      "saturation": 5.0,
+      "shield_cooldown": 0,
+      "sneaking": false,
+      "sprinting": false,
+      "velocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "xp": {
+        "level": 0,
+        "progress": 0.0,
+        "total": 0
+      },
+      "yaw": -20.0
+    },
+    "pointer_grabbed": false,
+    "screen": "paused",
+    "selected": 1,
+    "sleeping": null,
+    "swings": 0,
+    "ticks": 47,
+    "time": {
+      "day": 0,
+      "day_time": 6028,
+      "time_of_day": 6028
+    },
+    "using": null,
+    "weather": {
+      "raining": false,
+      "thundering": false
+    },
+    "world": "RustEditionSmoke"
+  },
+  "worldsOnReopen": {
+    "worlds": [
+      {
+        "commands": true,
+        "corrupted": false,
+        "folder": "RustEditionSmoke",
+        "last_played": 1794092322743,
+        "mode": "survival",
+        "name": "RustEditionSmoke",
+        "version": "26.3"
+      }
+    ]
+  },
+  "reopenedState": {
+    "busy": null,
+    "dialog": {
+      "open": null,
+      "screen": null
+    },
+    "dimension": "minecraft:overworld",
+    "gamemode": "spectator",
+    "held": null,
+    "input": {
+      "counts": {
+        "agent": 1,
+        "game": 0,
+        "user": 0
+      },
+      "events": 1,
+      "last_origin": "agent",
+      "last_user_age_s": null,
+      "recording": null,
+      "replay": null,
+      "user_since_agent": 0
+    },
+    "looking_at": {
+      "block": null,
+      "entity": null,
+      "kind": "none"
+    },
+    "menu": null,
+    "mining": null,
+    "paused": false,
+    "player": {
+      "absorption": 0.0,
+      "air": 300,
+      "block_pos": [
+        26,
+        94,
+        -9
+      ],
+      "death_time": null,
+      "effects": [],
+      "eye": [
+        26.5,
+        95.62000000476836,
+        -8.5
+      ],
+      "fall_flying": false,
+      "flying": true,
+      "food": 20,
+      "fov_modifier": 0.99951171875,
+      "health": 20.0,
+      "hurt_time": 0,
+      "on_ground": false,
+      "pitch": 29.0,
+      "portal_effect": 0.0,
+      "position": [
+        26.5,
+        94.0,
+        -8.5
+      ],
+      "saturation": 5.0,
+      "shield_cooldown": 0,
+      "sneaking": false,
+      "sprinting": false,
+      "velocity": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "xp": {
+        "level": 0,
+        "progress": 0.0,
+        "total": 0
+      },
+      "yaw": -20.0
+    },
+    "pointer_grabbed": false,
+    "screen": "playing",
+    "selected": 1,
+    "sleeping": null,
+    "swings": 0,
+    "ticks": 11,
+    "time": {
+      "day": 0,
+      "day_time": 6028,
+      "time_of_day": 6028
+    },
+    "using": null,
+    "weather": {
+      "raining": false,
+      "thundering": false
+    },
+    "world": "RustEditionSmoke"
+  },
+  "bootstrap": {
+    "sizeBytes": 2885120,
+    "sha256": "41e8adeb1560a4cb14d3809f225505edbbf581449c11fb638ec6b597ed75cf11"
+  },
+  "cacheEntries": [
+    "java-25",
+    "java-tool-home",
+    "java-tool-temp",
+    "minecraft",
+    "process-home",
+    "resources",
+    "resources.json",
+    "server.jar",
+    "session.lock"
+  ],
+  "cacheReuse": {
+    "coldPrepared": true,
+    "secondLaunchReused": true,
+    "receipt": {
+      "sizeBytes": 3564115,
+      "sha256": "3c8a8b4672bd3ee675d3e02f51d9775931e39cf2ba2d2d5f05ef5f3aca51caca"
+    }
+  },
+  "coldPreparation": {
+    "status": "PASS",
+    "narration": "off",
+    "bootstrap": {
+      "sizeBytes": 2885120,
+      "sha256": "41e8adeb1560a4cb14d3809f225505edbbf581449c11fb638ec6b597ed75cf11"
+    },
+    "preparer": {
+      "sizeBytes": 2339840,
+      "sha256": "01265064b7b82b339362f86309610acc876427d1d6bcc55aff40b683be3ffb50"
+    },
+    "researchLock": {
+      "sizeBytes": 3415,
+      "sha256": "eac45913fbfef00bf8902548511593e413b097644c4c1761b74839081c83bbac"
+    },
+    "resourceReceipt": {
+      "sizeBytes": 3564115,
+      "sha256": "3c8a8b4672bd3ee675d3e02f51d9775931e39cf2ba2d2d5f05ef5f3aca51caca"
+    },
+    "resourceFiles": 28178,
+    "selfContainedInputs": true
+  },
+  "windowTitle": "Minecraft Rust Edition",
+  "pauseMenu": {
+    "before": "Открыть для сети",
+    "after": "Жалобы",
+    "returnedToGame": true,
+    "loopback": "PASS"
+  }
+}

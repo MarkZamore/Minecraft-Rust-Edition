@@ -40,7 +40,9 @@
     "nativeArchiveUpdateAndRecovery": "PASS",
     "personalSettingsAndManualServersPreserved": "PASS",
     "windowCaptionIconVisibleOnDark": "PASS",
-    "supportingLauncherPublishedSha256": "PASS"
+    "supportingLauncherPublishedSha256": "PASS",
+    "publicArchivesSha256": "PASS",
+    "publicManifestReadback": "PASS"
   },
   "guestCommands": {
     "allowed": {
@@ -166,7 +168,24 @@
     "Live Steam overlay, two accounts and world transfer deferred by explicit user decision"
   ],
   "publicDelivery": {
-    "status": "NOT RUN",
-    "reason": "Publish archives, independent readback, then manifest after exact update acceptance"
+    "status": "PASS",
+    "revision": "3bf42761e1f9302ed19820d2a010b78e2c3748db",
+    "manifest": {
+      "assetId": 722298202,
+      "sizeBytes": 151218,
+      "sha256": "67f83c74f427524c23fb914c7c9b3e1e5be3cfd142dca9dc6de306b84d426b1a",
+      "url": "https://github.com/MarkZamore/Minecraft-Rust-Edition/releases/download/pack-latest/pack-manifest.json",
+      "uploadedAtUtc": "2026-11-07T23:40:49Z",
+      "independentAssetIdReadback": "PASS"
+    },
+    "archivesVerifiedBeforeManifest": true,
+    "fileCount": 479,
+    "distributionLockSha256": "b37f4583d39e53f66351f4567e15b1050bffafc4928fd28faf039cc51c53cd8d"
+  },
+  "handoff": {
+    "target": "Minecraft Rust Mods",
+    "status": "SENT",
+    "acceptedSourceRevision": "3bf42761e1f9302ed19820d2a010b78e2c3748db",
+    "scope": "Apply applicable shared fixes to the separate 37-mod client; keep closed FPS/flicker scope"
   }
 }
