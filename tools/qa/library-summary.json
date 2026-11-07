@@ -1,0 +1,25 @@
+{
+  "repository": "MarkZamore/Minecraft-Rust-Edition",
+  "revision": "72d1109a0f89da60352fd35a1f7dd986981be4ed",
+  "previousRevision": "f99134a3b785cca77be960491e9cdeea75559e03",
+  "library": {
+    "name": "library-df06744dfd7c293c4fe2fcfdc91a5ac001f7d7eb4407af49b6330ca3cf973b3a.zip",
+    "sizeBytes": 520710,
+    "sha256": "df06744dfd7c293c4fe2fcfdc91a5ac001f7d7eb4407af49b6330ca3cf973b3a",
+    "revision": "72d1109a0f89da60352fd35a1f7dd986981be4ed"
+  },
+  "changedLibraryFields": [
+    "revision",
+    "summary"
+  ],
+  "descriptionUnchanged": true,
+  "runtimeUnchanged": true,
+  "modCount": 0,
+  "publicManifestSha256": "5afecd920ec62f2cba0091a1561dfc6bf3e8abd93e27e3d6b0f193c85e8d4712",
+  "publicLibrarySha256": "df06744dfd7c293c4fe2fcfdc91a5ac001f7d7eb4407af49b6330ca3cf973b3a",
+  "sourceMain": "72d1109a0f89da60352fd35a1f7dd986981be4ed",
+  "publishedUtc": "2026-11-07T18:12:08.823475+00:00",
+  "checks": "PASS",
+  "gameplay": "NOT RUN - text-only publication",
+  "summary": "Знакомый Minecraft с выживанием и строительством на движке Rust."
+}
