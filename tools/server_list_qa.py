@@ -294,6 +294,8 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
             del environment[key]
     environment.update(HORIZON_CONTROL=str(endpoint), HORIZON_NO_DISCORD="1",
                        LANMINECRAFT_BUILD_NAME=build_name)
+    from client_environment import direct_client_environment
+    environment = direct_client_environment(client, environment)
     # No --control, --frames, --benchmark, --offscreen or fixture flag: normal startup.
     arguments = [str(client), "--resources", str(resources), "--game-dir", str(game),
                  "--home", str(game), "--name", "RustEditionServerListQA"]

@@ -9,6 +9,7 @@ import subprocess
 import time
 
 from stage_runtime import file_info
+from client_environment import direct_client_environment
 
 
 WORLD = "RustEditionSmoke"
@@ -56,6 +57,8 @@ def run_client(executable, controller, resources, qa, index, action, standalone=
             environment.pop("JAVA_HOME", None)
         environment["LANMINECRAFT_NATIVE_CACHE"] = str(cache)
     arguments.extend(["--game-dir", str(game), "--control-socket", str(endpoint)])
+    if not standalone:
+        environment = direct_client_environment(executable, environment)
     with (qa / f"client-{index}.log").open("wb") as output:
         process = subprocess.Popen(arguments, cwd=game, env=environment, stdout=output, stderr=output)
 

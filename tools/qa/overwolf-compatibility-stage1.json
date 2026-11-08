@@ -1,0 +1,3808 @@
+{
+  "schemaVersion": 1,
+  "status": "NOT RELEASED; waiting for Windows battery modal to be closed and power connected",
+  "recordedUtc": "2026-11-08T01:01:06.293745+00:00",
+  "publishedBaseRevision": "3bf42761e1f9302ed19820d2a010b78e2c3748db",
+  "engineUnchanged": {
+    "sizeBytes": 92608512,
+    "sha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3"
+  },
+  "bootstrap": {
+    "schemaVersion": 1,
+    "executable": {
+      "path": "native/launch-rust-edition.exe",
+      "sizeBytes": 2923008,
+      "sha256": "ace261a88a6a5438ede83e9571be2d1189ec7d950948d751460071af446b0c6d"
+    },
+    "sourceFiles": {
+      "launcher/standalone/.cargo/config.toml": "b30e5a93f3ee1e18d93d09516eb08d9ccccdda15027615c61d58be7264185711",
+      "launcher/standalone/Cargo.lock": "af53d08fb3af8937fc1d8c2ea07b5f0824c08a039b8d2b820bdd402f3d665ddd",
+      "launcher/standalone/Cargo.toml": "c2f537080dc0210fdc04f3b2120d362dd0844f55f95248c017eba3289e2b31f3",
+      "launcher/standalone/src/environment_defaults.rs": "c3e9ea529ae1c4926857f9eec614636a3a4f4f4c3b74c76fd0a3f5f1d190ec55",
+      "launcher/standalone/src/main.rs": "76e7dd861f24e4be8b786823399b79ae1ec44e388cbea82ebc4005516180a2e1",
+      "launcher/standalone/src/minecraft_inputs.rs": "74e9ba0e78504c37705825b61c30af8016d0ab07edbe4fc3044211f1316d61ec",
+      "launcher/standalone/src/prepared_data.rs": "3bbd23cb1f6ba2edce231756b8236745ca44b735a5c35370388acf2d44806f8e"
+    },
+    "sourceSha256": "8179f35f13d7e4fc1263891e8f132525b6a9e66bbc7a90a5eeb18aa51708e883",
+    "build": {
+      "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "target": "x86_64-pc-windows-msvc",
+      "rustflags": "-C target-feature=+crt-static",
+      "profile": "release",
+      "sourceCommit": "ea131ad0395b61b801c0d07147a9374aa545cf8e"
+    }
+  },
+  "policy": {
+    "DISABLE_VULKAN_OW_OVERLAY_LAYER": "1"
+  },
+  "sourceTests": {
+    "rust": 19,
+    "policyGuard": 13,
+    "directQaPolicy": 2,
+    "compatibilityGateMethods": 3,
+    "compatibilityNegativeMutations": 41,
+    "independentCodeReview": "PASS",
+    "clippy": "Two unchanged baseline lints require explicit narrow exceptions; no new-module findings"
+  },
+  "checks": {
+    "autonomousColdBootstrapSaveReopenPausePort": "PASS",
+    "threeActualBootstrapVulkanAndNoOwclient": "PASS",
+    "localGuestPermissionsAndPort": "PASS",
+    "nativeNotice13ActualCaptures": "PASS",
+    "ordinaryServerStarts1to4": "PASS",
+    "serverViews14DesktopKeys": "NOT RUN; Windows low battery modal inaccessible to UI driver",
+    "exactArchiveUpdate": "NOT RUN; requires complete startup gate",
+    "publicDelivery": "NOT RUN; manifest remains 3bf4276"
+  },
+  "smoke": {
+    "schemaVersion": 1,
+    "acceptanceContext": {
+      "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
+      "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+      "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc",
+      "overlayReceiptSha256": "e2acc99e05d1fab76b565ced8c56d77f4c783ef2bfa8f2d90156fb947632b577",
+      "payloadInventorySha256": "a3a4ab6f371ecaef891c25929e8122b347d9bbec876f30707886366509f5b880"
+    },
+    "client": {
+      "sizeBytes": 92608512,
+      "sha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3"
+    },
+    "preview": {
+      "sizeBytes": 5303209,
+      "sha256": "690c7685ea57d012f3693d01442e6478cee153413a46864cd7b6d2f9bcac422a"
+    },
+    "modsPage": {
+      "frame": 43,
+      "gui_size": [
+        427.0,
+        240.0
+      ],
+      "screen": "title",
+      "widgets": [
+        {
+          "bounds": [
+            58.0,
+            37.0,
+            310.0,
+            20.0
+          ],
+          "enabled": true,
+          "id": "browse-mods",
+          "kind": "button",
+          "label": "Browse Mods..."
+        },
+        {
+          "bounds": [
+            59.0,
+            213.0,
+            150.0,
+            20.0
+          ],
+          "enabled": true,
+          "id": "open-mod-folder",
+          "kind": "button",
+          "label": "Open Mod Folder"
+        },
+        {
+          "bounds": [
+            217.0,
+            213.0,
+            150.0,
+            20.0
+          ],
+          "enabled": true,
+          "id": "done",
+          "kind": "button",
+          "label": "Done"
+        }
+      ]
+    },
+    "firstState": {
+      "busy": null,
+      "dialog": {
+        "open": null,
+        "screen": null
+      },
+      "dimension": "minecraft:overworld",
+      "gamemode": "spectator",
+      "held": null,
+      "input": {
+        "counts": {
+          "agent": 14,
+          "game": 0,
+          "user": 0
+        },
+        "events": 14,
+        "last_origin": "agent",
+        "last_user_age_s": null,
+        "recording": null,
+        "replay": null,
+        "user_since_agent": 0
+      },
+      "looking_at": {
+        "block": null,
+        "entity": null,
+        "kind": "none"
+      },
+      "menu": null,
+      "mining": null,
+      "paused": true,
+      "player": {
+        "absorption": 0.0,
+        "air": 300,
+        "block_pos": [
+          26,
+          94,
+          -9
+        ],
+        "death_time": null,
+        "effects": [],
+        "eye": [
+          26.5,
+          95.62000000476836,
+          -8.5
+        ],
+        "fall_flying": false,
+        "flying": true,
+        "food": 20,
+        "fov_modifier": 1.0999999046325684,
+        "health": 20.0,
+        "hurt_time": 0,
+        "on_ground": false,
+        "pitch": 29.0,
+        "portal_effect": 0.0,
+        "position": [
+          26.5,
+          94.0,
+          -8.5
+        ],
+        "saturation": 5.0,
+        "shield_cooldown": 0,
+        "sneaking": false,
+        "sprinting": false,
+        "velocity": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "xp": {
+          "level": 0,
+          "progress": 0.0,
+          "total": 0
+        },
+        "yaw": -20.0
+      },
+      "pointer_grabbed": false,
+      "screen": "paused",
+      "selected": 1,
+      "sleeping": null,
+      "swings": 0,
+      "ticks": 46,
+      "time": {
+        "day": 0,
+        "day_time": 6026,
+        "time_of_day": 6026
+      },
+      "using": null,
+      "weather": {
+        "raining": false,
+        "thundering": false
+      },
+      "world": "RustEditionSmoke"
+    },
+    "worldsOnReopen": {
+      "worlds": [
+        {
+          "commands": true,
+          "corrupted": false,
+          "folder": "RustEditionSmoke",
+          "last_played": 1794098944457,
+          "mode": "survival",
+          "name": "RustEditionSmoke",
+          "version": "26.3"
+        }
+      ]
+    },
+    "reopenedState": {
+      "busy": null,
+      "dialog": {
+        "open": null,
+        "screen": null
+      },
+      "dimension": "minecraft:overworld",
+      "gamemode": "spectator",
+      "held": null,
+      "input": {
+        "counts": {
+          "agent": 1,
+          "game": 0,
+          "user": 0
+        },
+        "events": 1,
+        "last_origin": "agent",
+        "last_user_age_s": null,
+        "recording": null,
+        "replay": null,
+        "user_since_agent": 0
+      },
+      "looking_at": {
+        "block": null,
+        "entity": null,
+        "kind": "none"
+      },
+      "menu": null,
+      "mining": null,
+      "paused": false,
+      "player": {
+        "absorption": 0.0,
+        "air": 300,
+        "block_pos": [
+          26,
+          94,
+          -9
+        ],
+        "death_time": null,
+        "effects": [],
+        "eye": [
+          26.5,
+          95.62000000476836,
+          -8.5
+        ],
+        "fall_flying": false,
+        "flying": true,
+        "food": 20,
+        "fov_modifier": 0.99951171875,
+        "health": 20.0,
+        "hurt_time": 0,
+        "on_ground": false,
+        "pitch": 29.0,
+        "portal_effect": 0.0,
+        "position": [
+          26.5,
+          94.0,
+          -8.5
+        ],
+        "saturation": 5.0,
+        "shield_cooldown": 0,
+        "sneaking": false,
+        "sprinting": false,
+        "velocity": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "xp": {
+          "level": 0,
+          "progress": 0.0,
+          "total": 0
+        },
+        "yaw": -20.0
+      },
+      "pointer_grabbed": false,
+      "screen": "playing",
+      "selected": 1,
+      "sleeping": null,
+      "swings": 0,
+      "ticks": 11,
+      "time": {
+        "day": 0,
+        "day_time": 6027,
+        "time_of_day": 6027
+      },
+      "using": null,
+      "weather": {
+        "raining": false,
+        "thundering": false
+      },
+      "world": "RustEditionSmoke"
+    },
+    "bootstrap": {
+      "sizeBytes": 2923008,
+      "sha256": "ace261a88a6a5438ede83e9571be2d1189ec7d950948d751460071af446b0c6d"
+    },
+    "cacheEntries": [
+      "java-25",
+      "java-tool-home",
+      "java-tool-temp",
+      "minecraft",
+      "process-home",
+      "resources",
+      "resources.json",
+      "server.jar",
+      "session.lock"
+    ],
+    "cacheReuse": {
+      "coldPrepared": true,
+      "secondLaunchReused": true,
+      "receipt": {
+        "sizeBytes": 3564115,
+        "sha256": "7204497a68a7ccd6050c3b4af405902d0b6cd2e8aaa47c7642a78e4201c98bf3"
+      }
+    },
+    "coldPreparation": {
+      "status": "PASS",
+      "narration": "off",
+      "bootstrap": {
+        "sizeBytes": 2923008,
+        "sha256": "ace261a88a6a5438ede83e9571be2d1189ec7d950948d751460071af446b0c6d"
+      },
+      "preparer": {
+        "sizeBytes": 2339840,
+        "sha256": "01265064b7b82b339362f86309610acc876427d1d6bcc55aff40b683be3ffb50"
+      },
+      "researchLock": {
+        "sizeBytes": 3415,
+        "sha256": "eac45913fbfef00bf8902548511593e413b097644c4c1761b74839081c83bbac"
+      },
+      "resourceReceipt": {
+        "sizeBytes": 3564115,
+        "sha256": "7204497a68a7ccd6050c3b4af405902d0b6cd2e8aaa47c7642a78e4201c98bf3"
+      },
+      "resourceFiles": 28178,
+      "selfContainedInputs": true
+    },
+    "windowTitle": "Minecraft Rust Edition",
+    "pauseMenu": {
+      "before": "Открыть для сети",
+      "after": "Жалобы",
+      "returnedToGame": true,
+      "loopback": "PASS",
+      "localPort": 57794,
+      "publicationChat": [
+        "Этот мир теперь открыт для локальной сети. Порт: 57794"
+      ]
+    }
+  },
+  "multiplayer": {
+    "schemaVersion": 1,
+    "client": {
+      "sizeBytes": 92608512,
+      "sha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3"
+    },
+    "acceptanceContext": {
+      "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
+      "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+      "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc",
+      "overlayReceiptSha256": "e2acc99e05d1fab76b565ced8c56d77f4c783ef2bfa8f2d90156fb947632b577",
+      "payloadInventorySha256": "a3a4ab6f371ecaef891c25929e8122b347d9bbec876f30707886366509f5b880"
+    },
+    "transport": "Windows loopback; real Horizon server; guest T/type/Enter input",
+    "twoAccountSteam": "NOT RUN",
+    "status": "PASS",
+    "commandsAllowed": {
+      "result": "PASS",
+      "hostAllowsCommands": true,
+      "pauseMenu": {
+        "before": "Open to LAN",
+        "after": "Player Reporting",
+        "returnedToGame": true,
+        "loopback": "PASS",
+        "localPort": 58192,
+        "publicationChat": [
+          "This world is now open to LAN. The port number is 58192"
+        ]
+      },
+      "guestFinalMode": "creative",
+      "guestChat": [
+        "Set own game mode to Creative Mode",
+        "Set own game mode to Survival Mode"
+      ]
+    },
+    "commandsDenied": {
+      "result": "PASS",
+      "hostAllowsCommands": false,
+      "pauseMenu": {
+        "before": "Open to LAN",
+        "after": "Player Reporting",
+        "returnedToGame": true,
+        "loopback": "PASS",
+        "localPort": 53583,
+        "publicationChat": [
+          "This world is now open to LAN. The port number is 53583"
+        ]
+      },
+      "guestFinalMode": "survival",
+      "guestChat": [
+        "gamemode creative<--[HERE]",
+        "Unknown or incomplete command. See below for error"
+      ]
+    }
+  },
+  "compatibility": {
+    "schemaVersion": 1,
+    "status": "PASS",
+    "startup": "actual bootstrap child; inherited defaults untouched; Vulkan modules inspected",
+    "acceptanceContext": {
+      "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
+      "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+      "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc",
+      "overlayReceiptSha256": "e2acc99e05d1fab76b565ced8c56d77f4c783ef2bfa8f2d90156fb947632b577",
+      "payloadInventorySha256": "a3a4ab6f371ecaef891c25929e8122b347d9bbec876f30707886366509f5b880"
+    },
+    "environmentDefaults": {
+      "DISABLE_VULKAN_OW_OVERLAY_LAYER": "1"
+    },
+    "presentation": {
+      "sizeBytes": 114,
+      "sha256": "6ead1b8261631f83f58f690427bb3e44ecd4ec25ebb5666f0c492bf242024c0b"
+    },
+    "inheritedDefaults": {
+      "DISABLE_VULKAN_OW_OVERLAY_LAYER": {
+        "present": false,
+        "value": null
+      }
+    },
+    "client": {
+      "sizeBytes": 92608512,
+      "sha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3"
+    },
+    "bootstrap": {
+      "sizeBytes": 2923008,
+      "sha256": "ace261a88a6a5438ede83e9571be2d1189ec7d950948d751460071af446b0c6d"
+    },
+    "runs": [
+      {
+        "index": 1,
+        "arguments": [
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\launch-rust-edition.exe",
+          "--game-dir",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\compatibility\\run-1\\game",
+          "--control-socket",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\compatibility\\run-1\\control.json"
+        ],
+        "nativeProcessId": 25592,
+        "bootstrapProcessId": 2904,
+        "processAncestry": [
+          {
+            "parent": 2904,
+            "pid": 25592,
+            "name": "horizon-client.exe",
+            "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+            "created": "2026-11-08T00:49:43.8891450Z"
+          },
+          {
+            "parent": 42896,
+            "pid": 2904,
+            "name": "launch-rust-edition.exe",
+            "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\launch-rust-edition.exe",
+            "created": "2026-11-08T00:49:40.2889160Z"
+          }
+        ],
+        "moduleSnapshot": {
+          "modules": [
+            {
+              "name": "horizon-client.exe",
+              "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe"
+            },
+            {
+              "name": "ntdll.dll",
+              "path": "C:\\Windows\\SYSTEM32\\ntdll.dll"
+            },
+            {
+              "name": "KERNEL32.DLL",
+              "path": "C:\\Windows\\System32\\KERNEL32.DLL"
+            },
+            {
+              "name": "KERNELBASE.dll",
+              "path": "C:\\Windows\\System32\\KERNELBASE.dll"
+            },
+            {
+              "name": "advapi32.dll",
+              "path": "C:\\Windows\\System32\\advapi32.dll"
+            },
+            {
+              "name": "msvcrt.dll",
+              "path": "C:\\Windows\\System32\\msvcrt.dll"
+            },
+            {
+              "name": "sechost.dll",
+              "path": "C:\\Windows\\System32\\sechost.dll"
+            },
+            {
+              "name": "RPCRT4.dll",
+              "path": "C:\\Windows\\System32\\RPCRT4.dll"
+            },
+            {
+              "name": "ole32.dll",
+              "path": "C:\\Windows\\System32\\ole32.dll"
+            },
+            {
+              "name": "msvcp_win.dll",
+              "path": "C:\\Windows\\System32\\msvcp_win.dll"
+            },
+            {
+              "name": "ucrtbase.dll",
+              "path": "C:\\Windows\\System32\\ucrtbase.dll"
+            },
+            {
+              "name": "GDI32.dll",
+              "path": "C:\\Windows\\System32\\GDI32.dll"
+            },
+            {
+              "name": "win32u.dll",
+              "path": "C:\\Windows\\System32\\win32u.dll"
+            },
+            {
+              "name": "gdi32full.dll",
+              "path": "C:\\Windows\\System32\\gdi32full.dll"
+            },
+            {
+              "name": "USER32.dll",
+              "path": "C:\\Windows\\System32\\USER32.dll"
+            },
+            {
+              "name": "combase.dll",
+              "path": "C:\\Windows\\System32\\combase.dll"
+            },
+            {
+              "name": "oleaut32.dll",
+              "path": "C:\\Windows\\System32\\oleaut32.dll"
+            },
+            {
+              "name": "setupapi.dll",
+              "path": "C:\\Windows\\System32\\setupapi.dll"
+            },
+            {
+              "name": "bcryptprimitives.dll",
+              "path": "C:\\Windows\\System32\\bcryptprimitives.dll"
+            },
+            {
+              "name": "ws2_32.dll",
+              "path": "C:\\Windows\\System32\\ws2_32.dll"
+            },
+            {
+              "name": "shell32.dll",
+              "path": "C:\\Windows\\System32\\shell32.dll"
+            },
+            {
+              "name": "dxgi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dxgi.dll"
+            },
+            {
+              "name": "opengl32.dll",
+              "path": "C:\\Windows\\SYSTEM32\\opengl32.dll"
+            },
+            {
+              "name": "imm32.dll",
+              "path": "C:\\Windows\\System32\\imm32.dll"
+            },
+            {
+              "name": "iphlpapi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\iphlpapi.dll"
+            },
+            {
+              "name": "steam_api64.dll",
+              "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\steam_api64.dll"
+            },
+            {
+              "name": "powrprof.dll",
+              "path": "C:\\Windows\\SYSTEM32\\powrprof.dll"
+            },
+            {
+              "name": "dwmapi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dwmapi.dll"
+            },
+            {
+              "name": "bcrypt.dll",
+              "path": "C:\\Windows\\SYSTEM32\\bcrypt.dll"
+            },
+            {
+              "name": "GLU32.dll",
+              "path": "C:\\Windows\\SYSTEM32\\GLU32.dll"
+            },
+            {
+              "name": "uxtheme.dll",
+              "path": "C:\\Windows\\SYSTEM32\\uxtheme.dll"
+            },
+            {
+              "name": "dxcore.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dxcore.dll"
+            },
+            {
+              "name": "CRYPT32.dll",
+              "path": "C:\\Windows\\System32\\CRYPT32.dll"
+            },
+            {
+              "name": "CRYPTBASE.DLL",
+              "path": "C:\\Windows\\SYSTEM32\\CRYPTBASE.DLL"
+            },
+            {
+              "name": "UMPDC.dll",
+              "path": "C:\\Windows\\SYSTEM32\\UMPDC.dll"
+            },
+            {
+              "name": "kernel.appcore.dll",
+              "path": "C:\\Windows\\SYSTEM32\\kernel.appcore.dll"
+            },
+            {
+              "name": "clbcatq.dll",
+              "path": "C:\\Windows\\System32\\clbcatq.dll"
+            },
+            {
+              "name": "sapi.dll",
+              "path": "C:\\Windows\\System32\\Speech\\Common\\sapi.dll"
+            },
+            {
+              "name": "MMDevApi.dll",
+              "path": "C:\\Windows\\System32\\MMDevApi.dll"
+            },
+            {
+              "name": "DEVOBJ.dll",
+              "path": "C:\\Windows\\System32\\DEVOBJ.dll"
+            },
+            {
+              "name": "cfgmgr32.dll",
+              "path": "C:\\Windows\\SYSTEM32\\cfgmgr32.dll"
+            },
+            {
+              "name": "AUDIOSES.DLL",
+              "path": "C:\\Windows\\SYSTEM32\\AUDIOSES.DLL"
+            },
+            {
+              "name": "shcore.dll",
+              "path": "C:\\Windows\\System32\\shcore.dll"
+            },
+            {
+              "name": "resourcepolicyclient.dll",
+              "path": "C:\\Windows\\SYSTEM32\\resourcepolicyclient.dll"
+            },
+            {
+              "name": "mswsock.dll",
+              "path": "C:\\Windows\\system32\\mswsock.dll"
+            },
+            {
+              "name": "MSCTF.dll",
+              "path": "C:\\Windows\\System32\\MSCTF.dll"
+            },
+            {
+              "name": "dataexchange.dll",
+              "path": "C:\\Windows\\system32\\dataexchange.dll"
+            },
+            {
+              "name": "twinapi.appcore.dll",
+              "path": "C:\\Windows\\system32\\twinapi.appcore.dll"
+            },
+            {
+              "name": "explorerframe.dll",
+              "path": "C:\\Windows\\system32\\explorerframe.dll"
+            },
+            {
+              "name": "SHLWAPI.dll",
+              "path": "C:\\Windows\\System32\\SHLWAPI.dll"
+            },
+            {
+              "name": "ApplicationTargetedFeatureDatabase.dll",
+              "path": "C:\\Windows\\system32\\ApplicationTargetedFeatureDatabase.dll"
+            },
+            {
+              "name": "WinTypes.dll",
+              "path": "C:\\Windows\\System32\\WinTypes.dll"
+            },
+            {
+              "name": "textinputframework.dll",
+              "path": "C:\\Windows\\SYSTEM32\\textinputframework.dll"
+            },
+            {
+              "name": "Oleacc.dll",
+              "path": "C:\\Windows\\system32\\Oleacc.dll"
+            },
+            {
+              "name": "vulkan-1.dll",
+              "path": "C:\\Windows\\SYSTEM32\\vulkan-1.dll"
+            },
+            {
+              "name": "windows.staterepositorycore.dll",
+              "path": "C:\\Windows\\SYSTEM32\\windows.staterepositorycore.dll"
+            },
+            {
+              "name": "directxdatabasehelper.dll",
+              "path": "C:\\Windows\\SYSTEM32\\directxdatabasehelper.dll"
+            },
+            {
+              "name": "igvk64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igvk64.dll"
+            },
+            {
+              "name": "igc64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igc64.dll"
+            },
+            {
+              "name": "ow-graphics-vulkan.dll",
+              "path": "C:\\Program Files (x86)\\Overwolf\\0.314.1.1\\ow-graphics-vulkan.dll"
+            },
+            {
+              "name": "windows.storage.dll",
+              "path": "C:\\Windows\\SYSTEM32\\windows.storage.dll"
+            },
+            {
+              "name": "igdgmm2_64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdgmm2_64.dll"
+            },
+            {
+              "name": "igdgmm64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdgmm64.dll"
+            },
+            {
+              "name": "igdgmmstaging_64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdgmmstaging_64.dll"
+            },
+            {
+              "name": "profapi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\profapi.dll"
+            },
+            {
+              "name": "ControlLib.dll",
+              "path": "C:\\Windows\\SYSTEM32\\ControlLib.dll"
+            },
+            {
+              "name": "IntelControlLib.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\IntelControlLib.dll"
+            },
+            {
+              "name": "d3d11.dll",
+              "path": "C:\\Windows\\SYSTEM32\\d3d11.dll"
+            },
+            {
+              "name": "igvkMedia64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igvkMedia64.dll"
+            },
+            {
+              "name": "igddxvacommon64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igddxvacommon64.dll"
+            },
+            {
+              "name": "media_bin_64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\media_bin_64.dll"
+            },
+            {
+              "name": "igdml64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdml64.dll"
+            },
+            {
+              "name": "iga64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\iga64.dll"
+            },
+            {
+              "name": "D3D12.dll",
+              "path": "C:\\Windows\\system32\\D3D12.dll"
+            },
+            {
+              "name": "D3D12Core.dll",
+              "path": "C:\\Windows\\system32\\D3D12Core.dll"
+            },
+            {
+              "name": "igd12umd64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igd12umd64.dll"
+            },
+            {
+              "name": "igdext64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdext64.dll"
+            },
+            {
+              "name": "igd12um64xe3.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igd12um64xe3.dll"
+            },
+            {
+              "name": "version.dll",
+              "path": "C:\\Windows\\system32\\version.dll"
+            },
+            {
+              "name": "UniversalAdapter64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\UniversalAdapter64.dll"
+            },
+            {
+              "name": "D3DSCache.dll",
+              "path": "C:\\Windows\\SYSTEM32\\D3DSCache.dll"
+            },
+            {
+              "name": "USERENV.dll",
+              "path": "C:\\Windows\\SYSTEM32\\USERENV.dll"
+            },
+            {
+              "name": "igd12dxva64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igd12dxva64.dll"
+            },
+            {
+              "name": "igdinfo64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdinfo64.dll"
+            },
+            {
+              "name": "ntmarta.dll",
+              "path": "C:\\Windows\\SYSTEM32\\ntmarta.dll"
+            },
+            {
+              "name": "dcomp.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dcomp.dll"
+            },
+            {
+              "name": "Microsoft.Internal.WarpPal.dll",
+              "path": "C:\\Windows\\SYSTEM32\\Microsoft.Internal.WarpPal.dll"
+            },
+            {
+              "name": "Windows.Gaming.Input.dll",
+              "path": "C:\\Windows\\System32\\Windows.Gaming.Input.dll"
+            },
+            {
+              "name": "inputhost.dll",
+              "path": "C:\\Windows\\SYSTEM32\\inputhost.dll"
+            },
+            {
+              "name": "CoreMessaging.dll",
+              "path": "C:\\Windows\\System32\\CoreMessaging.dll"
+            },
+            {
+              "name": "uiautomationcore.dll",
+              "path": "C:\\Windows\\System32\\uiautomationcore.dll"
+            },
+            {
+              "name": "threadpoolwinrt.dll",
+              "path": "C:\\Windows\\System32\\threadpoolwinrt.dll"
+            }
+          ],
+          "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+          "pid": 25592
+        },
+        "parentEnvironmentUnchanged": true,
+        "title": {
+          "frame": 80,
+          "gui_size": [
+            1280.0,
+            720.0
+          ],
+          "screen": "title",
+          "widgets": [
+            {
+              "bounds": [
+                1084.0,
+                710.0,
+                194.0,
+                10.0
+              ],
+              "enabled": true,
+              "id": "not-affiliated-with-mojang-or-microsoft",
+              "kind": "button",
+              "label": "Not affiliated with Mojang or Microsoft"
+            },
+            {
+              "bounds": [
+                540.0,
+                228.0,
+                200.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "singleplayer",
+              "kind": "button",
+              "label": "Singleplayer"
+            },
+            {
+              "bounds": [
+                540.0,
+                252.0,
+                200.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "multiplayer",
+              "kind": "button",
+              "label": "Multiplayer"
+            },
+            {
+              "bounds": [
+                540.0,
+                276.0,
+                200.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "minecraft-realms",
+              "kind": "button",
+              "label": "Minecraft Realms"
+            },
+            {
+              "bounds": [
+                540.0,
+                324.0,
+                98.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "options",
+              "kind": "button",
+              "label": "Options..."
+            },
+            {
+              "bounds": [
+                642.0,
+                324.0,
+                98.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "quit-game",
+              "kind": "button",
+              "label": "Quit Game"
+            },
+            {
+              "bounds": [
+                606.0,
+                300.0,
+                20.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "friends",
+              "kind": "button",
+              "label": "Friends"
+            },
+            {
+              "bounds": [
+                630.0,
+                300.0,
+                20.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "language",
+              "kind": "button",
+              "label": "Language..."
+            },
+            {
+              "bounds": [
+                654.0,
+                300.0,
+                20.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "accessibility-settings",
+              "kind": "button",
+              "label": "Accessibility Settings..."
+            }
+          ]
+        },
+        "observedUnixMs": 1794098987093,
+        "presentationHeartbeat": {
+          "backend": "native-ui-v1",
+          "pid": 25592,
+          "timestampUnixMs": 1794098986828,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "exitCode": 0,
+        "warm": true,
+        "rendererBackendLine": "Horizon renderer: Intel(R) Arc(TM) B390 GPU (Vulkan, IntegratedGpu)",
+        "log": {
+          "sizeBytes": 1731,
+          "sha256": "3f4194c4deadc140dd5693d784e69b254ad942c308caa2d38ff909c4461402d9"
+        }
+      },
+      {
+        "index": 2,
+        "arguments": [
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\launch-rust-edition.exe",
+          "--game-dir",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\compatibility\\run-2\\game",
+          "--control-socket",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\compatibility\\run-2\\control.json"
+        ],
+        "nativeProcessId": 32196,
+        "bootstrapProcessId": 25604,
+        "processAncestry": [
+          {
+            "parent": 25604,
+            "pid": 32196,
+            "name": "horizon-client.exe",
+            "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+            "created": "2026-11-08T00:49:51.0582080Z"
+          },
+          {
+            "parent": 42896,
+            "pid": 25604,
+            "name": "launch-rust-edition.exe",
+            "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\launch-rust-edition.exe",
+            "created": "2026-11-08T00:49:47.3807060Z"
+          }
+        ],
+        "moduleSnapshot": {
+          "modules": [
+            {
+              "name": "horizon-client.exe",
+              "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe"
+            },
+            {
+              "name": "ntdll.dll",
+              "path": "C:\\Windows\\SYSTEM32\\ntdll.dll"
+            },
+            {
+              "name": "KERNEL32.DLL",
+              "path": "C:\\Windows\\System32\\KERNEL32.DLL"
+            },
+            {
+              "name": "KERNELBASE.dll",
+              "path": "C:\\Windows\\System32\\KERNELBASE.dll"
+            },
+            {
+              "name": "advapi32.dll",
+              "path": "C:\\Windows\\System32\\advapi32.dll"
+            },
+            {
+              "name": "msvcrt.dll",
+              "path": "C:\\Windows\\System32\\msvcrt.dll"
+            },
+            {
+              "name": "sechost.dll",
+              "path": "C:\\Windows\\System32\\sechost.dll"
+            },
+            {
+              "name": "RPCRT4.dll",
+              "path": "C:\\Windows\\System32\\RPCRT4.dll"
+            },
+            {
+              "name": "ole32.dll",
+              "path": "C:\\Windows\\System32\\ole32.dll"
+            },
+            {
+              "name": "msvcp_win.dll",
+              "path": "C:\\Windows\\System32\\msvcp_win.dll"
+            },
+            {
+              "name": "ucrtbase.dll",
+              "path": "C:\\Windows\\System32\\ucrtbase.dll"
+            },
+            {
+              "name": "GDI32.dll",
+              "path": "C:\\Windows\\System32\\GDI32.dll"
+            },
+            {
+              "name": "win32u.dll",
+              "path": "C:\\Windows\\System32\\win32u.dll"
+            },
+            {
+              "name": "gdi32full.dll",
+              "path": "C:\\Windows\\System32\\gdi32full.dll"
+            },
+            {
+              "name": "USER32.dll",
+              "path": "C:\\Windows\\System32\\USER32.dll"
+            },
+            {
+              "name": "combase.dll",
+              "path": "C:\\Windows\\System32\\combase.dll"
+            },
+            {
+              "name": "oleaut32.dll",
+              "path": "C:\\Windows\\System32\\oleaut32.dll"
+            },
+            {
+              "name": "setupapi.dll",
+              "path": "C:\\Windows\\System32\\setupapi.dll"
+            },
+            {
+              "name": "bcryptprimitives.dll",
+              "path": "C:\\Windows\\System32\\bcryptprimitives.dll"
+            },
+            {
+              "name": "ws2_32.dll",
+              "path": "C:\\Windows\\System32\\ws2_32.dll"
+            },
+            {
+              "name": "shell32.dll",
+              "path": "C:\\Windows\\System32\\shell32.dll"
+            },
+            {
+              "name": "opengl32.dll",
+              "path": "C:\\Windows\\SYSTEM32\\opengl32.dll"
+            },
+            {
+              "name": "dxgi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dxgi.dll"
+            },
+            {
+              "name": "imm32.dll",
+              "path": "C:\\Windows\\System32\\imm32.dll"
+            },
+            {
+              "name": "GLU32.dll",
+              "path": "C:\\Windows\\SYSTEM32\\GLU32.dll"
+            },
+            {
+              "name": "steam_api64.dll",
+              "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\steam_api64.dll"
+            },
+            {
+              "name": "iphlpapi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\iphlpapi.dll"
+            },
+            {
+              "name": "powrprof.dll",
+              "path": "C:\\Windows\\SYSTEM32\\powrprof.dll"
+            },
+            {
+              "name": "bcrypt.dll",
+              "path": "C:\\Windows\\SYSTEM32\\bcrypt.dll"
+            },
+            {
+              "name": "dwmapi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dwmapi.dll"
+            },
+            {
+              "name": "uxtheme.dll",
+              "path": "C:\\Windows\\SYSTEM32\\uxtheme.dll"
+            },
+            {
+              "name": "dxcore.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dxcore.dll"
+            },
+            {
+              "name": "CRYPT32.dll",
+              "path": "C:\\Windows\\System32\\CRYPT32.dll"
+            },
+            {
+              "name": "CRYPTBASE.DLL",
+              "path": "C:\\Windows\\SYSTEM32\\CRYPTBASE.DLL"
+            },
+            {
+              "name": "UMPDC.dll",
+              "path": "C:\\Windows\\SYSTEM32\\UMPDC.dll"
+            },
+            {
+              "name": "kernel.appcore.dll",
+              "path": "C:\\Windows\\SYSTEM32\\kernel.appcore.dll"
+            },
+            {
+              "name": "clbcatq.dll",
+              "path": "C:\\Windows\\System32\\clbcatq.dll"
+            },
+            {
+              "name": "sapi.dll",
+              "path": "C:\\Windows\\System32\\Speech\\Common\\sapi.dll"
+            },
+            {
+              "name": "MMDevApi.dll",
+              "path": "C:\\Windows\\System32\\MMDevApi.dll"
+            },
+            {
+              "name": "DEVOBJ.dll",
+              "path": "C:\\Windows\\System32\\DEVOBJ.dll"
+            },
+            {
+              "name": "cfgmgr32.dll",
+              "path": "C:\\Windows\\SYSTEM32\\cfgmgr32.dll"
+            },
+            {
+              "name": "AUDIOSES.DLL",
+              "path": "C:\\Windows\\SYSTEM32\\AUDIOSES.DLL"
+            },
+            {
+              "name": "shcore.dll",
+              "path": "C:\\Windows\\System32\\shcore.dll"
+            },
+            {
+              "name": "resourcepolicyclient.dll",
+              "path": "C:\\Windows\\SYSTEM32\\resourcepolicyclient.dll"
+            },
+            {
+              "name": "mswsock.dll",
+              "path": "C:\\Windows\\system32\\mswsock.dll"
+            },
+            {
+              "name": "MSCTF.dll",
+              "path": "C:\\Windows\\System32\\MSCTF.dll"
+            },
+            {
+              "name": "dataexchange.dll",
+              "path": "C:\\Windows\\system32\\dataexchange.dll"
+            },
+            {
+              "name": "twinapi.appcore.dll",
+              "path": "C:\\Windows\\system32\\twinapi.appcore.dll"
+            },
+            {
+              "name": "explorerframe.dll",
+              "path": "C:\\Windows\\system32\\explorerframe.dll"
+            },
+            {
+              "name": "SHLWAPI.dll",
+              "path": "C:\\Windows\\System32\\SHLWAPI.dll"
+            },
+            {
+              "name": "ApplicationTargetedFeatureDatabase.dll",
+              "path": "C:\\Windows\\system32\\ApplicationTargetedFeatureDatabase.dll"
+            },
+            {
+              "name": "WinTypes.dll",
+              "path": "C:\\Windows\\System32\\WinTypes.dll"
+            },
+            {
+              "name": "textinputframework.dll",
+              "path": "C:\\Windows\\SYSTEM32\\textinputframework.dll"
+            },
+            {
+              "name": "Oleacc.dll",
+              "path": "C:\\Windows\\system32\\Oleacc.dll"
+            },
+            {
+              "name": "vulkan-1.dll",
+              "path": "C:\\Windows\\SYSTEM32\\vulkan-1.dll"
+            },
+            {
+              "name": "windows.staterepositorycore.dll",
+              "path": "C:\\Windows\\SYSTEM32\\windows.staterepositorycore.dll"
+            },
+            {
+              "name": "directxdatabasehelper.dll",
+              "path": "C:\\Windows\\SYSTEM32\\directxdatabasehelper.dll"
+            },
+            {
+              "name": "igvk64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igvk64.dll"
+            },
+            {
+              "name": "igc64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igc64.dll"
+            },
+            {
+              "name": "ow-graphics-vulkan.dll",
+              "path": "C:\\Program Files (x86)\\Overwolf\\0.314.1.1\\ow-graphics-vulkan.dll"
+            },
+            {
+              "name": "windows.storage.dll",
+              "path": "C:\\Windows\\SYSTEM32\\windows.storage.dll"
+            },
+            {
+              "name": "igdgmm2_64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdgmm2_64.dll"
+            },
+            {
+              "name": "igdgmm64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdgmm64.dll"
+            },
+            {
+              "name": "igdgmmstaging_64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdgmmstaging_64.dll"
+            },
+            {
+              "name": "profapi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\profapi.dll"
+            },
+            {
+              "name": "ControlLib.dll",
+              "path": "C:\\Windows\\SYSTEM32\\ControlLib.dll"
+            },
+            {
+              "name": "IntelControlLib.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\IntelControlLib.dll"
+            },
+            {
+              "name": "d3d11.dll",
+              "path": "C:\\Windows\\SYSTEM32\\d3d11.dll"
+            },
+            {
+              "name": "igvkMedia64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igvkMedia64.dll"
+            },
+            {
+              "name": "igddxvacommon64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igddxvacommon64.dll"
+            },
+            {
+              "name": "media_bin_64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\media_bin_64.dll"
+            },
+            {
+              "name": "igdml64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdml64.dll"
+            },
+            {
+              "name": "iga64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\iga64.dll"
+            },
+            {
+              "name": "D3D12.dll",
+              "path": "C:\\Windows\\system32\\D3D12.dll"
+            },
+            {
+              "name": "D3D12Core.dll",
+              "path": "C:\\Windows\\system32\\D3D12Core.dll"
+            },
+            {
+              "name": "igd12umd64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igd12umd64.dll"
+            },
+            {
+              "name": "igdext64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdext64.dll"
+            },
+            {
+              "name": "igd12um64xe3.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igd12um64xe3.dll"
+            },
+            {
+              "name": "version.dll",
+              "path": "C:\\Windows\\system32\\version.dll"
+            },
+            {
+              "name": "UniversalAdapter64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\UniversalAdapter64.dll"
+            },
+            {
+              "name": "D3DSCache.dll",
+              "path": "C:\\Windows\\SYSTEM32\\D3DSCache.dll"
+            },
+            {
+              "name": "USERENV.dll",
+              "path": "C:\\Windows\\SYSTEM32\\USERENV.dll"
+            },
+            {
+              "name": "igd12dxva64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igd12dxva64.dll"
+            },
+            {
+              "name": "igdinfo64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdinfo64.dll"
+            },
+            {
+              "name": "ntmarta.dll",
+              "path": "C:\\Windows\\SYSTEM32\\ntmarta.dll"
+            },
+            {
+              "name": "dcomp.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dcomp.dll"
+            },
+            {
+              "name": "Microsoft.Internal.WarpPal.dll",
+              "path": "C:\\Windows\\SYSTEM32\\Microsoft.Internal.WarpPal.dll"
+            },
+            {
+              "name": "Windows.Gaming.Input.dll",
+              "path": "C:\\Windows\\System32\\Windows.Gaming.Input.dll"
+            },
+            {
+              "name": "inputhost.dll",
+              "path": "C:\\Windows\\SYSTEM32\\inputhost.dll"
+            },
+            {
+              "name": "CoreMessaging.dll",
+              "path": "C:\\Windows\\System32\\CoreMessaging.dll"
+            },
+            {
+              "name": "uiautomationcore.dll",
+              "path": "C:\\Windows\\System32\\uiautomationcore.dll"
+            },
+            {
+              "name": "threadpoolwinrt.dll",
+              "path": "C:\\Windows\\System32\\threadpoolwinrt.dll"
+            }
+          ],
+          "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+          "pid": 32196
+        },
+        "parentEnvironmentUnchanged": true,
+        "title": {
+          "frame": 81,
+          "gui_size": [
+            1280.0,
+            720.0
+          ],
+          "screen": "title",
+          "widgets": [
+            {
+              "bounds": [
+                1084.0,
+                710.0,
+                194.0,
+                10.0
+              ],
+              "enabled": true,
+              "id": "not-affiliated-with-mojang-or-microsoft",
+              "kind": "button",
+              "label": "Not affiliated with Mojang or Microsoft"
+            },
+            {
+              "bounds": [
+                540.0,
+                228.0,
+                200.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "singleplayer",
+              "kind": "button",
+              "label": "Singleplayer"
+            },
+            {
+              "bounds": [
+                540.0,
+                252.0,
+                200.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "multiplayer",
+              "kind": "button",
+              "label": "Multiplayer"
+            },
+            {
+              "bounds": [
+                540.0,
+                276.0,
+                200.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "minecraft-realms",
+              "kind": "button",
+              "label": "Minecraft Realms"
+            },
+            {
+              "bounds": [
+                540.0,
+                324.0,
+                98.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "options",
+              "kind": "button",
+              "label": "Options..."
+            },
+            {
+              "bounds": [
+                642.0,
+                324.0,
+                98.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "quit-game",
+              "kind": "button",
+              "label": "Quit Game"
+            },
+            {
+              "bounds": [
+                606.0,
+                300.0,
+                20.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "friends",
+              "kind": "button",
+              "label": "Friends"
+            },
+            {
+              "bounds": [
+                630.0,
+                300.0,
+                20.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "language",
+              "kind": "button",
+              "label": "Language..."
+            },
+            {
+              "bounds": [
+                654.0,
+                300.0,
+                20.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "accessibility-settings",
+              "kind": "button",
+              "label": "Accessibility Settings..."
+            }
+          ]
+        },
+        "observedUnixMs": 1794098994320,
+        "presentationHeartbeat": {
+          "backend": "native-ui-v1",
+          "pid": 32196,
+          "timestampUnixMs": 1794098994019,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "exitCode": 0,
+        "warm": true,
+        "rendererBackendLine": "Horizon renderer: Intel(R) Arc(TM) B390 GPU (Vulkan, IntegratedGpu)",
+        "log": {
+          "sizeBytes": 1683,
+          "sha256": "23f12727531556c5021fedb2ab3a9468004d513a24274a094d0cc18a59af7426"
+        }
+      },
+      {
+        "index": 3,
+        "arguments": [
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\launch-rust-edition.exe",
+          "--game-dir",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\compatibility\\run-3\\game",
+          "--control-socket",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\compatibility\\run-3\\control.json"
+        ],
+        "nativeProcessId": 42108,
+        "bootstrapProcessId": 34148,
+        "processAncestry": [
+          {
+            "parent": 34148,
+            "pid": 42108,
+            "name": "horizon-client.exe",
+            "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+            "created": "2026-11-08T00:49:58.5306170Z"
+          },
+          {
+            "parent": 42896,
+            "pid": 34148,
+            "name": "launch-rust-edition.exe",
+            "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\launch-rust-edition.exe",
+            "created": "2026-11-08T00:49:54.8851980Z"
+          }
+        ],
+        "moduleSnapshot": {
+          "modules": [
+            {
+              "name": "horizon-client.exe",
+              "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe"
+            },
+            {
+              "name": "ntdll.dll",
+              "path": "C:\\Windows\\SYSTEM32\\ntdll.dll"
+            },
+            {
+              "name": "KERNEL32.DLL",
+              "path": "C:\\Windows\\System32\\KERNEL32.DLL"
+            },
+            {
+              "name": "KERNELBASE.dll",
+              "path": "C:\\Windows\\System32\\KERNELBASE.dll"
+            },
+            {
+              "name": "advapi32.dll",
+              "path": "C:\\Windows\\System32\\advapi32.dll"
+            },
+            {
+              "name": "msvcrt.dll",
+              "path": "C:\\Windows\\System32\\msvcrt.dll"
+            },
+            {
+              "name": "sechost.dll",
+              "path": "C:\\Windows\\System32\\sechost.dll"
+            },
+            {
+              "name": "RPCRT4.dll",
+              "path": "C:\\Windows\\System32\\RPCRT4.dll"
+            },
+            {
+              "name": "ole32.dll",
+              "path": "C:\\Windows\\System32\\ole32.dll"
+            },
+            {
+              "name": "msvcp_win.dll",
+              "path": "C:\\Windows\\System32\\msvcp_win.dll"
+            },
+            {
+              "name": "ucrtbase.dll",
+              "path": "C:\\Windows\\System32\\ucrtbase.dll"
+            },
+            {
+              "name": "GDI32.dll",
+              "path": "C:\\Windows\\System32\\GDI32.dll"
+            },
+            {
+              "name": "win32u.dll",
+              "path": "C:\\Windows\\System32\\win32u.dll"
+            },
+            {
+              "name": "gdi32full.dll",
+              "path": "C:\\Windows\\System32\\gdi32full.dll"
+            },
+            {
+              "name": "USER32.dll",
+              "path": "C:\\Windows\\System32\\USER32.dll"
+            },
+            {
+              "name": "combase.dll",
+              "path": "C:\\Windows\\System32\\combase.dll"
+            },
+            {
+              "name": "oleaut32.dll",
+              "path": "C:\\Windows\\System32\\oleaut32.dll"
+            },
+            {
+              "name": "setupapi.dll",
+              "path": "C:\\Windows\\System32\\setupapi.dll"
+            },
+            {
+              "name": "bcryptprimitives.dll",
+              "path": "C:\\Windows\\System32\\bcryptprimitives.dll"
+            },
+            {
+              "name": "ws2_32.dll",
+              "path": "C:\\Windows\\System32\\ws2_32.dll"
+            },
+            {
+              "name": "shell32.dll",
+              "path": "C:\\Windows\\System32\\shell32.dll"
+            },
+            {
+              "name": "dxgi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dxgi.dll"
+            },
+            {
+              "name": "opengl32.dll",
+              "path": "C:\\Windows\\SYSTEM32\\opengl32.dll"
+            },
+            {
+              "name": "imm32.dll",
+              "path": "C:\\Windows\\System32\\imm32.dll"
+            },
+            {
+              "name": "iphlpapi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\iphlpapi.dll"
+            },
+            {
+              "name": "steam_api64.dll",
+              "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\steam_api64.dll"
+            },
+            {
+              "name": "bcrypt.dll",
+              "path": "C:\\Windows\\SYSTEM32\\bcrypt.dll"
+            },
+            {
+              "name": "dwmapi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dwmapi.dll"
+            },
+            {
+              "name": "powrprof.dll",
+              "path": "C:\\Windows\\SYSTEM32\\powrprof.dll"
+            },
+            {
+              "name": "uxtheme.dll",
+              "path": "C:\\Windows\\SYSTEM32\\uxtheme.dll"
+            },
+            {
+              "name": "GLU32.dll",
+              "path": "C:\\Windows\\SYSTEM32\\GLU32.dll"
+            },
+            {
+              "name": "dxcore.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dxcore.dll"
+            },
+            {
+              "name": "CRYPT32.dll",
+              "path": "C:\\Windows\\System32\\CRYPT32.dll"
+            },
+            {
+              "name": "CRYPTBASE.DLL",
+              "path": "C:\\Windows\\SYSTEM32\\CRYPTBASE.DLL"
+            },
+            {
+              "name": "UMPDC.dll",
+              "path": "C:\\Windows\\SYSTEM32\\UMPDC.dll"
+            },
+            {
+              "name": "kernel.appcore.dll",
+              "path": "C:\\Windows\\SYSTEM32\\kernel.appcore.dll"
+            },
+            {
+              "name": "clbcatq.dll",
+              "path": "C:\\Windows\\System32\\clbcatq.dll"
+            },
+            {
+              "name": "sapi.dll",
+              "path": "C:\\Windows\\System32\\Speech\\Common\\sapi.dll"
+            },
+            {
+              "name": "MMDevApi.dll",
+              "path": "C:\\Windows\\System32\\MMDevApi.dll"
+            },
+            {
+              "name": "DEVOBJ.dll",
+              "path": "C:\\Windows\\System32\\DEVOBJ.dll"
+            },
+            {
+              "name": "cfgmgr32.dll",
+              "path": "C:\\Windows\\SYSTEM32\\cfgmgr32.dll"
+            },
+            {
+              "name": "AUDIOSES.DLL",
+              "path": "C:\\Windows\\SYSTEM32\\AUDIOSES.DLL"
+            },
+            {
+              "name": "shcore.dll",
+              "path": "C:\\Windows\\System32\\shcore.dll"
+            },
+            {
+              "name": "resourcepolicyclient.dll",
+              "path": "C:\\Windows\\SYSTEM32\\resourcepolicyclient.dll"
+            },
+            {
+              "name": "mswsock.dll",
+              "path": "C:\\Windows\\system32\\mswsock.dll"
+            },
+            {
+              "name": "MSCTF.dll",
+              "path": "C:\\Windows\\System32\\MSCTF.dll"
+            },
+            {
+              "name": "dataexchange.dll",
+              "path": "C:\\Windows\\system32\\dataexchange.dll"
+            },
+            {
+              "name": "twinapi.appcore.dll",
+              "path": "C:\\Windows\\system32\\twinapi.appcore.dll"
+            },
+            {
+              "name": "explorerframe.dll",
+              "path": "C:\\Windows\\system32\\explorerframe.dll"
+            },
+            {
+              "name": "SHLWAPI.dll",
+              "path": "C:\\Windows\\System32\\SHLWAPI.dll"
+            },
+            {
+              "name": "ApplicationTargetedFeatureDatabase.dll",
+              "path": "C:\\Windows\\system32\\ApplicationTargetedFeatureDatabase.dll"
+            },
+            {
+              "name": "WinTypes.dll",
+              "path": "C:\\Windows\\System32\\WinTypes.dll"
+            },
+            {
+              "name": "textinputframework.dll",
+              "path": "C:\\Windows\\SYSTEM32\\textinputframework.dll"
+            },
+            {
+              "name": "Oleacc.dll",
+              "path": "C:\\Windows\\system32\\Oleacc.dll"
+            },
+            {
+              "name": "vulkan-1.dll",
+              "path": "C:\\Windows\\SYSTEM32\\vulkan-1.dll"
+            },
+            {
+              "name": "windows.staterepositorycore.dll",
+              "path": "C:\\Windows\\SYSTEM32\\windows.staterepositorycore.dll"
+            },
+            {
+              "name": "directxdatabasehelper.dll",
+              "path": "C:\\Windows\\SYSTEM32\\directxdatabasehelper.dll"
+            },
+            {
+              "name": "igvk64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igvk64.dll"
+            },
+            {
+              "name": "igc64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igc64.dll"
+            },
+            {
+              "name": "ow-graphics-vulkan.dll",
+              "path": "C:\\Program Files (x86)\\Overwolf\\0.314.1.1\\ow-graphics-vulkan.dll"
+            },
+            {
+              "name": "windows.storage.dll",
+              "path": "C:\\Windows\\SYSTEM32\\windows.storage.dll"
+            },
+            {
+              "name": "igdgmm2_64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdgmm2_64.dll"
+            },
+            {
+              "name": "igdgmm64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdgmm64.dll"
+            },
+            {
+              "name": "igdgmmstaging_64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdgmmstaging_64.dll"
+            },
+            {
+              "name": "profapi.dll",
+              "path": "C:\\Windows\\SYSTEM32\\profapi.dll"
+            },
+            {
+              "name": "ControlLib.dll",
+              "path": "C:\\Windows\\SYSTEM32\\ControlLib.dll"
+            },
+            {
+              "name": "IntelControlLib.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\IntelControlLib.dll"
+            },
+            {
+              "name": "d3d11.dll",
+              "path": "C:\\Windows\\SYSTEM32\\d3d11.dll"
+            },
+            {
+              "name": "igvkMedia64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igvkMedia64.dll"
+            },
+            {
+              "name": "igddxvacommon64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igddxvacommon64.dll"
+            },
+            {
+              "name": "media_bin_64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\media_bin_64.dll"
+            },
+            {
+              "name": "igdml64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdml64.dll"
+            },
+            {
+              "name": "iga64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\iga64.dll"
+            },
+            {
+              "name": "D3D12.dll",
+              "path": "C:\\Windows\\system32\\D3D12.dll"
+            },
+            {
+              "name": "D3D12Core.dll",
+              "path": "C:\\Windows\\system32\\D3D12Core.dll"
+            },
+            {
+              "name": "igd12umd64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igd12umd64.dll"
+            },
+            {
+              "name": "igdext64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdext64.dll"
+            },
+            {
+              "name": "igd12um64xe3.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igd12um64xe3.dll"
+            },
+            {
+              "name": "version.dll",
+              "path": "C:\\Windows\\system32\\version.dll"
+            },
+            {
+              "name": "UniversalAdapter64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\UniversalAdapter64.dll"
+            },
+            {
+              "name": "D3DSCache.dll",
+              "path": "C:\\Windows\\SYSTEM32\\D3DSCache.dll"
+            },
+            {
+              "name": "USERENV.dll",
+              "path": "C:\\Windows\\SYSTEM32\\USERENV.dll"
+            },
+            {
+              "name": "igd12dxva64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igd12dxva64.dll"
+            },
+            {
+              "name": "igdinfo64.dll",
+              "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\iigd_dch.inf_amd64_cbda6972ed2814ef\\igdinfo64.dll"
+            },
+            {
+              "name": "ntmarta.dll",
+              "path": "C:\\Windows\\SYSTEM32\\ntmarta.dll"
+            },
+            {
+              "name": "dcomp.dll",
+              "path": "C:\\Windows\\SYSTEM32\\dcomp.dll"
+            },
+            {
+              "name": "Microsoft.Internal.WarpPal.dll",
+              "path": "C:\\Windows\\SYSTEM32\\Microsoft.Internal.WarpPal.dll"
+            },
+            {
+              "name": "Windows.Gaming.Input.dll",
+              "path": "C:\\Windows\\System32\\Windows.Gaming.Input.dll"
+            },
+            {
+              "name": "inputhost.dll",
+              "path": "C:\\Windows\\SYSTEM32\\inputhost.dll"
+            },
+            {
+              "name": "CoreMessaging.dll",
+              "path": "C:\\Windows\\System32\\CoreMessaging.dll"
+            },
+            {
+              "name": "uiautomationcore.dll",
+              "path": "C:\\Windows\\System32\\uiautomationcore.dll"
+            },
+            {
+              "name": "threadpoolwinrt.dll",
+              "path": "C:\\Windows\\System32\\threadpoolwinrt.dll"
+            }
+          ],
+          "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+          "pid": 42108
+        },
+        "parentEnvironmentUnchanged": true,
+        "title": {
+          "frame": 83,
+          "gui_size": [
+            1280.0,
+            720.0
+          ],
+          "screen": "title",
+          "widgets": [
+            {
+              "bounds": [
+                1084.0,
+                710.0,
+                194.0,
+                10.0
+              ],
+              "enabled": true,
+              "id": "not-affiliated-with-mojang-or-microsoft",
+              "kind": "button",
+              "label": "Not affiliated with Mojang or Microsoft"
+            },
+            {
+              "bounds": [
+                540.0,
+                228.0,
+                200.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "singleplayer",
+              "kind": "button",
+              "label": "Singleplayer"
+            },
+            {
+              "bounds": [
+                540.0,
+                252.0,
+                200.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "multiplayer",
+              "kind": "button",
+              "label": "Multiplayer"
+            },
+            {
+              "bounds": [
+                540.0,
+                276.0,
+                200.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "minecraft-realms",
+              "kind": "button",
+              "label": "Minecraft Realms"
+            },
+            {
+              "bounds": [
+                540.0,
+                324.0,
+                98.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "options",
+              "kind": "button",
+              "label": "Options..."
+            },
+            {
+              "bounds": [
+                642.0,
+                324.0,
+                98.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "quit-game",
+              "kind": "button",
+              "label": "Quit Game"
+            },
+            {
+              "bounds": [
+                606.0,
+                300.0,
+                20.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "friends",
+              "kind": "button",
+              "label": "Friends"
+            },
+            {
+              "bounds": [
+                630.0,
+                300.0,
+                20.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "language",
+              "kind": "button",
+              "label": "Language..."
+            },
+            {
+              "bounds": [
+                654.0,
+                300.0,
+                20.0,
+                20.0
+              ],
+              "enabled": true,
+              "id": "accessibility-settings",
+              "kind": "button",
+              "label": "Accessibility Settings..."
+            }
+          ]
+        },
+        "observedUnixMs": 1794099001830,
+        "presentationHeartbeat": {
+          "backend": "native-ui-v1",
+          "pid": 42108,
+          "timestampUnixMs": 1794099001496,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "exitCode": 0,
+        "warm": true,
+        "rendererBackendLine": "Horizon renderer: Intel(R) Arc(TM) B390 GPU (Vulkan, IntegratedGpu)",
+        "log": {
+          "sizeBytes": 1731,
+          "sha256": "9812d282563afb12575b7c9664ff601877327562b05d30422acb05f4214af435"
+        }
+      }
+    ],
+    "fixtureRemoved": true
+  },
+  "nativeNotices": {
+    "schemaVersion": 1,
+    "status": "PASS",
+    "acceptanceContext": {
+      "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
+      "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+      "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc",
+      "overlayReceiptSha256": "e2acc99e05d1fab76b565ced8c56d77f4c783ef2bfa8f2d90156fb947632b577",
+      "payloadInventorySha256": "a3a4ab6f371ecaef891c25929e8122b347d9bbec876f30707886366509f5b880"
+    },
+    "client": {
+      "sizeBytes": 92608512,
+      "sha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3"
+    },
+    "bootstrap": {
+      "sizeBytes": 2923008,
+      "sha256": "ace261a88a6a5438ede83e9571be2d1189ec7d950948d751460071af446b0c6d"
+    },
+    "startup": "exact bootstrap child; native-ui-v1; real presented unscaled screenshots",
+    "checks": {
+      "bootstrapChildPidAndTitle": "PASS",
+      "titleVisiblePixelsAndFreshPresentation": "PASS",
+      "threeCardsAndSevenSecondExpiry": "PASS",
+      "malformedAndTornKeepPriorUntilOriginalExpiry": "PASS",
+      "future1500msRetainedUntilItsTime": "PASS",
+      "dpiOnceAndGameGuiScaleUnchanged": "PASS",
+      "actualFullscreenVisibleNotice": "PASS",
+      "worldAndChatInputWhileVisible": "PASS",
+      "pauseMenuVisibleWithoutInputWidgets": "PASS",
+      "emptyQueueFreshHeartbeat": "PASS",
+      "sessionSentinelAndNoExtraMod": "PASS",
+      "exactCandidateUnchanged": "PASS"
+    },
+    "captures": [
+      {
+        "file": "title-one.png",
+        "sizeBytes": 2462595,
+        "sha256": "2da91baf96003e28521cb4645dd019af6e069fae8aca69d5543642b77d7ce415",
+        "pixels": {
+          "count": 1,
+          "boxes": [
+            [
+              12,
+              1354,
+              252,
+              1428
+            ]
+          ],
+          "size": [
+            2560,
+            1440
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099096425,
+        "heartbeatBeforeObservedUnixMs": 1794099096216,
+        "heartbeatAfterObservedUnixMs": 1794099096645,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099096124,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099096625,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            356,
+            401,
+            2916,
+            1841
+          ],
+          "window": [
+            343,
+            343,
+            2929,
+            1854
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "title-three.png",
+        "sizeBytes": 2469055,
+        "sha256": "5228cd9c10431aa3547b3e0b0f01a5873d18865c4ed67dba8363bd9078c29a63",
+        "pixels": {
+          "count": 3,
+          "boxes": [
+            [
+              12,
+              1182,
+              252,
+              1256
+            ],
+            [
+              12,
+              1268,
+              252,
+              1342
+            ],
+            [
+              12,
+              1354,
+              252,
+              1428
+            ]
+          ],
+          "size": [
+            2560,
+            1440
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099097360,
+        "heartbeatBeforeObservedUnixMs": 1794099097164,
+        "heartbeatAfterObservedUnixMs": 1794099097661,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099097142,
+          "renderedCount": 3,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099097643,
+          "renderedCount": 3,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            356,
+            401,
+            2916,
+            1841
+          ],
+          "window": [
+            343,
+            343,
+            2929,
+            1854
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "expired-three.png",
+        "sizeBytes": 2561232,
+        "sha256": "e62253e642b98dab152871d0f31a1780118e432e513e97cea54883e49650b784",
+        "pixels": {
+          "count": 0,
+          "boxes": [],
+          "size": [
+            2560,
+            1440
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099104482,
+        "heartbeatBeforeObservedUnixMs": 1794099104265,
+        "heartbeatAfterObservedUnixMs": 1794099104681,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099104160,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099104665,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            356,
+            401,
+            2916,
+            1841
+          ],
+          "window": [
+            343,
+            343,
+            2929,
+            1854
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "torn-snapshot-retains-card.png",
+        "sizeBytes": 2608033,
+        "sha256": "41faaea3732bf2d1d099b5cb4b5cc2b38723f409a5994635614b73dda9e1888f",
+        "pixels": {
+          "count": 1,
+          "boxes": [
+            [
+              12,
+              1354,
+              252,
+              1428
+            ]
+          ],
+          "size": [
+            2560,
+            1440
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099109593,
+        "heartbeatBeforeObservedUnixMs": 1794099109385,
+        "heartbeatAfterObservedUnixMs": 1794099109792,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099109198,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099109709,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            356,
+            401,
+            2916,
+            1841
+          ],
+          "window": [
+            343,
+            343,
+            2929,
+            1854
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "torn-snapshot-original-expiry.png",
+        "sizeBytes": 2707663,
+        "sha256": "cae368a0d8a3a69f7bedd182d227810123fa3c1e192227d261b3b02e05995f21",
+        "pixels": {
+          "count": 0,
+          "boxes": [],
+          "size": [
+            2560,
+            1440
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099112002,
+        "heartbeatBeforeObservedUnixMs": 1794099111784,
+        "heartbeatAfterObservedUnixMs": 1794099112303,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099111709,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099112219,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            356,
+            401,
+            2916,
+            1841
+          ],
+          "window": [
+            343,
+            343,
+            2929,
+            1854
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "future-not-yet-visible.png",
+        "sizeBytes": 2753659,
+        "sha256": "97eb9a89eb81d4449b68d29218154c6b79ac653c25e9ff872cf8aca38a415044",
+        "pixels": {
+          "count": 0,
+          "boxes": [],
+          "size": [
+            2560,
+            1440
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099113029,
+        "heartbeatBeforeObservedUnixMs": 1794099112810,
+        "heartbeatAfterObservedUnixMs": 1794099113336,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099112736,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099113228,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            356,
+            401,
+            2916,
+            1841
+          ],
+          "window": [
+            343,
+            343,
+            2929,
+            1854
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "future-notice-retained.png",
+        "sizeBytes": 2816860,
+        "sha256": "5c79a7f5a163fb8ad2df1cad8638184d9b04b493a135647bda97e275c1707e34",
+        "pixels": {
+          "count": 1,
+          "boxes": [
+            [
+              12,
+              1354,
+              252,
+              1428
+            ]
+          ],
+          "size": [
+            2560,
+            1440
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099114526,
+        "heartbeatBeforeObservedUnixMs": 1794099114308,
+        "heartbeatAfterObservedUnixMs": 1794099114827,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099114228,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099114742,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            356,
+            401,
+            2916,
+            1841
+          ],
+          "window": [
+            343,
+            343,
+            2929,
+            1854
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "dpi-one.png",
+        "sizeBytes": 2863366,
+        "sha256": "188a833f654c8da3e6fe6972747f2ca7ed6c25a3fcbc45d5004cb127d3bf7456",
+        "pixels": {
+          "count": 1,
+          "boxes": [
+            [
+              12,
+              1354,
+              252,
+              1428
+            ]
+          ],
+          "size": [
+            2560,
+            1440
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099115742,
+        "heartbeatBeforeObservedUnixMs": 1794099115530,
+        "heartbeatAfterObservedUnixMs": 1794099115842,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099115243,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099115741,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            356,
+            401,
+            2916,
+            1841
+          ],
+          "window": [
+            343,
+            343,
+            2929,
+            1854
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "dpi-two.png",
+        "sizeBytes": 2876599,
+        "sha256": "ea0ff22cea633fb407bfd5ca4f7cde52bd49be9c28eaf14cf95a4caa0889e545",
+        "pixels": {
+          "count": 1,
+          "boxes": [
+            [
+              24,
+              1268,
+              504,
+              1416
+            ]
+          ],
+          "size": [
+            2560,
+            1440
+          ],
+          "expectedPhysicalWidth": 480
+        },
+        "capturedUnixMs": 1794099116770,
+        "heartbeatBeforeObservedUnixMs": 1794099116560,
+        "heartbeatAfterObservedUnixMs": 1794099116871,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099116258,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099116557,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            356,
+            401,
+            2916,
+            1841
+          ],
+          "window": [
+            343,
+            343,
+            2929,
+            1854
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "fullscreen-world.png",
+        "sizeBytes": 2704118,
+        "sha256": "65437f629e85e3bddcfd043279a559d59d3f02011d38efa52e6c37bf2ca19a80",
+        "pixels": {
+          "count": 1,
+          "boxes": [
+            [
+              12,
+              1714,
+              252,
+              1788
+            ]
+          ],
+          "size": [
+            2880,
+            1800
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099119261,
+        "heartbeatBeforeObservedUnixMs": 1794099118946,
+        "heartbeatAfterObservedUnixMs": 1794099119433,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099118787,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099119294,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "window": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "world-chat-input-with-card.png",
+        "sizeBytes": 3033555,
+        "sha256": "9e99966d2b0cc6c297175c71f1502c1b2e07305ff280f4e53f36a1a4c4eef27d",
+        "pixels": {
+          "count": 1,
+          "boxes": [
+            [
+              12,
+              1714,
+              252,
+              1788
+            ]
+          ],
+          "size": [
+            2880,
+            1800
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099119768,
+        "heartbeatBeforeObservedUnixMs": 1794099119484,
+        "heartbeatAfterObservedUnixMs": 1794099119915,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099119294,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099119802,
+          "renderedCount": 1,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "window": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "paused-world-three.png",
+        "sizeBytes": 2583661,
+        "sha256": "3090c4f72845fe708ae394f6a328fafec1439434125103121b2fb09b91533e95",
+        "pixels": {
+          "count": 3,
+          "boxes": [
+            [
+              12,
+              1542,
+              252,
+              1616
+            ],
+            [
+              12,
+              1628,
+              252,
+              1702
+            ],
+            [
+              12,
+              1714,
+              252,
+              1788
+            ]
+          ],
+          "size": [
+            2880,
+            1800
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099121668,
+        "heartbeatBeforeObservedUnixMs": 1794099121331,
+        "heartbeatAfterObservedUnixMs": 1794099121903,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099121314,
+          "renderedCount": 3,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099121814,
+          "renderedCount": 3,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "window": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      },
+      {
+        "file": "paused-zero-fresh-heartbeat.png",
+        "sizeBytes": 2589704,
+        "sha256": "60c33c0ce25ab9b3af6f74cc631fba4f8c22df3d223f7610d9dde17902d4c18f",
+        "pixels": {
+          "count": 0,
+          "boxes": [],
+          "size": [
+            2880,
+            1800
+          ],
+          "expectedPhysicalWidth": 240
+        },
+        "capturedUnixMs": 1794099122693,
+        "heartbeatBeforeObservedUnixMs": 1794099122332,
+        "heartbeatAfterObservedUnixMs": 1794099122847,
+        "heartbeatBefore": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099122328,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "heartbeatAfter": {
+          "backend": "native-ui-v1",
+          "pid": 31020,
+          "timestampUnixMs": 1794099122828,
+          "renderedCount": 0,
+          "transformations": 0,
+          "error": ""
+        },
+        "window": {
+          "hwnd": 56822002,
+          "title": "Minecraft Rust Edition",
+          "client": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "window": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "monitor": [
+            0,
+            0,
+            2880,
+            1800
+          ],
+          "foregroundHwnd": 56822002
+        }
+      }
+    ],
+    "fixtureRemoved": true,
+    "arguments": [
+      "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\launch-rust-edition.exe",
+      "--game-dir",
+      "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\notices\\game",
+      "--control-socket",
+      "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\notices\\control.json"
+    ],
+    "nativeProcessId": 31020,
+    "bootstrapProcessId": 25408,
+    "titleUiBefore": {
+      "screen": "title",
+      "widgets": [
+        {
+          "id": "not-affiliated-with-mojang-or-microsoft",
+          "bounds": [
+            1084.0,
+            710.0,
+            194.0,
+            10.0
+          ],
+          "label": "Not affiliated with Mojang or Microsoft",
+          "enabled": true
+        },
+        {
+          "id": "singleplayer",
+          "bounds": [
+            540.0,
+            228.0,
+            200.0,
+            20.0
+          ],
+          "label": "Singleplayer",
+          "enabled": true
+        },
+        {
+          "id": "multiplayer",
+          "bounds": [
+            540.0,
+            252.0,
+            200.0,
+            20.0
+          ],
+          "label": "Multiplayer",
+          "enabled": true
+        },
+        {
+          "id": "minecraft-realms",
+          "bounds": [
+            540.0,
+            276.0,
+            200.0,
+            20.0
+          ],
+          "label": "Minecraft Realms",
+          "enabled": true
+        },
+        {
+          "id": "options",
+          "bounds": [
+            540.0,
+            324.0,
+            98.0,
+            20.0
+          ],
+          "label": "Options...",
+          "enabled": true
+        },
+        {
+          "id": "quit-game",
+          "bounds": [
+            642.0,
+            324.0,
+            98.0,
+            20.0
+          ],
+          "label": "Quit Game",
+          "enabled": true
+        },
+        {
+          "id": "friends",
+          "bounds": [
+            606.0,
+            300.0,
+            20.0,
+            20.0
+          ],
+          "label": "Friends",
+          "enabled": true
+        },
+        {
+          "id": "language",
+          "bounds": [
+            630.0,
+            300.0,
+            20.0,
+            20.0
+          ],
+          "label": "Language...",
+          "enabled": true
+        },
+        {
+          "id": "accessibility-settings",
+          "bounds": [
+            654.0,
+            300.0,
+            20.0,
+            20.0
+          ],
+          "label": "Accessibility Settings...",
+          "enabled": true
+        }
+      ]
+    },
+    "processAncestry": [
+      {
+        "parent": 25408,
+        "pid": 31020,
+        "name": "horizon-client.exe",
+        "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+        "created": "2026-11-08T00:51:32.5727390Z"
+      },
+      {
+        "parent": 30744,
+        "pid": 25408,
+        "name": "launch-rust-edition.exe",
+        "path": "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\launch-rust-edition.exe",
+        "created": "2026-11-08T00:51:28.7066460Z"
+      }
+    ],
+    "timing": {
+      "lifeMs": 7000,
+      "threeCards": {
+        "createdUnixMs": 1794099096660,
+        "sentUnixMs": 1794099096661,
+        "nearExpiry": {
+          "heartbeat": {
+            "backend": "native-ui-v1",
+            "pid": 31020,
+            "timestampUnixMs": 1794099102660,
+            "renderedCount": 3,
+            "transformations": 0,
+            "error": ""
+          },
+          "observedUnixMs": 1794099102761
+        },
+        "expired": {
+          "heartbeat": {
+            "backend": "native-ui-v1",
+            "pid": 31020,
+            "timestampUnixMs": 1794099104160,
+            "renderedCount": 0,
+            "transformations": 0,
+            "error": ""
+          },
+          "observedUnixMs": 1794099104265
+        }
+      },
+      "tornSnapshot": {
+        "createdUnixMs": 1794099104683,
+        "sentUnixMs": 1794099104683,
+        "invalidSnapshots": [
+          {
+            "kind": "invalid-utf8",
+            "writtenUnixMs": 1794099106683,
+            "heartbeat": {
+              "backend": "native-ui-v1",
+              "pid": 31020,
+              "timestampUnixMs": 1794099107198,
+              "renderedCount": 1,
+              "transformations": 0,
+              "error": ""
+            },
+            "observedUnixMs": 1794099107384
+          },
+          {
+            "kind": "broken-unicode-escape",
+            "writtenUnixMs": 1794099108684,
+            "heartbeat": {
+              "backend": "native-ui-v1",
+              "pid": 31020,
+              "timestampUnixMs": 1794099109198,
+              "renderedCount": 1,
+              "transformations": 0,
+              "error": ""
+            },
+            "observedUnixMs": 1794099109385
+          }
+        ],
+        "expired": {
+          "heartbeat": {
+            "backend": "native-ui-v1",
+            "pid": 31020,
+            "timestampUnixMs": 1794099111709,
+            "renderedCount": 0,
+            "transformations": 0,
+            "error": ""
+          },
+          "observedUnixMs": 1794099111784
+        }
+      },
+      "futureNotice": {
+        "queuedUnixMs": 1794099112304,
+        "createdUnixMs": 1794099113804,
+        "sentUnixMs": 1794099112306
+      }
+    },
+    "dpi": {
+      "oneWidth": 240,
+      "twoWidth": 480,
+      "guiScale": "guiScale:2",
+      "guiScaleBefore": "guiScale:2",
+      "guiScaleAfter": "guiScale:2",
+      "uiBefore": {
+        "screen": "title",
+        "widgets": [
+          {
+            "id": "not-affiliated-with-mojang-or-microsoft",
+            "bounds": [
+              1084.0,
+              710.0,
+              194.0,
+              10.0
+            ],
+            "label": "Not affiliated with Mojang or Microsoft",
+            "enabled": true
+          },
+          {
+            "id": "singleplayer",
+            "bounds": [
+              540.0,
+              228.0,
+              200.0,
+              20.0
+            ],
+            "label": "Singleplayer",
+            "enabled": true
+          },
+          {
+            "id": "multiplayer",
+            "bounds": [
+              540.0,
+              252.0,
+              200.0,
+              20.0
+            ],
+            "label": "Multiplayer",
+            "enabled": true
+          },
+          {
+            "id": "minecraft-realms",
+            "bounds": [
+              540.0,
+              276.0,
+              200.0,
+              20.0
+            ],
+            "label": "Minecraft Realms",
+            "enabled": true
+          },
+          {
+            "id": "options",
+            "bounds": [
+              540.0,
+              324.0,
+              98.0,
+              20.0
+            ],
+            "label": "Options...",
+            "enabled": true
+          },
+          {
+            "id": "quit-game",
+            "bounds": [
+              642.0,
+              324.0,
+              98.0,
+              20.0
+            ],
+            "label": "Quit Game",
+            "enabled": true
+          },
+          {
+            "id": "friends",
+            "bounds": [
+              606.0,
+              300.0,
+              20.0,
+              20.0
+            ],
+            "label": "Friends",
+            "enabled": true
+          },
+          {
+            "id": "language",
+            "bounds": [
+              630.0,
+              300.0,
+              20.0,
+              20.0
+            ],
+            "label": "Language...",
+            "enabled": true
+          },
+          {
+            "id": "accessibility-settings",
+            "bounds": [
+              654.0,
+              300.0,
+              20.0,
+              20.0
+            ],
+            "label": "Accessibility Settings...",
+            "enabled": true
+          }
+        ]
+      },
+      "uiAfter": {
+        "screen": "title",
+        "widgets": [
+          {
+            "id": "not-affiliated-with-mojang-or-microsoft",
+            "bounds": [
+              1084.0,
+              710.0,
+              194.0,
+              10.0
+            ],
+            "label": "Not affiliated with Mojang or Microsoft",
+            "enabled": true
+          },
+          {
+            "id": "singleplayer",
+            "bounds": [
+              540.0,
+              228.0,
+              200.0,
+              20.0
+            ],
+            "label": "Singleplayer",
+            "enabled": true
+          },
+          {
+            "id": "multiplayer",
+            "bounds": [
+              540.0,
+              252.0,
+              200.0,
+              20.0
+            ],
+            "label": "Multiplayer",
+            "enabled": true
+          },
+          {
+            "id": "minecraft-realms",
+            "bounds": [
+              540.0,
+              276.0,
+              200.0,
+              20.0
+            ],
+            "label": "Minecraft Realms",
+            "enabled": true
+          },
+          {
+            "id": "options",
+            "bounds": [
+              540.0,
+              324.0,
+              98.0,
+              20.0
+            ],
+            "label": "Options...",
+            "enabled": true
+          },
+          {
+            "id": "quit-game",
+            "bounds": [
+              642.0,
+              324.0,
+              98.0,
+              20.0
+            ],
+            "label": "Quit Game",
+            "enabled": true
+          },
+          {
+            "id": "friends",
+            "bounds": [
+              606.0,
+              300.0,
+              20.0,
+              20.0
+            ],
+            "label": "Friends",
+            "enabled": true
+          },
+          {
+            "id": "language",
+            "bounds": [
+              630.0,
+              300.0,
+              20.0,
+              20.0
+            ],
+            "label": "Language...",
+            "enabled": true
+          },
+          {
+            "id": "accessibility-settings",
+            "bounds": [
+              654.0,
+              300.0,
+              20.0,
+              20.0
+            ],
+            "label": "Accessibility Settings...",
+            "enabled": true
+          }
+        ]
+      }
+    },
+    "titleUiAfter": {
+      "screen": "title",
+      "widgets": [
+        {
+          "id": "not-affiliated-with-mojang-or-microsoft",
+          "bounds": [
+            1084.0,
+            710.0,
+            194.0,
+            10.0
+          ],
+          "label": "Not affiliated with Mojang or Microsoft",
+          "enabled": true
+        },
+        {
+          "id": "singleplayer",
+          "bounds": [
+            540.0,
+            228.0,
+            200.0,
+            20.0
+          ],
+          "label": "Singleplayer",
+          "enabled": true
+        },
+        {
+          "id": "multiplayer",
+          "bounds": [
+            540.0,
+            252.0,
+            200.0,
+            20.0
+          ],
+          "label": "Multiplayer",
+          "enabled": true
+        },
+        {
+          "id": "minecraft-realms",
+          "bounds": [
+            540.0,
+            276.0,
+            200.0,
+            20.0
+          ],
+          "label": "Minecraft Realms",
+          "enabled": true
+        },
+        {
+          "id": "options",
+          "bounds": [
+            540.0,
+            324.0,
+            98.0,
+            20.0
+          ],
+          "label": "Options...",
+          "enabled": true
+        },
+        {
+          "id": "quit-game",
+          "bounds": [
+            642.0,
+            324.0,
+            98.0,
+            20.0
+          ],
+          "label": "Quit Game",
+          "enabled": true
+        },
+        {
+          "id": "friends",
+          "bounds": [
+            606.0,
+            300.0,
+            20.0,
+            20.0
+          ],
+          "label": "Friends",
+          "enabled": true
+        },
+        {
+          "id": "language",
+          "bounds": [
+            630.0,
+            300.0,
+            20.0,
+            20.0
+          ],
+          "label": "Language...",
+          "enabled": true
+        },
+        {
+          "id": "accessibility-settings",
+          "bounds": [
+            654.0,
+            300.0,
+            20.0,
+            20.0
+          ],
+          "label": "Accessibility Settings...",
+          "enabled": true
+        }
+      ]
+    },
+    "foregroundBeforeChat": 56822002,
+    "foregroundAfterChat": 56822002,
+    "technicalChat": [
+      "There are 1 of a max of 8 players online: Player16263"
+    ],
+    "pauseUiBefore": {
+      "screen": "paused",
+      "widgets": [
+        {
+          "id": "back-to-game",
+          "bounds": [
+            618.0,
+            233.0,
+            204.0,
+            20.0
+          ],
+          "label": "Back to Game",
+          "enabled": true
+        },
+        {
+          "id": "advancements",
+          "bounds": [
+            618.0,
+            257.0,
+            98.0,
+            20.0
+          ],
+          "label": "Advancements",
+          "enabled": true
+        },
+        {
+          "id": "statistics",
+          "bounds": [
+            724.0,
+            257.0,
+            98.0,
+            20.0
+          ],
+          "label": "Statistics",
+          "enabled": true
+        },
+        {
+          "id": "options",
+          "bounds": [
+            618.0,
+            305.0,
+            98.0,
+            20.0
+          ],
+          "label": "Options...",
+          "enabled": true
+        },
+        {
+          "id": "open-to-lan",
+          "bounds": [
+            724.0,
+            305.0,
+            98.0,
+            20.0
+          ],
+          "label": "Open to LAN",
+          "enabled": true
+        },
+        {
+          "id": "save-and-quit-to-title",
+          "bounds": [
+            618.0,
+            329.0,
+            204.0,
+            20.0
+          ],
+          "label": "Save and Quit to Title",
+          "enabled": true
+        },
+        {
+          "id": "play-with-friends",
+          "bounds": [
+            722.0,
+            281.0,
+            20.0,
+            20.0
+          ],
+          "label": "Play with Friends",
+          "enabled": true
+        },
+        {
+          "id": "button-0",
+          "bounds": [
+            674.0,
+            281.0,
+            20.0,
+            20.0
+          ],
+          "enabled": true
+        },
+        {
+          "id": "button-1",
+          "bounds": [
+            698.0,
+            281.0,
+            20.0,
+            20.0
+          ],
+          "enabled": true
+        },
+        {
+          "id": "button-2",
+          "bounds": [
+            746.0,
+            281.0,
+            20.0,
+            20.0
+          ],
+          "enabled": true
+        }
+      ]
+    },
+    "pauseUiAfter": {
+      "screen": "paused",
+      "widgets": [
+        {
+          "id": "back-to-game",
+          "bounds": [
+            618.0,
+            233.0,
+            204.0,
+            20.0
+          ],
+          "label": "Back to Game",
+          "enabled": true
+        },
+        {
+          "id": "advancements",
+          "bounds": [
+            618.0,
+            257.0,
+            98.0,
+            20.0
+          ],
+          "label": "Advancements",
+          "enabled": true
+        },
+        {
+          "id": "statistics",
+          "bounds": [
+            724.0,
+            257.0,
+            98.0,
+            20.0
+          ],
+          "label": "Statistics",
+          "enabled": true
+        },
+        {
+          "id": "options",
+          "bounds": [
+            618.0,
+            305.0,
+            98.0,
+            20.0
+          ],
+          "label": "Options...",
+          "enabled": true
+        },
+        {
+          "id": "open-to-lan",
+          "bounds": [
+            724.0,
+            305.0,
+            98.0,
+            20.0
+          ],
+          "label": "Open to LAN",
+          "enabled": true
+        },
+        {
+          "id": "save-and-quit-to-title",
+          "bounds": [
+            618.0,
+            329.0,
+            204.0,
+            20.0
+          ],
+          "label": "Save and Quit to Title",
+          "enabled": true
+        },
+        {
+          "id": "play-with-friends",
+          "bounds": [
+            722.0,
+            281.0,
+            20.0,
+            20.0
+          ],
+          "label": "Play with Friends",
+          "enabled": true
+        },
+        {
+          "id": "button-0",
+          "bounds": [
+            674.0,
+            281.0,
+            20.0,
+            20.0
+          ],
+          "enabled": true
+        },
+        {
+          "id": "button-1",
+          "bounds": [
+            698.0,
+            281.0,
+            20.0,
+            20.0
+          ],
+          "enabled": true
+        },
+        {
+          "id": "button-2",
+          "bounds": [
+            746.0,
+            281.0,
+            20.0,
+            20.0
+          ],
+          "enabled": true
+        }
+      ]
+    },
+    "retainedBytes": 35032201
+  },
+  "serverFailure": {
+    "schemaVersion": 1,
+    "status": "FAIL",
+    "acceptanceContext": {
+      "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
+      "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
+      "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc",
+      "overlayReceiptSha256": "e2acc99e05d1fab76b565ced8c56d77f4c783ef2bfa8f2d90156fb947632b577",
+      "payloadInventorySha256": "a3a4ab6f371ecaef891c25929e8122b347d9bbec876f30707886366509f5b880"
+    },
+    "startup": "ordinary client; Agent Control enabled only in technical extras",
+    "runs": [
+      {
+        "servers": [],
+        "arguments": [
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+          "--resources",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\cache\\resources",
+          "--game-dir",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\servers\\game",
+          "--home",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\servers\\game",
+          "--name",
+          "RustEditionServerListQA"
+        ],
+        "exitCode": 0
+      },
+      {
+        "servers": [],
+        "arguments": [
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+          "--resources",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\cache\\resources",
+          "--game-dir",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\servers\\game",
+          "--home",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\servers\\game",
+          "--name",
+          "RustEditionServerListQA"
+        ],
+        "exitCode": 0
+      },
+      {
+        "servers": [
+          {
+            "address": "manual.example.invalid:25565",
+            "name": "Manual preservation QA"
+          }
+        ],
+        "arguments": [
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+          "--resources",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\cache\\resources",
+          "--game-dir",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\servers\\game",
+          "--home",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\servers\\game",
+          "--name",
+          "RustEditionServerListQA"
+        ],
+        "exitCode": 0
+      },
+      {
+        "servers": [
+          {
+            "address": "manual.example.invalid:25565",
+            "name": "Manual preservation QA"
+          }
+        ],
+        "arguments": [
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\candidate\\native\\horizon-client.exe",
+          "--resources",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\cache\\resources",
+          "--game-dir",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\servers\\game",
+          "--home",
+          "C:\\Users\\Oscar\\Documents\\LANMinecraft\\artifacts\\agent-runs\\rust-edition-overwolf-20261108\\servers\\game",
+          "--name",
+          "RustEditionServerListQA"
+        ],
+        "exitCode": 0
+      }
+    ],
+    "checks": {
+      "cleanFirstLaunchAndRestart": "PASS",
+      "manualEntriesAndFieldsRetainedAcrossRestart": "PASS"
+    },
+    "manualServersSha256": "65dec0c0a7a0fa0368a54cf42dbeb1f06893473006a0287e0e9674bea7795424",
+    "error": "Desktop key acknowledgement timed out: run-5-key-1"
+  },
+  "serverObstruction": {
+    "schemaVersion": 1,
+    "observedUnixMs": 1794099430839,
+    "status": "BLOCKED BY EXTERNAL DESKTOP STATE",
+    "observation": "Windows low-battery modal obscured the owned Minecraft Rust Edition window. sky.list_windows did not expose a targetable battery modal; activating owned game left modal visible.",
+    "inputPerformed": false,
+    "acknowledgementsWritten": 0,
+    "firstPendingKey": "run-5-key-1 Enter",
+    "qaError": "Desktop key acknowledgement timed out: run-5-key-1",
+    "ordinaryRunsCompleted": 4,
+    "gameClientSha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3",
+    "bootstrapSha256": "ace261a88a6a5438ede83e9571be2d1189ec7d950948d751460071af446b0c6d"
+  },
+  "changedManagedFiles": [
+    "native/launch-rust-edition.exe",
+    "native/presentation.json",
+    "portable-pack.json"
+  ],
+  "formatOnlyFiles": [
+    "portable-pack.json"
+  ],
+  "contentPolicy": {
+    "noLauncherCSharpChanges": true,
+    "noGlobalRegistryOrEnvironmentChanges": true,
+    "steamLayerAndVulkanRemainEnabled": true,
+    "noFpsFlickerOrDistanceCapChanges": true
+  },
+  "liveSteam": "NOT RUN; explicit user decision to check later",
+  "resume": {
+    "stand": "artifacts/agent-runs/rust-edition-overwolf-20261108",
+    "next": "After actual battery modal closure, rerun fresh six-launch server_list_qa including14realkeys, then exact update QA and archives-before-manifest publication",
+    "sourceProtectedDependency": "LocalSources/Rust-Edition-repairs-20261108 kept unchanged"
+  }
+}

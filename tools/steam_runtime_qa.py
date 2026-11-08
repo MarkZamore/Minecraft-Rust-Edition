@@ -14,6 +14,7 @@ import time
 
 from smoke_runtime import check_pause_menu, set_test_language
 from stage_runtime import file_info
+from client_environment import direct_client_environment
 
 
 @contextlib.contextmanager
@@ -29,6 +30,7 @@ def client(executable, controller, resources, root, name):
     for key in ("HORIZON_LAUNCHER_HOME", "XDG_DATA_HOME", "XDG_CONFIG_HOME"):
         environment[key] = str(root / key.lower())
     environment["HORIZON_LAUNCHER_NO_SELF_UPDATE"] = "1"
+    environment = direct_client_environment(executable, environment)
     with (root / "client.log").open("wb") as log:
         process = subprocess.Popen(
             [str(executable), "--resources", str(resources), "--home", str(root / "home"),
