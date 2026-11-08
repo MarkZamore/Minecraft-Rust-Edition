@@ -39,10 +39,10 @@
     "rust": 19,
     "policyGuard": 13,
     "directQaPolicy": 2,
-    "compatibilityGateMethods": 3,
     "compatibilityNegativeMutations": 41,
     "independentCodeReview": "PASS",
-    "clippy": "Two unchanged baseline lints require explicit narrow exceptions; no new-module findings"
+    "clippy": "Two unchanged baseline lints require explicit narrow exceptions; no new-module findings",
+    "focusedGateMethodsIncludingExistingNoticeAndPort": 6
   },
   "checks": {
     "autonomousColdBootstrapSaveReopenPausePort": "PASS",
@@ -3804,5 +3804,10 @@
     "stand": "artifacts/agent-runs/rust-edition-overwolf-20261108",
     "next": "After actual battery modal closure, rerun fresh six-launch server_list_qa including14realkeys, then exact update QA and archives-before-manifest publication",
     "sourceProtectedDependency": "LocalSources/Rust-Edition-repairs-20261108 kept unchanged"
+  },
+  "retainedStand": {
+    "bytes": 2057563152,
+    "deleteBy": "2026-11-09",
+    "reason": "One exact candidate, verified raw inputs/prepared resource cache, file-only update harness and evidence needed to resume mandatory UI/update QA after Windows battery modal closure"
   }
 }
