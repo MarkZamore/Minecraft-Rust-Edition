@@ -127,7 +127,7 @@
   },
   "liveSteam": {
     "status": "NOT RUN",
-    "userDecision": "Р СџРЎР‚Р С•Р Р†Р ВµРЎР‚Р С‘РЎвЂљРЎРЉ Steam Р С—Р С•Р В·Р В¶Р Вµ: РЎРЏР Р†Р Р…Р С•Р Вµ РЎР‚Р ВµРЎв‚¬Р ВµР Р…Р С‘Р Вµ Р С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљР ВµР В»РЎРЏ Р С•РЎвЂљ 8 Р Р…Р С•РЎРЏР В±РЎР‚РЎРЏ 2026 Р С–Р С•Р Т‘Р В°"
+    "userDecision": "Проверить Steam позже: явное решение пользователя от 8 ноября 2026 года"
   },
   "windowIconVisual": {
     "schemaVersion": 1,
@@ -183,7 +183,7 @@
     "status": "SENT",
     "publishedRevision": "34d18e6956912ba5412e17eefdd5889f814e6cee",
     "gpuClear": true,
-    "sentUtc": "2026-11-08T07:47:06.613555+00:00"
+    "recordedUtc": "2026-11-08T07:47:06.613555+00:00"
   },
   "cleanup": {
     "status": "NOT RUN; automatic approval review blocked both attempts",
