@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS",
+  "publishedRevision": "34d18e6956912ba5412e17eefdd5889f814e6cee",
+  "verifiedAtUtc": "2026-11-08T07:43:51.517655+00:00",
+  "manifest": {
+    "assetId": 723274481,
+    "sizeBytes": 151219,
+    "sha256": "c6da36d897ade557ad8027192484f16f9f2e870367869fe21df2dc7a2ba30495",
+    "url": "https://github.com/MarkZamore/Minecraft-Rust-Edition/releases/download/pack-latest/pack-manifest.json",
+    "uploadedAtUtc": "2026-11-08T07:43:17Z",
+    "independentAssetIdReadback": "PASS"
+  },
+  "distributionLockSha256": "07087721379b2e48856c123fabad060a0cff74f158bd96f67deed2b303e11f0f",
+  "allArchivesVerifiedBeforeManifest": true,
+  "archives": {
+    "schemaVersion": 1,
+    "status": "PASS",
+    "publishableManifest": true,
+    "revision": "34d18e6956912ba5412e17eefdd5889f814e6cee",
+    "verifiedAtUtc": "2026-11-08T07:42:30.737155+00:00",
+    "freshUpstream": {
+      "id": 437763591,
+      "target_commitish": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
+      "published_at": "2026-11-07T18:34:22Z",
+      "name": "Nightly 2026-11-07 · 2ebf00a"
+    },
+    "releaseId": 436094469,
+    "tag": "pack-latest",
+    "uploads": [
+      {
+        "name": "minecraft-rust-edition-windows-x64-48f862a45b4d04bf9dd47bd39cbd8b2d861e70727822ae0a60a74b48c577589d.zip",
+        "action": "uploaded",
+        "startedUtc": "2026-11-08T07:42:11.565066+00:00",
+        "completedUtc": "2026-11-08T07:42:18.382314+00:00"
+      },
+      {
+        "name": "launcher-df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b.zip",
+        "action": "reused",
+        "assetId": 716133986
+      },
+      {
+        "name": "library-2195a90079a5e15669ee9963549be85ae9a70aa458796ba3bef72c80e56dc6ec.zip",
+        "action": "uploaded",
+        "startedUtc": "2026-11-08T07:42:18.383331+00:00",
+        "completedUtc": "2026-11-08T07:42:20.250189+00:00"
+      }
+    ],
+    "assets": [
+      {
+        "name": "minecraft-rust-edition-windows-x64-48f862a45b4d04bf9dd47bd39cbd8b2d861e70727822ae0a60a74b48c577589d.zip",
+        "assetId": 723272394,
+        "url": "https://github.com/MarkZamore/Minecraft-Rust-Edition/releases/download/pack-latest/minecraft-rust-edition-windows-x64-48f862a45b4d04bf9dd47bd39cbd8b2d861e70727822ae0a60a74b48c577589d.zip",
+        "sizeBytes": 38833059,
+        "sha256": "48f862a45b4d04bf9dd47bd39cbd8b2d861e70727822ae0a60a74b48c577589d",
+        "downloadStartedUtc": "2026-11-08T07:42:20.824388+00:00",
+        "downloadCompletedUtc": "2026-11-08T07:42:26.704183+00:00",
+        "independentAssetIdReadback": "PASS",
+        "zipMap": "PASS",
+        "verifiedFileCount": 478
+      },
+      {
+        "name": "launcher-df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b.zip",
+        "assetId": 716133986,
+        "url": "https://github.com/MarkZamore/Minecraft-Rust-Edition/releases/download/pack-latest/launcher-df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b.zip",
+        "sizeBytes": 972,
+        "sha256": "df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b",
+        "downloadStartedUtc": "2026-11-08T07:42:27.626849+00:00",
+        "downloadCompletedUtc": "2026-11-08T07:42:28.594467+00:00",
+        "independentAssetIdReadback": "PASS",
+        "zipMap": "PASS",
+        "verifiedFileCount": 1
+      },
+      {
+        "name": "library-2195a90079a5e15669ee9963549be85ae9a70aa458796ba3bef72c80e56dc6ec.zip",
+        "assetId": 723272526,
+        "url": "https://github.com/MarkZamore/Minecraft-Rust-Edition/releases/download/pack-latest/library-2195a90079a5e15669ee9963549be85ae9a70aa458796ba3bef72c80e56dc6ec.zip",
+        "sizeBytes": 1021194,
+        "sha256": "2195a90079a5e15669ee9963549be85ae9a70aa458796ba3bef72c80e56dc6ec",
+        "downloadStartedUtc": "2026-11-08T07:42:28.595468+00:00",
+        "downloadCompletedUtc": "2026-11-08T07:42:30.105032+00:00",
+        "independentAssetIdReadback": "PASS",
+        "libraryMetadata": "PASS",
+        "libraryRevision": "34d18e6956912ba5412e17eefdd5889f814e6cee",
+        "modCount": 0,
+        "officialProjectUrlRemoved": true
+      }
+    ],
+    "verifiedManifestFileCount": 479,
+    "allPreviousAssetsPreserved": true,
+    "previousAssetCount": 19,
+    "previousZipCount": 18,
+    "finalAssetCount": 21,
+    "manifestUntouched": true,
+    "manifestAssetBefore": {
+      "id": 722298202,
+      "digest": "sha256:67f83c74f427524c23fb914c7c9b3e1e5be3cfd142dca9dc6de306b84d426b1a"
+    },
+    "tagAndMainUntouchedByThisTask": true,
+    "readbackBytes": 39855225,
+    "environmentDefaults": {
+      "DISABLE_VULKAN_OW_OVERLAY_LAYER": "1"
+    },
+    "bootstrap": {
+      "path": "native/launch-rust-edition.exe",
+      "sizeBytes": 2923008,
+      "sha256": "ace261a88a6a5438ede83e9571be2d1189ec7d950948d751460071af446b0c6d"
+    },
+    "client": {
+      "path": "native/horizon-client.exe",
+      "sizeBytes": 92608512,
+      "sha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3"
+    },
+    "cleanupOwner": "codex/Edition-overwolf",
+    "deleteBy": "2026-11-09"
+  },
+  "repeatDistributionVerification": {
+    "status": "PASS",
+    "successiveRuns": 2,
+    "sameFourFiles": "PASS"
+  },
+  "launcherImplementationChanged": false,
+  "newLauncherExePublished": false,
+  "liveSteam": "NOT RUN; user deferred",
+  "taskbarVisual": "NOT RUN; unchanged engine; bounded window capture only"
+}

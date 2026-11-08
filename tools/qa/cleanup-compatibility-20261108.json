@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "status": "NOT RUN",
+  "owner": "codex/Edition-overwolf",
+  "recordedUtc": "2026-11-08T07:47:06.613555+00:00",
+  "reason": "Automatic approval review rejected both aggregate cleanup and separately fenced cache cleanup; stated reason: blocked by policy. No deletion command executed. No alternate deletion mechanism attempted.",
+  "automaticReviewRejections": 2,
+  "removedBytesThisFinalCleanup": 0,
+  "removedEarlierBytes": 922510083,
+  "retainedBytes": 2223327900,
+  "deleteBy": "2026-11-09",
+  "processesRemaining": 0,
+  "sourceWorktreesPreserved": true,
+  "userPacksAndWorldsUntouched": true,
+  "retainedRun": "artifacts/agent-runs/rust-edition-overwolf-20261108",
+  "recoverableDirectories": [
+    "archives",
+    "cache",
+    "candidate",
+    "dist-check",
+    "dist-final",
+    "dist-qa",
+    "loopback",
+    "qa-build",
+    "public-readback",
+    "smoke"
+  ],
+  "retainedEvidence": [
+    "notices/*.png",
+    "compatibility",
+    "servers",
+    "updater/report.json",
+    "evidence",
+    "compact JSON/logs"
+  ],
+  "publishedRevision": "34d18e6956912ba5412e17eefdd5889f814e6cee",
+  "workspaceBudgetGiB": 50,
+  "workspaceWithinBudget": true
+}

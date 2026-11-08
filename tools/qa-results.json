@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "recordedUtc": "2026-11-08T07:32:39.466696+00:00",
+  "recordedUtc": "2026-11-08T07:43:51.517655+00:00",
   "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
   "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
   "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc",
@@ -41,8 +41,8 @@
     "personalSettingsAndManualServersPreserved": "PASS",
     "windowCaptionIconVisibleOnDark": "PASS",
     "supportingLauncherPublishedSha256": "PASS",
-    "publicArchivesSha256": "NOT RUN",
-    "publicManifestReadback": "NOT RUN",
+    "publicArchivesSha256": "PASS",
+    "publicManifestReadback": "PASS",
     "packOwnedOverlayCompatibility": "PASS"
   },
   "guestCommands": {
@@ -127,7 +127,7 @@
   },
   "liveSteam": {
     "status": "NOT RUN",
-    "userDecision": "Проверить Steam позже: явное решение пользователя от 8 ноября 2026 года"
+    "userDecision": "Р СџРЎР‚Р С•Р Р†Р ВµРЎР‚Р С‘РЎвЂљРЎРЉ Steam Р С—Р С•Р В·Р В¶Р Вµ: РЎРЏР Р†Р Р…Р С•Р Вµ РЎР‚Р ВµРЎв‚¬Р ВµР Р…Р С‘Р Вµ Р С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљР ВµР В»РЎРЏ Р С•РЎвЂљ 8 Р Р…Р С•РЎРЏР В±РЎР‚РЎРЏ 2026 Р С–Р С•Р Т‘Р В°"
   },
   "windowIconVisual": {
     "schemaVersion": 1,
@@ -171,17 +171,27 @@
     "Live Steam overlay, two accounts and world transfer deferred by explicit user decision"
   ],
   "publicDelivery": {
-    "status": "NOT RUN",
-    "reason": "New compatibility archives and manifest not yet published"
+    "status": "PASS",
+    "publishedRevision": "34d18e6956912ba5412e17eefdd5889f814e6cee",
+    "proof": "tools/qa/public-delivery-34d18e6.json",
+    "manifestSha256": "c6da36d897ade557ad8027192484f16f9f2e870367869fe21df2dc7a2ba30495",
+    "allArchivesVerifiedBeforeManifest": true
   },
   "handoff": {
     "target": "Minecraft Rust Mods",
-    "status": "Source ready sent; final public handoff pending"
+    "threadId": "01a1aff3-e131-7450-bd41-228577fce68c",
+    "status": "SENT",
+    "publishedRevision": "34d18e6956912ba5412e17eefdd5889f814e6cee",
+    "gpuClear": true,
+    "sentUtc": "2026-11-08T07:47:06.613555+00:00"
   },
   "cleanup": {
-    "status": "active; clean after publication",
+    "status": "NOT RUN; automatic approval review blocked both attempts",
     "owner": "codex/Edition-overwolf",
-    "deleteBy": "2026-11-09"
+    "deleteBy": "2026-11-09",
+    "retainedBytes": 2223327900,
+    "proof": "tools/qa/cleanup-compatibility-20261108.json",
+    "workspaceWithinBudget": true
   },
   "overwolfCompatibility": {
     "status": "PASS",
