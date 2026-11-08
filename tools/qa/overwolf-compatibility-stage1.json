@@ -3809,5 +3809,7 @@
     "bytes": 2057563152,
     "deleteBy": "2026-11-09",
     "reason": "One exact candidate, verified raw inputs/prepared resource cache, file-only update harness and evidence needed to resume mandatory UI/update QA after Windows battery modal closure"
-  }
+  },
+  "historicalSnapshot": true,
+  "supersededBy": "tools/release-acceptance.json: complete actual six-run/14-key acceptance and archive recovery after power/modal resolved"
 }

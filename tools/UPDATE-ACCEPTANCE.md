@@ -150,3 +150,7 @@ NOT RUN по решению пользователя от 8 ноября 2026 г
 python -m unittest discover -s tools -p 'test_required_layers.py' -v
 python -m unittest discover -s tools -p 'test_release_acceptance.py' -v
 ```
+
+### Наблюдение окна при проверке клавиш
+
+Для клавиатурных сценариев используйте текстовое состояние Sky (`include_screenshot: false`, `include_text: true`) и штатный `horizon-ctl ui`. Повторные захваты WGC во время интерактивной проверки сопровождались сообщением пользователя о мерцании; после остановки ввода и захвата оно прекратилось. Окончательный прогон выполнен без WGC и без изменения графических настроек.
