@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "observedUnixMs": 1794122948668,
+  "status": "PASS",
+  "scope": "Actual six ordinary launches; real desktop key driver without Windows Graphics Capture",
+  "clientSha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3",
+  "bootstrapSha256": "ace261a88a6a5438ede83e9571be2d1189ec7d950948d751460071af446b0c6d",
+  "driver": "node_repl @oai/sky",
+  "observation": "Unique returned native window + get_window_state(include_screenshot=false, include_text=true); actual horizon-ctl ui widget state inspected before each separate press_key action",
+  "afterAction": "Text-only get_window_state refresh, then matching acknowledgement with actual action timestamp",
+  "screenCaptures": 0,
+  "actualKeyAcknowledgements": 14,
+  "ordinaryRuns": 6,
+  "fixtureRemoved": true,
+  "sourceEdited": false
+}
