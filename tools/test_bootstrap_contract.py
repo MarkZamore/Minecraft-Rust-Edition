@@ -3,7 +3,9 @@
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -97,6 +99,44 @@ class BootstrapLockTests(unittest.TestCase):
         lock = copy.deepcopy(self.lock)
         lock["sourceFiles"] = dict(reversed(list(lock["sourceFiles"].items())))
         self.assertEqual(contract.verify_bootstrap(self.binary, self.root, lock), lock)
+
+    def test_relative_parent_components_resolve_to_the_reviewed_binary(self):
+        working = self.root / "nested/work"
+        working.mkdir(parents=True)
+        previous = Path.cwd()
+        try:
+            os.chdir(working)
+            relative = Path("../../native/launch-rust-edition.exe")
+            self.assertIn("..", relative.parts)
+            self.assertEqual(contract._ordinary(relative), self.binary)
+            self.assertEqual(contract.verify_bootstrap(relative, self.root), self.lock)
+        finally:
+            os.chdir(previous)
+
+    def test_directory_link_to_an_owned_binary_remains_rejected(self):
+        link = self.root / "native-alias"
+        if os.name == "nt":
+            # Junction creation needs no Developer Mode or administrator rights.
+            # The child receives literal paths; no path is composed into code.
+            environment = dict(os.environ, BOOTSTRAP_TEST_LINK=str(link),
+                               BOOTSTRAP_TEST_TARGET=str(self.binary.parent))
+            subprocess.run([
+                "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+                "New-Item -ItemType Junction -Path $env:BOOTSTRAP_TEST_LINK "
+                "-Target $env:BOOTSTRAP_TEST_TARGET -ErrorAction Stop | Out-Null",
+            ], env=environment, capture_output=True, check=True,
+                creationflags=subprocess.CREATE_NO_WINDOW)
+        else:
+            link.symlink_to(self.binary.parent, target_is_directory=True)
+        try:
+            with self.assertRaisesRegex(ValueError, "ordinary file"):
+                contract.verify_bootstrap(link / self.binary.name, self.root)
+            self.assertTrue(self.binary.is_file())
+        finally:
+            if link.is_junction():
+                link.rmdir()
+            else:
+                link.unlink()
 
     def test_old_binary_fails_even_with_the_same_file_size(self):
         self.binary.write_bytes(b"x" * self.binary.stat().st_size)

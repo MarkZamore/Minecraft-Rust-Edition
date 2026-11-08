@@ -42,6 +42,9 @@ def validate_environment_defaults(value):
 
 
 def _ordinary(path):
+    # absolute() leaves lexical '..' components on Windows; normalize those
+    # before comparing with the filesystem-resolved path and opening the file.
+    path = Path(os.path.abspath(path))
     if not path.is_file() or path.resolve() != path.absolute():
         raise ValueError("Bootstrap contract requires an ordinary file: " + str(path))
     return path
