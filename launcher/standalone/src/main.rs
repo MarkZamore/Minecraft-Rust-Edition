@@ -4,6 +4,7 @@
     target_feature = "crt-static"
 )))]
 compile_error!("The portable Windows x64 bootstrap requires the static MSVC runtime.");
+mod environment_defaults;
 mod minecraft_inputs;
 mod prepared_data;
 
@@ -81,6 +82,17 @@ fn run() -> Result<i32> {
     };
     let exe = env::current_exe()?;
     let native = exe.parent().context("No installation directory")?;
+    let (presentation, environment_defaults) =
+        environment_defaults::read_presentation(File::open(child(native, "presentation.json")?)?)?;
+    let title = presentation["name"]
+        .as_str()
+        .context("Missing pack display name")?;
+    ensure!(
+        !title.trim().is_empty()
+            && title.chars().count() <= 128
+            && !title.chars().any(char::is_control),
+        "Invalid pack display name"
+    );
     let pack = native.parent().context("No pack directory")?;
     let game = std::path::absolute(options.game.unwrap_or_else(|| pack.join("game")))?;
     let cache = env::var_os("LANMINECRAFT_NATIVE_CACHE")
@@ -104,17 +116,6 @@ fn run() -> Result<i32> {
         options.server.map(std::path::absolute).transpose()?,
         options.java.map(std::path::absolute).transpose()?,
     )?;
-    let presentation: Value =
-        serde_json::from_reader(File::open(child(native, "presentation.json")?)?)?;
-    let title = presentation["name"]
-        .as_str()
-        .context("Missing pack display name")?;
-    ensure!(
-        !title.trim().is_empty()
-            && title.chars().count() <= 128
-            && !title.chars().any(char::is_control),
-        "Invalid pack display name"
-    );
     let mut client = tool(&native.join("horizon-client.exe"), native);
     client.env("LANMINECRAFT_BUILD_NAME", title);
     if let Some(config) = presentation.get("instanceConfig") {
@@ -155,6 +156,7 @@ fn run() -> Result<i32> {
     if let Some(world) = options.world {
         client.arg("--quickPlaySingleplayer").arg(world);
     }
+    environment_defaults.apply(&mut client);
     let status = client
         .status()
         .context("Could not start the Horizon game client");
