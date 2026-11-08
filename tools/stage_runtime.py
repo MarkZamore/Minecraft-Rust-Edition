@@ -14,6 +14,8 @@ import tarfile
 import tempfile
 import zipfile
 
+from bootstrap_contract import expected_presentation, verify_bootstrap
+
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOCK = ROOT / "tools/upstream-lock.json"
@@ -256,6 +258,7 @@ def stage_runtime(archives, stage, openssl, client=None, steam_dll=None, receipt
         verify_proof(read_json(receipt_path), compute_proof(archives, steam_repo / "source/native"))
         verify_overlay(lock, read_json(receipt_path), client, steam_dll)
         verify_pe(bootstrap)
+        verify_bootstrap(bootstrap, root=ROOT)
         notices = {"e4steam": steam_notices(steam_repo), "rust": rust_notices()}
     with tempfile.TemporaryDirectory(dir=stage.parent) as temporary:
         candidate = pathlib.Path(temporary) / "candidate"
@@ -267,7 +270,7 @@ def stage_runtime(archives, stage, openssl, client=None, steam_dll=None, receipt
             destination.parent.mkdir()
             shutil.copyfile(ROOT / name, destination)
         display_name = read_json(ROOT / "library/content.json")["name"]
-        presentation = json.dumps({"name": display_name}, ensure_ascii=False, indent=2) + "\n"
+        presentation = json.dumps(expected_presentation(display_name, root=ROOT), ensure_ascii=False, indent=2) + "\n"
         (native / "presentation.json").write_bytes(presentation.encode("utf-8"))
         if receipt_path is not None:
             shutil.copyfile(client, native / "horizon-client.exe")
@@ -310,6 +313,7 @@ def main():
                 verify_proof(read_json(args.overlay_receipt), compute_proof(args.archives, args.steam_repo / "source/native"))
                 verify_overlay(lock, read_json(args.overlay_receipt), args.patched_client, args.steam_dll)
                 verify_pe(args.bootstrap)
+                verify_bootstrap(args.bootstrap, root=ROOT)
                 steam_notices(args.steam_repo)
                 rust_notices()
         else:

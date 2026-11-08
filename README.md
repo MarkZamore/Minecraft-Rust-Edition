@@ -28,6 +28,14 @@
 меняются, `session.json` остаётся файлом лаунчера. Для этой поставки требуется
 capability `native-launcher-notices-v1` поддерживающего лаунчера.
 
+Сборка задаёт совместимость с неявным Vulkan-слоем Overwolf через
+`launcher/environment-defaults.json`. Bootstrap доставляет
+`DISABLE_VULKAN_OW_OVERLAY_LAYER=1` только в процесс игры: слой `VK_LAYER_OW_OVERLAY`
+отключается штатным параметром его манифеста. Vulkan, оверлей Steam и системные
+настройки сохраняются. Явно унаследованное значение этой переменной имеет
+приоритет, включая пустое; собственный выбор пользователя остаётся действующим.
+Полный ограниченный контракт описан в [документации bootstrap](launcher/standalone/README.md).
+
 ## Подготовка и проверка релиза
 
 Перед обновлением движка прочитать [AGENTS.md](AGENTS.md) и
@@ -37,6 +45,12 @@ capability `native-launcher-notices-v1` поддерживающего лаун�
 он создаёт `candidate-manifest.json`, а выпускной манифест появляется после приёмки.
 
 Для инструментов сборки нужны Python 3.12 или новее, Git и OpenSSL 3. Rust нужен для сборки исходников, а игрок запускает готовый Windows x64 клиент. Bootstrap собирается для `x86_64-pc-windows-msvc` со статическим C runtime.
+
+`tools/bootstrap-lock.json` закрепляет текущие исходники и конфигурацию bootstrap,
+release-профиль и размер/SHA-256 собранного EXE. Поставляемая `native/presentation.json`
+должна точно соответствовать имени библиотеки и исходной политике окружения.
+Оба условия проверяются при staging и перед упаковкой; замена bootstrap старым
+PE или потеря `environmentDefaults` блокирует выпуск.
 
 ```powershell
 Push-Location launcher/standalone

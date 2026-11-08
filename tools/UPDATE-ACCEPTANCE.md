@@ -30,12 +30,28 @@
    с квитанцией и required-layer-proof. Архивы, код мода и Java/Mojang кеши
    переиспользовать; игровые папки держать отдельно в зарегистрированном стенде.
 
+   Bootstrap проверяется отдельно по `tools/bootstrap-lock.json`: Cargo manifest,
+   lock, имеющиеся `.cargo/config`/`config.toml`/`build.rs`, все Rust-файлы `src`,
+   fingerprint отсортированного списка, release/MSVC x64/static CRT и EXE SHA-256.
+   Для sourceFiles/sourceSha256 использовать `bootstrap_contract.bootstrap_sources`
+   и `source_fingerprint`; данные сборки записываются после настоящей компиляции.
+   Политика `launcher/environment-defaults.json` должна совпадать с
+   `native/presentation.json:environmentDefaults`. Потеря vendor opt-out Overwolf
+   при авторском обновлении, старый bootstrap или несовпадение политики блокируют
+   staging/упаковку. Реестр и чужие процессы для обхода проверки не менять.
+
 3. Проверить точный candidate через `smoke_runtime.py --bootstrap ... --cache ...
    --expect-title 'Minecraft Rust Edition' --expect-cold --check-pause-menu` без
    `--minecraft`/`--java`, затем `steam_runtime_qa.py`. Оба инструмента сохраняют
    acceptanceContext до запуска и проверяют неизменность файлов после прогона.
    Для неизменившегося подготовщика можно использовать прежний отдельный cold
    proof, только если SHA bootstrap/preparer/research и resource receipt совпадают.
+
+   При изменении bootstrap или policy нужна новая приёмка. Подтвердить применение
+   defaults реальным bootstrap к его дочернему клиенту и результат запуска,
+   сохранив Vulkan и Steam. Только вручную добавленная переменная в QA-процесс
+   не доказывает доставку исправления. Общий bootstrap сохраняет явно заданные
+   переменные, включая пустые; повторение значений в C# лаунчера не требуется.
 
 4. Запустить `tools/server_list_qa.py --candidate $candidate --controller $controller
    --resources $resources --out $serverQa --ui-key-requests $serverQa/ui-keys`, затем использовать

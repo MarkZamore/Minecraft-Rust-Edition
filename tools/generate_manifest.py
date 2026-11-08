@@ -10,6 +10,8 @@ import sys
 import tempfile
 import zipfile
 
+from bootstrap_contract import verify_bootstrap, verify_presentation
+
 from stage_runtime import (
     CONTROL_FILES, LIBRARY_SOURCES, LOCK, ROOT, file_info, read_json, safe_path,
     verify_file, verify_overlay, verify_pe,
@@ -52,6 +54,7 @@ def describe_candidate(candidate):
     if runtime["nativeRuntime"]["executable"] not in files or "native/steam_api64.dll" not in files:
         raise ValueError("The accepted runtime and its native Steam dependency are required")
     verify_pe(candidate / runtime["nativeRuntime"]["executable"])
+    verify_bootstrap(candidate / runtime["nativeRuntime"]["executable"], root=ROOT)
     if any(path.lower().endswith("/horizon-launcher.exe") for path in files):
         raise ValueError("A separate Horizon launcher is forbidden")
     content = read_json(ROOT / "library/content.json")
@@ -59,8 +62,7 @@ def describe_candidate(candidate):
         "name": "Horizon", "version": upstream["displayVersion"], "revision": upstream["commit"],
     }:
         raise ValueError("Library metadata does not describe the pinned project")
-    if read_json(candidate / "native/presentation.json") != {"name": content["name"]}:
-        raise ValueError("The native display name must come from library/content.json")
+    verify_presentation(read_json(candidate / "native/presentation.json"), content["name"], root=ROOT)
     preview = ROOT / "library/preview.jpg"
     with preview.open("rb") as stream:
         if stream.read(3) != b"\xff\xd8\xff":
