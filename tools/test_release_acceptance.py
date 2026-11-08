@@ -142,6 +142,108 @@ class ReleaseAcceptanceTests(unittest.TestCase):
             self.assertFalse((production / "pack-manifest.json").exists())
 
 
+class OverlayCompatibilityEvidenceTests(unittest.TestCase):
+    """Synthetic boundary checks only, never actual compatibility acceptance."""
+
+    def setUp(self):
+        from bootstrap_contract import load_environment_defaults
+        self.files = {path: {"sha256": str(index) * 64, "sizeBytes": index * 10}
+                      for index, path in enumerate(("native/horizon-client.exe",
+                          "native/launch-rust-edition.exe", "native/presentation.json"), 1)}
+        self.context = {"unitFixture": "not runtime evidence"}
+        defaults = load_environment_defaults()
+        self.report = {"schemaVersion": 1, "status": "PASS", "startup": gate.COMPATIBILITY_STARTUP,
+                       "acceptanceContext": self.context, "environmentDefaults": defaults,
+                       "inheritedDefaults": {key: {"present": False, "value": None} for key in defaults},
+                       "client": self.files["native/horizon-client.exe"],
+                       "bootstrap": self.files["native/launch-rust-edition.exe"],
+                       "presentation": self.files["native/presentation.json"],
+                       "fixtureRemoved": True, "runs": []}
+        client = "C:/qa/native/horizon-client.exe"
+        bootstrap = "C:/qa/native/launch-rust-edition.exe"
+        for index in range(1, 4):
+            native_pid, bootstrap_pid = 100 + index * 10, 101 + index * 10
+            self.report["runs"].append({"index": index, "exitCode": 0, "warm": True,
+                "arguments": [bootstrap, "--game-dir", f"C:/qa/run-{index}/game",
+                              "--control-socket", f"C:/qa/run-{index}/control.json"],
+                "nativeProcessId": native_pid, "bootstrapProcessId": bootstrap_pid,
+                "processAncestry": [{"pid": native_pid, "parent": bootstrap_pid, "path": client},
+                                    {"pid": bootstrap_pid, "parent": 99, "path": bootstrap}],
+                "moduleSnapshot": {"pid": native_pid, "path": client, "modules": [
+                    {"name": "horizon-client.exe", "path": client},
+                    {"name": "vulkan-1.dll", "path": "C:/Windows/System32/vulkan-1.dll"}]},
+                "parentEnvironmentUnchanged": True,
+                "title": {"screen": "title", "widgets": [
+                    {"id": "singleplayer", "label": "Singleplayer", "enabled": True},
+                    {"id": "multiplayer", "label": "Multiplayer", "enabled": True},
+                    {"id": "realms"}, {"id": "options"}, {"id": "quit"}]},
+                "observedUnixMs": 10000,
+                "presentationHeartbeat": {"backend": "native-ui-v1", "pid": native_pid,
+                    "timestampUnixMs": 9500, "renderedCount": 0, "transformations": 0, "error": ""},
+                "rendererBackendLine": "Horizon renderer: Unit GPU (Vulkan, driver unit)"})
+
+    def verify(self, report):
+        gate.verify_overlay_compatibility(report, self.files, self.context, "Unit pack")
+
+    def test_complete_three_child_observations_are_accepted(self):
+        self.verify(self.report)
+
+    def test_missing_stale_injected_foreign_or_nonvulkan_proof_is_rejected(self):
+        def inherited(report, **values):
+            next(iter(report["inheritedDefaults"].values())).update(values)
+
+        mutations = {
+            "missing": lambda r: r.clear(),
+            "not-run": lambda r: r.update(status="NOT RUN"),
+            "wrong-startup": lambda r: r.update(startup="direct client; QA injected flag"),
+            "other-context": lambda r: r.update(acceptanceContext={}),
+            "other-client": lambda r: r.update(client={}),
+            "other-bootstrap": lambda r: r.update(bootstrap={}),
+            "other-presentation": lambda r: r.update(presentation={}),
+            "other-defaults": lambda r: r.update(environmentDefaults={}),
+            "missing-inheritance": lambda r: r.pop("inheritedDefaults"),
+            "inherited-override": lambda r: inherited(r, present=True, value="1"),
+            "inherited-hidden-value": lambda r: inherited(r, value="1"),
+            "fixture-left": lambda r: r.update(fixtureRemoved=False),
+            "two-launches": lambda r: r["runs"].pop(),
+            "cold-launch": lambda r: r["runs"][0].update(warm=False),
+            "failed-launch": lambda r: r["runs"][0].update(exitCode=1),
+            "parent-mutated": lambda r: r["runs"][0].update(parentEnvironmentUnchanged=False),
+            "no-child": lambda r: r["runs"][0].update(nativeProcessId=111),
+            "boolean-pid": lambda r: r["runs"][0].update(nativeProcessId=True),
+            "reused-launch": lambda r: r["runs"].__setitem__(1, copy.deepcopy(r["runs"][0])),
+            "wrong-program": lambda r: r["runs"][0]["arguments"].__setitem__(0, "C:/qa/native/other.exe"),
+            "no-control-socket": lambda r: r["runs"][0]["arguments"].pop(3),
+            "module-foreign-pid": lambda r: r["runs"][0]["moduleSnapshot"].update(pid=999),
+            "module-foreign-path": lambda r: r["runs"][0]["moduleSnapshot"].update(path="C:/other/horizon-client.exe"),
+            "broken-ancestry": lambda r: r["runs"][0]["processAncestry"][0].update(parent=999),
+            "ancestry-other-client": lambda r: r["runs"][0]["processAncestry"][0].update(path="C:/other/horizon-client.exe"),
+            "ancestry-other-bootstrap": lambda r: r["runs"][0]["processAncestry"][-1].update(path="C:/other/launch-rust-edition.exe"),
+            "no-modules": lambda r: r["runs"][0]["moduleSnapshot"].update(modules=[]),
+            "no-vulkan": lambda r: r["runs"][0]["moduleSnapshot"]["modules"].pop(),
+            "overwolf-loaded": lambda r: r["runs"][0]["moduleSnapshot"]["modules"].append(
+                {"name": "OWClient.dll", "path": "C:/Overwolf/OWClient.dll"}),
+            "module-name-disagrees-with-path": lambda r: r["runs"][0]["moduleSnapshot"]["modules"][-1].update(path="C:/Overwolf/owclient.dll"),
+            "other-api": lambda r: r["runs"][0].update(rendererBackendLine="Horizon renderer: Unit GPU (Dx12, driver unit)"),
+            "no-title": lambda r: r["runs"][0]["title"].update(screen="loading"),
+            "title-widgets-missing": lambda r: r["runs"][0]["title"]["widgets"].pop(),
+            "foreign-heartbeat": lambda r: r["runs"][0]["presentationHeartbeat"].update(pid=999),
+            "no-heartbeat": lambda r: r["runs"][0].pop("presentationHeartbeat"),
+            "old-heartbeat": lambda r: r["runs"][0]["presentationHeartbeat"].update(timestampUnixMs=7000),
+            "future-heartbeat": lambda r: r["runs"][0]["presentationHeartbeat"].update(timestampUnixMs=11000),
+            "wrong-heartbeat-backend": lambda r: r["runs"][0]["presentationHeartbeat"].update(backend="lwjgl"),
+            "renderer-error": lambda r: r["runs"][0]["presentationHeartbeat"].update(error="failed"),
+            "nonempty-notices": lambda r: r["runs"][0]["presentationHeartbeat"].update(renderedCount=1),
+            "transformer-used": lambda r: r["runs"][0]["presentationHeartbeat"].update(transformations=1),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(mutation=label):
+                report = copy.deepcopy(self.report)
+                mutate(report)
+                with self.assertRaises(ValueError):
+                    self.verify(report)
+
+
 class PublicationPortEvidenceTests(unittest.TestCase):
     def test_actual_decimal_port_is_required_as_its_own_number(self):
         gate.verify_publication_port({"localPort": 28055, "publicationChat": ["Local server port: 28055."]})

@@ -3,7 +3,7 @@
 import argparse
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import subprocess
 
@@ -258,6 +258,103 @@ def verify_publication_port(pause):
             "actual local publication port was not shown in chat")
 
 
+COMPATIBILITY_STARTUP = "actual bootstrap child; inherited defaults untouched; Vulkan modules inspected"
+
+
+def verify_overlay_compatibility(report, files, context, name):
+    from bootstrap_contract import load_environment_defaults
+
+    require(isinstance(report, dict) and report.get("schemaVersion") == 1
+            and report.get("status") == "PASS", "overlay compatibility runtime QA missing")
+    require(report.get("startup") == COMPATIBILITY_STARTUP
+            and report.get("acceptanceContext") == context,
+            "overlay compatibility has another startup or payload")
+    require(all(report.get(key) == files[path] for key, path in (
+        ("client", "native/horizon-client.exe"), ("bootstrap", "native/launch-rust-edition.exe"),
+        ("presentation", "native/presentation.json"))), "overlay compatibility has another executable or policy")
+    defaults = load_environment_defaults()
+    require(report.get("environmentDefaults") == defaults,
+            "overlay compatibility does not test the current pack environment defaults")
+    inherited = report.get("inheritedDefaults")
+    require(isinstance(inherited, dict) and set(inherited) == set(defaults)
+            and all(isinstance(value, dict) and value.get("present") is False
+                    and "value" in value and value["value"] is None for value in inherited.values()),
+            "overlay compatibility defaults were overridden by the QA environment")
+    runs = report.get("runs")
+    require(report.get("fixtureRemoved") is True and isinstance(runs, list) and len(runs) == 3
+            and all(isinstance(run, dict) for run in runs),
+            "overlay compatibility needs three completed, cleaned launches")
+
+    def windows_path(value):
+        if not isinstance(value, str) or not value:
+            return None
+        path = PureWindowsPath(value)
+        return path if path.is_absolute() else None
+
+    seen_pids = set()
+    for index, run in enumerate(runs, 1):
+        native, bootstrap = run.get("nativeProcessId"), run.get("bootstrapProcessId")
+        require(_notice_int(run.get("index")) and run["index"] == index and run.get("warm") is True
+                and _notice_int(run.get("exitCode")) and run["exitCode"] == 0
+                and run.get("parentEnvironmentUnchanged") is True,
+                "overlay compatibility launch is cold, failed or changed its parent environment")
+        require(_notice_int(native) and _notice_int(bootstrap) and native > 0 and bootstrap > 0
+                and native != bootstrap and native not in seen_pids and bootstrap not in seen_pids,
+                "overlay compatibility does not identify distinct owned bootstrap children")
+        seen_pids.update((native, bootstrap))
+        arguments = run.get("arguments")
+        require(isinstance(arguments, list) and len(arguments) >= 3
+                and all(isinstance(argument, str) and argument for argument in arguments)
+                and arguments.count("--control-socket") == 1
+                and arguments.index("--control-socket") < len(arguments) - 1
+                and windows_path(arguments[arguments.index("--control-socket") + 1]) is not None,
+                "overlay compatibility did not launch the actual bootstrap control child")
+        bootstrap_path = windows_path(arguments[0])
+        require(bootstrap_path is not None and bootstrap_path.name.casefold() == "launch-rust-edition.exe",
+                "overlay compatibility arguments launch another program")
+        modules = run.get("moduleSnapshot")
+        require(isinstance(modules, dict) and _notice_int(modules.get("pid")) and modules["pid"] == native,
+                "overlay compatibility module snapshot belongs to another process")
+        client_path = windows_path(modules.get("path"))
+        require(client_path is not None and client_path == bootstrap_path.with_name("horizon-client.exe"),
+                "overlay compatibility module snapshot came from another client path")
+        ancestry = run.get("processAncestry")
+        require(isinstance(ancestry, list) and 2 <= len(ancestry) <= 12
+                and all(isinstance(row, dict) and _notice_int(row.get("pid")) and row["pid"] > 0
+                        and _notice_int(row.get("parent")) and row["parent"] > 0 for row in ancestry)
+                and len({row["pid"] for row in ancestry}) == len(ancestry)
+                and ancestry[0]["pid"] == native and ancestry[-1]["pid"] == bootstrap
+                and all(left["parent"] == right["pid"] for left, right in zip(ancestry, ancestry[1:]))
+                and windows_path(ancestry[0].get("path")) == client_path
+                and windows_path(ancestry[-1].get("path")) == bootstrap_path,
+                "overlay compatibility client does not descend from its tested bootstrap")
+        loaded = modules.get("modules")
+        require(isinstance(loaded, list) and 1 <= len(loaded) <= 4096
+                and all(isinstance(module, dict) and isinstance(module.get("name"), str)
+                        and windows_path(module.get("path")) is not None
+                        and windows_path(module["path"]).name.casefold() == module["name"].casefold()
+                        for module in loaded), "overlay compatibility loaded module evidence missing")
+        names = {module["name"].casefold() for module in loaded}
+        require("owclient.dll" not in names and "vulkan-1.dll" in names,
+                "overlay compatibility loaded Overwolf or did not load Vulkan")
+        backend = run.get("rendererBackendLine")
+        require(isinstance(backend, str) and backend.startswith("Horizon renderer: ") and "(Vulkan," in backend,
+                "overlay compatibility did not observe the actual Vulkan renderer")
+        title = run.get("title")
+        require(_notice_main_title(title) and len(title["widgets"]) >= 5,
+                "overlay compatibility did not reach the actual main title UI")
+        heartbeat, observed = run.get("presentationHeartbeat"), run.get("observedUnixMs")
+        require(isinstance(heartbeat, dict) and _notice_int(observed) and observed > 0
+                and heartbeat.get("backend") == "native-ui-v1" and _notice_int(heartbeat.get("pid"))
+                and heartbeat["pid"] == native
+                and heartbeat.get("error") == "" and _notice_int(heartbeat.get("renderedCount"))
+                and heartbeat["renderedCount"] == 0 and _notice_int(heartbeat.get("transformations"))
+                and heartbeat["transformations"] == 0 and _notice_int(heartbeat.get("timestampUnixMs"))
+                and heartbeat["timestampUnixMs"] > 0
+                and 0 <= observed - heartbeat["timestampUnixMs"] <= 2000,
+                "overlay compatibility native heartbeat is stale, foreign or failed")
+
+
 def verify_startup(record, files, receipt, name):
     require(record["schemaVersion"] == 1, "unknown schema")
     context = context_from_files(files, receipt)
@@ -316,6 +413,7 @@ def verify_startup(record, files, receipt, name):
                             for argument in run["arguments"] for flag in harness)
                 for run in runs), "server-list report used harness startup or incomplete runs")
     verify_native_notices(record.get("nativeNotices"), files, context, name)
+    verify_overlay_compatibility(record.get("compatibility"), files, context, name)
     # Steam deferral cannot waive any of the required checks above.
     steam = record["liveSteam"]
     require(steam["status"] in ("PASS", "NOT RUN"), "unknown live Steam status")
@@ -362,6 +460,8 @@ def main():
                         help="Six ordinary launches proving Steam-first views and saved-list preservation")
     parser.add_argument("--native-notices", required=True, type=Path,
                         help="Exact bootstrap child, final UI pixel/heartbeat/fullscreen/input acceptance")
+    parser.add_argument("--compatibility", required=True, type=Path,
+                        help="Three actual warm bootstrap children with pack defaults and observed Vulkan modules")
     parser.add_argument("--preparation", type=Path, help="Separate cold proof, or coldPreparation in the smoke report")
     parser.add_argument("--update", type=Path)
     parser.add_argument("--out", required=True, type=Path)
@@ -373,6 +473,7 @@ def main():
               **{key: read_json(getattr(args, key)) for key in ("smoke", "multiplayer")},
               "serverList": read_json(args.servers),
               "nativeNotices": read_json(args.native_notices),
+              "compatibility": read_json(args.compatibility),
               "update": read_json(args.update) if args.update else None,
               "liveSteam": {"status": "NOT RUN", "userDecision": args.defer_live_steam or ""}}
     record["preparation"] = read_json(args.preparation) if args.preparation else record["smoke"]["coldPreparation"]
