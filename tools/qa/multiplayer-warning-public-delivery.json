@@ -1,0 +1,38 @@
+{
+  "mode": "after",
+  "publishedRevision": "9f2de1e653e778400f5dc826f834c2e9671fa6f8",
+  "candidateRevision": "9f2de1e653e778400f5dc826f834c2e9671fa6f8",
+  "manifestSha256": "29664d4a6c03a7f163f9040fce3fda06a2ec169906373f99f811efd030957e5a",
+  "updatedClient": {
+    "sizeBytes": 92608000,
+    "sha256": "70ca11bd2beace848ebaadb88c31fbcec9d1284c687e55af24fd83ec00a5813b"
+  },
+  "verifiedPayloadMembers": 479,
+  "archives": [
+    {
+      "name": "minecraft-rust-edition-windows-x64-c013ce6187e8e008a8d68e9447d7260abab561f54265a05fd8466e2309180627.zip",
+      "sha256": "c013ce6187e8e008a8d68e9447d7260abab561f54265a05fd8466e2309180627",
+      "sizeBytes": 38834898
+    },
+    {
+      "name": "launcher-df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b.zip",
+      "sha256": "df353638cb2e18106ae9d9d59a31d73987049f627b897a2eda3481c88cc90b9b",
+      "sizeBytes": 972
+    },
+    {
+      "name": "library-e805fe02543cbd1e5c8cf790c17d70396fc827bb4141d5cc3f7ffb18608dad2d.zip",
+      "sha256": "e805fe02543cbd1e5c8cf790c17d70396fc827bb4141d5cc3f7ffb18608dad2d",
+      "sizeBytes": 1021194
+    }
+  ],
+  "gameLaunch": "NOT RUN",
+  "schemaVersion": 1,
+  "toolTestsPassed": 84,
+  "baseRevision": "34d18e6956912ba5412e17eefdd5889f814e6cee",
+  "changedPayloadPaths": [
+    "native/horizon-client.exe"
+  ],
+  "staticPackaging": "PASS",
+  "publicManifestAssetId": 755321498,
+  "status": "PASS"
+}
