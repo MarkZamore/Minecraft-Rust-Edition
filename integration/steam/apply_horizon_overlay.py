@@ -37,7 +37,8 @@ SOURCE_PATHS = {
         "game/split/windows.rs", "game/integrated.rs", "game/lan.rs",
         "game/remote.rs", "game/screens.rs", "game/friends.rs", "game/dedicated.rs",
         "game/lan_screen.rs", "game/chat.rs", "lan/mod.rs",
-        "lan/conn.rs", "lan/discovery.rs", "multiplayer.rs", "title.rs", "game/ui_control.rs",
+        "lan/conn.rs", "lan/discovery.rs", "multiplayer.rs", "title.rs", "title/tests.rs",
+        "game/ui_control.rs",
     )),
 }
 
@@ -357,6 +358,29 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
         "    pub fn take_found(&self) -> Vec<(usize, LanGame)> {\n        if !self.enabled { return Vec::new(); }")
     src("lan/discovery.rs", "        let scanner = Scanner {\n            inner: Arc::new(ScanInner {",
         "        let scanner = Scanner {\n            enabled: true,\n            inner: Arc::new(ScanInner {")
+    src("title.rs", '''            (Mode::Main, Some(4)) => {
+                // TitleScreen.init: SafetyScreen first, unless it was turned off.
+                self.mode = if self.skip_multiplayer_warning {
+                    Mode::Multiplayer(crate::multiplayer::Screen::list(&self.saves))
+                } else {
+                    Mode::MultiplayerWarning { check: false }
+                };
+                Action::None
+            }''',
+        '''            (Mode::Main, Some(4)) => {
+                // Edition opens its Steam-first list without changing the saved preference.
+                self.mode = Mode::Multiplayer(crate::multiplayer::Screen::list(&self.saves));
+                Action::None
+            }''')
+    src("title/tests.rs",
+        '''    // SafetyScreen comes first while its box was never ticked.
+    assert!(matches!(f.title.mode, Mode::MultiplayerWarning { .. }));
+''',
+        '''    assert!(matches!(f.title.mode, Mode::Multiplayer(Screen::List { .. })));
+    assert!(!f.title.skip_multiplayer_warning);
+''')
+    src("title/tests.rs", '            f.click("Proceed");\n', "", 1)
+    src("title/tests.rs", '\n    f.click("Proceed");\n', '\n', 3)
     src("title.rs", "            *screen = crate::multiplayer::Screen::list(&self.saves);",
         "            screen.refresh(&self.saves);")
     src("title.rs", "        let outcome = screen.click(hit, x, y, size, &self.saves);",

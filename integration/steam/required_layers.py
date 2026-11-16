@@ -84,6 +84,7 @@ LAYERS = {
         (SRC + "multiplayer.rs", "batch.text(atlas, host, cx + 35.0, cy + 12.0, gray, false);"),
     ),
     "steam-default-and-saved-view": (
+        (SRC + "title.rs", "(Mode::Main, Some(4)) => { self.mode = Mode::Multiplayer(crate::multiplayer::Screen::list(&self.saves)); Action::None }"),
         (SRC + "multiplayer.rs", "pub fn list(saves: &Path) -> Self { Self::list_view(saves, false) }"),
         (SRC + "multiplayer.rs", "let servers = if saved_view { servers::load(&servers_file(saves)) } else { Vec::new() };"),
         (SRC + "multiplayer.rs", "if saved_view { ping_all(&servers, &pings, &icons); }"),
@@ -277,6 +278,9 @@ def validate_patched_sources(patched):
         for path, fragment in rules:
             if _compact(fragment.encode("utf-8")) not in sources.get(path, b""):
                 raise ValueError(f"Mandatory layer {layer} is missing its reviewed outcome in {path}: {fragment[:90]}")
+    title = sources[SRC + "title.rs"]
+    if title.count(b"(Mode::Main, Some(4))") != 1:
+        raise ValueError("Mandatory layer steam-default-and-saved-view requires one Multiplayer menu action")
     game = sources[SRC + "game.rs"]
     for call in (b"add_official_server(", b"add_partner_servers("):
         if call in game:

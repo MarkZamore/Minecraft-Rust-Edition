@@ -201,6 +201,14 @@ class RequiredLayersTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "bound-address join guard"):
             guard.validate_patched_sources(self.patched)
 
+    def test_multiplayer_warning_cannot_return_in_prepared_sources(self):
+        path = "crates/horizon-client/src/title.rs"
+        self.lose(path,
+                  b"self.mode = Mode::Multiplayer(crate::multiplayer::Screen::list(&self.saves));",
+                  b"self.mode = Mode::MultiplayerWarning { check: false };")
+        with self.assertRaisesRegex(ValueError, "steam-default-and-saved-view"):
+            guard.validate_patched_sources(self.patched)
+
     def test_automatic_favicon_write_cannot_rewrite_unknown_saved_nbt(self):
         path = "crates/horizon-client/src/multiplayer.rs"
         self.patched[path] += b"\nsave_icon(&file, &address, icon);\n"

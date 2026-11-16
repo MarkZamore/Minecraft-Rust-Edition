@@ -321,6 +321,11 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
                     raise TimeoutError("Ordinary startup did not open the technical control endpoint")
                 time.sleep(0.25)
             control("wait-for", "screen", "title", "--timeout", "90")
+            control("click", widget_id(control("ui"), "multiplayer")["id"])
+            multiplayer = control("ui")
+            widget_id(multiplayer, STEAM_WIDGET)
+            widget_id(multiplayer, SAVED_WIDGET)
+            control("click", widget_id(multiplayer, BACK_WIDGET)["id"])
             if visual_check:
                 print("Ready for visual window-icon check", flush=True)
                 time.sleep(40)
@@ -332,6 +337,7 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
             if process.wait(timeout=45) != 0:
                 raise RuntimeError(f"Client exited with code {process.returncode}; see {log}")
             return {"servers": servers, "arguments": arguments, "exitCode": process.returncode,
+                    "firstMultiplayerScreen": ui_summary(multiplayer),
                     **({"serverViews": views} if views is not None else {})}
         finally:
             if process.poll() is None:
@@ -378,7 +384,7 @@ def main():
     # Fixture-only setting; it leaves the normal public-server startup path active.
     (game / "horizon-extras.txt").write_text("agentControl:true\n", encoding="utf-8")
     (game / "options.txt").write_text(
-        "version:5023\nlang:en_us\nonboardAccessibility:false\nskipMultiplayerWarning:true\nnarrator:0\n",
+        "version:5023\nlang:en_us\nonboardAccessibility:false\nnarrator:0\n",
         encoding="utf-8")
     context = execution_context(candidate)
     report = {"schemaVersion": 1, "status": "FAIL", "acceptanceContext": context,
@@ -396,6 +402,15 @@ def main():
                    ["horizon_official_server.txt", "horizon_partner_servers.txt"]):
                 raise RuntimeError("A clean profile acquired recommendation marker files")
         report["checks"]["cleanFirstLaunchAndRestart"] = "PASS"
+        report["checks"]["cleanFirstMultiplayerOpensSteamListDirectly"] = "PASS"
+        existing_options = {
+            "skipMultiplayerWarning": "false", "soundCategory_music": "0.375", "fov": "0.25",
+        }
+        options = game / "options.txt"
+        lines = [line for line in options.read_text(encoding="utf-8").splitlines()
+                 if line.split(":", 1)[0] not in existing_options]
+        lines.extend(f"{key}:{value}" for key, value in existing_options.items())
+        options.write_text("\n".join(lines) + "\n", encoding="utf-8")
         original = manual_servers()
         server_file = game / "servers.dat"
         server_file.write_bytes(original)
@@ -411,9 +426,15 @@ def main():
                 raise RuntimeError("Manual server list changed across ordinary startup")
             if server_file.read_bytes() != original:
                 raise RuntimeError("Manual servers.dat fields were rewritten")
+            current_options = dict(line.split(":", 1)
+                                   for line in options.read_text(encoding="utf-8").splitlines()
+                                   if ":" in line)
+            if any(current_options.get(key) != value for key, value in existing_options.items()):
+                raise RuntimeError("Multiplayer navigation changed the user's existing options")
             if any((game / name).read_bytes() != data for name, data in markers.items()):
                 raise RuntimeError("Legacy recommendation markers were rewritten")
         report["checks"]["manualEntriesAndFieldsRetainedAcrossRestart"] = "PASS"
+        report["checks"]["existingProfileOpensSteamListAndPreservesOptions"] = "PASS"
         report["manualServersSha256"] = hashlib.sha256(original).hexdigest()
         original = legacy_servers()
         server_file.write_bytes(original)

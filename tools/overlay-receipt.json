@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
   "upstreamSourceSha256": "90479a75b886e0b39663c1116c0424e90d0d0ea4e9633668c1c3fed09bc7d645",
-  "recipeSha256": "1d112caee5a55a951b2766136f144b503e1b6cdbe4c0fdb60b265644de2cbbcc",
+  "recipeSha256": "3136e8496a553cc3ab98637bae70482dff7ee64ed797665069ab81f7bdd8b510",
   "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
   "steamTransportSourceSha256": "f0d3f400397aaae5f56b508575019dd7fbed30e22dbf60cd6a67cd2cce505033",
   "patchedFiles": {
@@ -46,7 +46,8 @@
     "crates/horizon-client/src/lanmc_steam.rs": "ec7e18c74e1214f2c97ec29ccf8dcf5831f21cc02c7990af74004cd269d85612",
     "crates/horizon-client/src/lib.rs": "289fd22ab3d5b4f40cb5fbd178daac589ddd0933876d1161383b592ee019f090",
     "crates/horizon-client/src/multiplayer.rs": "f90ddef5f5a5de131dabac5f57e98a278598b77c5ab1141f38223da5c0b0e322",
-    "crates/horizon-client/src/title.rs": "0a9d9eea1dfb5abb6376b391f9b1ae87fe60ffd87c72e875cb986f534b2843cc",
+    "crates/horizon-client/src/title.rs": "81bf485925bdbf811609810a39686e4cb6b9c314a2a72aeb2bfc0820b34bee1e",
+    "crates/horizon-client/src/title/tests.rs": "f9bbf0322d3b8ee1d35c661a3ee2b037d20e82564b265e49b7a70d51cab57009",
     "crates/lanmc-notice-platform/Cargo.toml": "6e53ce6333f69444fc40bec827ace6319a17a839015914c07b70d41018dfd72a",
     "crates/lanmc-notice-platform/src/lib.rs": "0cbaf8337b4ed6f4b587f63a7a50d28dfe99c49d69f8d3056d9203d914e84469",
     "crates/lanmc-steam-native/Cargo.toml": "c0d4812ceccb70f59611a583fe2a071ae53f0e9057c86132770bf7438833ca61",
@@ -56,8 +57,8 @@
     "crates/lanmc-steam-native/src/worker.rs": "063e568df783d2c32cd139691709ff5c2bf93a395d4ed717180b92db765efba1",
     "packaging/icons/rust-edition.ico": "7544306e6d3193a12c64ecaedf4c81d982c6a4601ef1e62abd24b875767631ee"
   },
-  "clientSha256": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3",
-  "clientSizeBytes": 92608512,
+  "clientSha256": "70ca11bd2beace848ebaadb88c31fbcec9d1284c687e55af24fd83ec00a5813b",
+  "clientSizeBytes": 92608000,
   "steamDllSha256": "eb17909a76668cf9ae0b92a618a34a50f6c73d3a6787cb4dd8ce36a8b10bfb75",
   "steamDllSizeBytes": 317080
 }
