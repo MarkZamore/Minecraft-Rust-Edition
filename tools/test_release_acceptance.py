@@ -10,14 +10,15 @@ from unittest.mock import patch, Mock
 import generate_manifest as packer
 import release_acceptance as gate
 from stage_runtime import ROOT, read_json
+from static_warning_release import reviewed_base
 
 
 class ReleaseAcceptanceTests(unittest.TestCase):
     def setUp(self):
-        self.record = read_json(ROOT / "tools/release-acceptance.json")
-        self.distribution = read_json(ROOT / "tools/distribution-lock.json")
+        self.record = reviewed_base("tools/release-acceptance.json")
+        self.distribution = reviewed_base("tools/distribution-lock.json")
         self.files = self.distribution["files"]
-        self.receipt = read_json(ROOT / "tools/overlay-receipt.json")
+        self.receipt = reviewed_base("tools/overlay-receipt.json")
         self.content = read_json(ROOT / "library/content.json")
         self.manifest = {"files": list(self.files), "assets": [{
             "name": "runtime.zip", "sha256": self.record["update"]["newAssetSha256"],
@@ -126,9 +127,11 @@ class ReleaseAcceptanceTests(unittest.TestCase):
                     "sizeBytes": 1, "covers": covers}
         with tempfile.TemporaryDirectory() as temp, \
                 patch.object(packer, "describe_candidate", return_value=(read_json(ROOT / "portable-pack.json"), self.content, self.distribution)), \
+                patch.object(packer, "RELEASE_LOCK", Path(temp) / "distribution-lock.json"), \
                 patch.object(packer, "zip_payload", side_effect=archive), \
                 patch.object(gate, "read_record", return_value=record):
             candidate = Path(temp) / "candidate"
+            packer.RELEASE_LOCK.write_bytes(packer.json_bytes(self.distribution))
             (candidate / "library").mkdir(parents=True)
             (candidate / "overlay-receipt.json").write_text(json.dumps(self.receipt), encoding="utf-8")
             (candidate / "library/loaded-mods.json").write_text('{"mods": []}', encoding="utf-8")

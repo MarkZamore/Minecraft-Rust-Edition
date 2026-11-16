@@ -102,7 +102,7 @@
     "native/exporters/server/dev/horizonlab/parity/VanillaSimpleBlockOracle$World.class": "104984ef0c6ab5b42b40c661642fae7cdc45bd8224e4975856abad0b1d349d50",
     "native/exporters/server/dev/horizonlab/parity/VanillaSimpleBlockOracle.class": "280a14b3bd55f856e3c235ac755435917f6c02bfbeef1496f505f0c0760654ad",
     "native/exporters/server/dev/horizonlab/parity/VanillaStructureBlockExporter.class": "d2cc6c600e0e25428b3cdc1249abbb935792798c929a222de121a8e3727504d6",
-    "native/horizon-client.exe": "c6640181c414b150368e657a9a907add9f45443e4aecd48af5feb4c0fb15aee3",
+    "native/horizon-client.exe": "70ca11bd2beace848ebaadb88c31fbcec9d1284c687e55af24fd83ec00a5813b",
     "native/horizon-prepare.exe": "01265064b7b82b339362f86309610acc876427d1d6bcc55aff40b683be3ffb50",
     "native/launch-rust-edition.exe": "ace261a88a6a5438ede83e9571be2d1189ec7d950948d751460071af446b0c6d",
     "native/mods/horizon/src/test/java/dev/horizonlab/parity/ElderCurseTranscript.java": "ed9abda5bb2015f09c763719e7114c9ce821ced4553e6d4d16e45fea4eae018b",
