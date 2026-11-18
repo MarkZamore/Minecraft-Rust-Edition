@@ -325,6 +325,30 @@ class NativeNoticeEvidenceTests(unittest.TestCase):
     def test_complete_structural_fixture_is_accepted(self):
         self.verify(self.report)
 
+    def test_roboto_receipt_requires_exact_fonts_and_presented_font_ack(self):
+        def verify(report):
+            gate.verify_native_notices(report, self.files, self.context, "Unit pack", gate.NOTICE_FONT_MODE)
+
+        with self.assertRaisesRegex(ValueError, "exact launcher font files"):
+            verify(self.report)
+        self.report.update(fontMode=gate.NOTICE_FONT_MODE, fontFiles=gate.NOTICE_FONT_FILES)
+        with self.assertRaisesRegex(ValueError, "presented native notice frame"):
+            verify(self.report)
+
+        def set_font_ack(value):
+            if isinstance(value, dict):
+                if value.get("backend") == "native-ui-v1":
+                    value["fontMode"] = gate.NOTICE_FONT_MODE
+                else:
+                    for child in value.values():
+                        set_font_ack(child)
+            elif isinstance(value, list):
+                for child in value:
+                    set_font_ack(child)
+
+        set_font_ack(self.report)
+        verify(self.report)
+
     def test_stale_missing_foreign_unpresented_or_input_changing_evidence_is_rejected(self):
         mutations = {
             "missing": lambda r: r.clear(),

@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 
 pub const MAX_BYTES: usize = 32 * 1024;
 pub const LIFE_MS: u64 = 7_000;
+pub const ROBOTO_FONT_MODE: &str = "roboto-v1";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Style {
@@ -14,6 +15,7 @@ pub struct Style {
     pub text_argb: u32,
     pub muted_argb: u32,
     pub font_family: String,
+    pub packaged_fonts: bool,
     pub font_size: f32,
     pub width: f32,
     pub gap: f32,
@@ -62,6 +64,11 @@ pub fn parse_snapshot(
     {
         return Err("Invalid fontFamily".into());
     }
+    let packaged_fonts = match style.get("fontMode").map(String::as_str) {
+        None => false,
+        Some(ROBOTO_FONT_MODE) if font_family == "Roboto" => true,
+        Some(_) => return Err("Invalid notice font mode or family".into()),
+    };
     let life_ms = milliseconds(&style, "lifeMs")?;
     if life_ms != LIFE_MS {
         return Err("lifeMs must be 7000".into());
@@ -72,6 +79,7 @@ pub fn parse_snapshot(
         text_argb: color(&style, "textArgb")?,
         muted_argb: color(&style, "mutedArgb")?,
         font_family,
+        packaged_fonts,
         font_size: number(&style, "fontSize", 1.0, 128.0)?,
         width: number(&style, "width", 64.0, 4096.0)?,
         gap: number(&style, "gap", 0.0, 512.0)?,
@@ -285,7 +293,7 @@ fn unescape(value: &str) -> Result<String, String> {
 mod tests {
     use super::*;
 
-    const STYLE: &str = "bgArgb=FF112233\nborderArgb=FF445566\ntextArgb=FFFFFFFF\nmutedArgb=FFAABBCC\nfontFamily=Segoe UI Variable Text\nfontSize=14\nwidth=320\ngap=24\npadding=16\nradius=8\nriseMs=200\nfadeMs=350\nlifeMs=7000\n";
+    const STYLE: &str = "bgArgb=FF112233\nborderArgb=FF445566\ntextArgb=FFFFFFFF\nmutedArgb=FFAABBCC\nfontFamily=Tahoma\nfontSize=14\nwidth=320\ngap=24\npadding=16\nradius=8\nriseMs=200\nfadeMs=350\nlifeMs=7000\n";
     const NOTICES: &str =
         "count=1\ndpiScale=1.5\n0.title=Друзья\n0.body=Мир открыт\n0.createdUnixMs=10000\n";
 
@@ -297,7 +305,8 @@ mod tests {
     fn launcher_snapshot_preserves_style_dpi_and_cyrillic() {
         let snapshot = parse(STYLE, NOTICES, 10_100).unwrap();
         assert_eq!(snapshot.style.bg_argb, 0xff11_2233);
-        assert_eq!(snapshot.style.font_family, "Segoe UI Variable Text");
+        assert_eq!(snapshot.style.font_family, "Tahoma");
+        assert!(!snapshot.style.packaged_fonts);
         assert_eq!(snapshot.style.life_ms, 7000);
         assert_eq!(snapshot.dpi_scale, 1.5);
         assert_eq!(snapshot.notices[0].title, "Друзья");

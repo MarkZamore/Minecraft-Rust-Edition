@@ -1,9 +1,13 @@
 //! Safe bridge from the bounded launcher protocol to the audited platform rasterizer.
 //! All Windows FFI lives in lanmc_notice_platform, never in the game/render crate.
 use super::protocol::Snapshot;
-pub use lanmc_notice_platform::CardBitmap;
+pub use lanmc_notice_platform::{CardBitmap, MAX_FONT_BYTES, PackagedFonts};
 
-pub fn rasterize(snapshot: &Snapshot, viewport_width: u32) -> Result<Vec<CardBitmap>, String> {
+pub fn rasterize(
+    snapshot: &Snapshot,
+    viewport_width: u32,
+    fonts: Option<&PackagedFonts>,
+) -> Result<Vec<CardBitmap>, String> {
     let source = &snapshot.style;
     let converted = lanmc_notice_platform::Snapshot {
         style: lanmc_notice_platform::Style {
@@ -32,5 +36,5 @@ pub fn rasterize(snapshot: &Snapshot, viewport_width: u32) -> Result<Vec<CardBit
             .collect(),
         dpi_scale: snapshot.dpi_scale,
     };
-    lanmc_notice_platform::rasterize(&converted, viewport_width)
+    lanmc_notice_platform::rasterize(&converted, viewport_width, fonts)
 }

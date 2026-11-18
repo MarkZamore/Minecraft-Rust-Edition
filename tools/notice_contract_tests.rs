@@ -12,7 +12,7 @@ mod state;
 
 #[test]
 fn accepted_future_notice_stays_pending_then_paints_and_expires_at_original_time() {
-    let style = b"bgArgb=FF112233\nborderArgb=FF334455\ntextArgb=FFFFFFFF\nmutedArgb=FFEEEEEE\nfontFamily=Segoe UI\nfontSize=14\nwidth=320\ngap=24\npadding=16\nradius=8\nriseMs=200\nfadeMs=350\nlifeMs=7000\n";
+    let style = b"bgArgb=FF112233\nborderArgb=FF334455\ntextArgb=FFFFFFFF\nmutedArgb=FFEEEEEE\nfontFamily=Tahoma\nfontSize=14\nwidth=320\ngap=24\npadding=16\nradius=8\nriseMs=200\nfadeMs=350\nlifeMs=7000\n";
     let snapshot = protocol::parse_snapshot(
         style,
         b"count=1\ndpiScale=1.5\n0.title=Future\n0.body=Still pending\n0.createdUnixMs=11500\n",

@@ -1,4 +1,5 @@
-//! Launcher-styled notice cards, rasterized in memory using Windows fonts.
+//! Launcher-styled notice cards, rasterized in memory with private TrueType
+//! faces or the Windows font mapper for an older launcher session.
 //!
 //! No window, input, desktop DC or game font atlas is created or changed.
 //! GDI contributes grayscale glyph coverage only; the result is straight RGBA.
@@ -38,6 +39,25 @@ pub struct Snapshot {
 
 const MAX_SIDE: u32 = 4096;
 const MAX_TOTAL_BYTES: usize = 64 * 1024 * 1024;
+pub const MAX_FONT_BYTES: usize = 256 * 1024;
+
+/// A process-private font pair owned by the notice worker.
+pub struct PackagedFonts {
+    #[cfg(windows)]
+    inner: windows::PackagedFonts,
+}
+
+impl PackagedFonts {
+    pub fn load(regular: Vec<u8>, semibold: Vec<u8>) -> Result<Self, String> {
+        #[cfg(windows)]
+        return windows::PackagedFonts::load(regular, semibold).map(|inner| Self { inner });
+        #[cfg(not(windows))]
+        {
+            let _ = (regular, semibold);
+            Err("Native launcher notice fonts require Windows".into())
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct CardBitmap {
@@ -183,20 +203,29 @@ fn background(style: &Style, shape: Geometry) -> CardBitmap {
 }
 
 #[cfg(windows)]
-pub fn rasterize(snapshot: &Snapshot, viewport_width: u32) -> Result<Vec<CardBitmap>, String> {
+pub fn rasterize(
+    snapshot: &Snapshot,
+    viewport_width: u32,
+    fonts: Option<&PackagedFonts>,
+) -> Result<Vec<CardBitmap>, String> {
     let shape = geometry(snapshot, viewport_width)?;
     if snapshot.notices.is_empty() {
         return Ok(Vec::new());
     }
     let mut mask = windows::Mask::new(shape.width, shape.height)?;
+    let (regular, semibold) = match fonts {
+        Some(fonts) => fonts.inner.select(&mask, shape.font)?,
+        None => (
+            mask.legacy_font(&snapshot.style.font_family, shape.font, 400)?,
+            mask.legacy_font(&snapshot.style.font_family, shape.font, 700)?,
+        ),
+    };
     let mut cards = Vec::with_capacity(snapshot.notices.len());
     for notice in &snapshot.notices {
         let mut card = background(&snapshot.style, shape);
         mask.line(
             &notice.title,
-            &snapshot.style.font_family,
-            shape.font,
-            true,
+            &semibold,
             [
                 shape.padding,
                 shape.padding,
@@ -208,9 +237,7 @@ pub fn rasterize(snapshot: &Snapshot, viewport_width: u32) -> Result<Vec<CardBit
         let top = shape.padding + shape.line + shape.between;
         mask.line(
             &notice.body,
-            &snapshot.style.font_family,
-            shape.font,
-            false,
+            &regular,
             [
                 shape.padding,
                 top,
@@ -225,7 +252,11 @@ pub fn rasterize(snapshot: &Snapshot, viewport_width: u32) -> Result<Vec<CardBit
 }
 
 #[cfg(not(windows))]
-pub fn rasterize(_snapshot: &Snapshot, _viewport_width: u32) -> Result<Vec<CardBitmap>, String> {
+pub fn rasterize(
+    _snapshot: &Snapshot,
+    _viewport_width: u32,
+    _fonts: Option<&PackagedFonts>,
+) -> Result<Vec<CardBitmap>, String> {
     Err("Native launcher notice fonts require Windows".into())
 }
 
@@ -235,7 +266,7 @@ mod windows {
     // this thread. The DIB belongs to Mask until Drop; only its validated byte
     // range is exposed internally, after GdiFlush has completed pending writes.
     // No raw pointer or handle crosses the public safe rasterize API.
-    use super::{MAX_SIDE, MAX_TOTAL_BYTES, over};
+    use super::{MAX_FONT_BYTES, MAX_SIDE, MAX_TOTAL_BYTES, over};
     use std::{ffi::c_void, ptr};
 
     type Handle = *mut c_void;
@@ -297,6 +328,15 @@ mod windows {
             face: *const u16,
         ) -> Handle;
         fn GetTextFaceW(dc: Handle, count: i32, face: *mut u16) -> i32;
+        fn GetFontData(dc: Handle, table: u32, offset: u32, output: *mut c_void, bytes: u32)
+        -> u32;
+        fn AddFontMemResourceEx(
+            data: *mut c_void,
+            bytes: u32,
+            reserved: *mut c_void,
+            count: *mut u32,
+        ) -> Handle;
+        fn RemoveFontMemResourceEx(handle: Handle) -> i32;
         fn SetBkMode(dc: Handle, mode: i32) -> i32;
         fn SetTextColor(dc: Handle, color: u32) -> u32;
         fn GdiFlush() -> i32;
@@ -307,9 +347,9 @@ mod windows {
         -> i32;
     }
 
-    struct Font(Handle);
+    pub(super) struct Font(Handle);
     impl Font {
-        fn new(family: &str, size: i32, bold: bool) -> Result<Self, String> {
+        fn new(family: &str, size: i32, weight: i32) -> Result<Self, String> {
             let face: Vec<u16> = family.encode_utf16().chain(Some(0)).collect();
             // A negative height is the requested glyph em in physical pixels.
             // ANTIALIASED_QUALITY gives grayscale, never ClearType colour fringes.
@@ -319,7 +359,7 @@ mod windows {
                     0,
                     0,
                     0,
-                    if bold { 700 } else { 400 },
+                    weight,
                     0,
                     0,
                     0,
@@ -342,6 +382,96 @@ mod windows {
             unsafe {
                 DeleteObject(self.0);
             }
+        }
+    }
+
+    struct RegisteredFont {
+        handle: Handle,
+        bytes: Vec<u8>,
+    }
+
+    impl RegisteredFont {
+        fn new(bytes: Vec<u8>, weight: u16) -> Result<Self, String> {
+            if bytes.len() > MAX_FONT_BYTES || true_type_weight(&bytes) != Some(weight) {
+                return Err(format!("Invalid packaged notice font weight {weight}"));
+            }
+            let mut count = 0;
+            // GDI copies the input and registers the font only in this process.
+            let handle = unsafe {
+                AddFontMemResourceEx(
+                    bytes.as_ptr().cast_mut().cast(),
+                    bytes.len() as u32,
+                    ptr::null_mut(),
+                    &mut count,
+                )
+            };
+            if handle.is_null() {
+                return Err(format!(
+                    "Could not load packaged notice font weight {weight}"
+                ));
+            }
+            let resource = Self { handle, bytes };
+            if count != 1 {
+                return Err("Packaged notice resource must have exactly one font".into());
+            }
+            Ok(resource)
+        }
+    }
+
+    impl Drop for RegisteredFont {
+        fn drop(&mut self) {
+            unsafe { RemoveFontMemResourceEx(self.handle) };
+        }
+    }
+
+    /// Check the header and OS/2 table of the static TrueType input before GDI.
+    fn true_type_weight(bytes: &[u8]) -> Option<u16> {
+        if bytes.get(..4)? != [0, 1, 0, 0] {
+            return None;
+        }
+        let tables = u16::from_be_bytes(bytes.get(4..6)?.try_into().ok()?) as usize;
+        let directory = bytes.get(12..12 + tables * 16)?;
+        if directory
+            .chunks_exact(16)
+            .any(|entry| &entry[..4] == b"fvar")
+        {
+            return None;
+        }
+        let os2 = directory
+            .chunks_exact(16)
+            .find(|entry| &entry[..4] == b"OS/2")?;
+        let offset = u32::from_be_bytes(os2[8..12].try_into().ok()?) as usize;
+        let length = u32::from_be_bytes(os2[12..16].try_into().ok()?) as usize;
+        let table = bytes.get(offset..offset.checked_add(length)?)?;
+        Some(u16::from_be_bytes(table.get(4..6)?.try_into().ok()?))
+    }
+
+    pub(super) struct PackagedFonts {
+        regular: RegisteredFont,
+        semibold: RegisteredFont,
+    }
+
+    impl PackagedFonts {
+        pub(super) fn load(regular: Vec<u8>, semibold: Vec<u8>) -> Result<Self, String> {
+            let fonts = Self {
+                regular: RegisteredFont::new(regular, 400)?,
+                semibold: RegisteredFont::new(semibold, 600)?,
+            };
+            // GDI may silently substitute a different face. Validate both
+            // physical resources even when the first frame has no notices.
+            fonts.select(&Mask::new(1, 1)?, 14)?;
+            Ok(fonts)
+        }
+
+        pub(super) fn select(&self, mask: &Mask, size: i32) -> Result<(Font, Font), String> {
+            let regular = mask.packaged_font(&["Roboto"], size, 400, &self.regular.bytes)?;
+            let semibold = mask.packaged_font(
+                &["Roboto SemiBold", "Roboto"],
+                size,
+                600,
+                &self.semibold.bytes,
+            )?;
+            Ok((regular, semibold))
         }
     }
 
@@ -435,12 +565,65 @@ mod windows {
             })
         }
 
+        fn packaged_font(
+            &self,
+            families: &[&str],
+            size: i32,
+            weight: i32,
+            expected: &[u8],
+        ) -> Result<Font, String> {
+            let mut actual = vec![0; expected.len()];
+            for family in families {
+                let font = Font::new(family, size, weight)?;
+                let matches = {
+                    let _selected = Selected::new(self.dc, font.0)?;
+                    let len = expected.len() as u32;
+                    (unsafe { GetFontData(self.dc, 0, 0, ptr::null_mut(), 0) == len })
+                        && (unsafe {
+                            GetFontData(self.dc, 0, 0, actual.as_mut_ptr().cast(), len) == len
+                        })
+                        && actual == expected
+                };
+                if matches {
+                    return Ok(font);
+                }
+            }
+            Err(format!(
+                "GDI did not select the packaged notice font weight {weight}"
+            ))
+        }
+
+        pub(super) fn legacy_font(
+            &self,
+            family: &str,
+            size: i32,
+            weight: i32,
+        ) -> Result<Font, String> {
+            if family.encode_utf16().count() >= 32 {
+                return Font::new("", size, weight);
+            }
+            let font = Font::new(family, size, weight)?;
+            let face_matches = {
+                let _selected = Selected::new(self.dc, font.0)?;
+                let mut actual = [0u16; 64];
+                let len =
+                    unsafe { GetTextFaceW(self.dc, actual.len() as i32, actual.as_mut_ptr()) };
+                let len = usize::try_from(len).unwrap_or(0).min(actual.len());
+                String::from_utf16_lossy(&actual[..len])
+                    .trim_end_matches('\0')
+                    .eq_ignore_ascii_case(family)
+            };
+            if face_matches {
+                Ok(font)
+            } else {
+                Font::new("", size, weight)
+            }
+        }
+
         pub(super) fn line(
             &mut self,
             text: &str,
-            family: &str,
-            size: i32,
-            bold: bool,
+            font: &Font,
             bounds: [u32; 4],
         ) -> Result<(), String> {
             // GDI batches must complete before direct access to DIB pixels.
@@ -453,28 +636,7 @@ mod windows {
             if text.is_empty() || bounds[2] <= bounds[0] || bounds[3] <= bounds[1] {
                 return Ok(());
             }
-            let family = if family.encode_utf16().count() < 32 {
-                family
-            } else {
-                "Segoe UI"
-            };
-            let mut font = Font::new(family, size, bold)?;
-            let mut selected = Selected::new(self.dc, font.0)?;
-            let mut actual = [0u16; 64];
-            let len = unsafe { GetTextFaceW(self.dc, actual.len() as i32, actual.as_mut_ptr()) };
-            let face = if len > 0 {
-                String::from_utf16_lossy(&actual[..len as usize])
-                    .trim_end_matches('\0')
-                    .to_owned()
-            } else {
-                String::new()
-            };
-            if !face.eq_ignore_ascii_case(family) && !family.eq_ignore_ascii_case("Segoe UI") {
-                // Match the launcher's documented system-font fallback.
-                drop(selected);
-                font = Font::new("Segoe UI", size, bold)?;
-                selected = Selected::new(self.dc, font.0)?;
-            }
+            let _selected = Selected::new(self.dc, font.0)?;
             let text: String = text
                 .chars()
                 .map(|ch| if ch.is_control() { ' ' } else { ch })
@@ -496,8 +658,6 @@ mod windows {
                 )
             };
             let flushed = unsafe { GdiFlush() } != 0;
-            drop(selected);
-            drop(font);
             if result == 0 || !flushed {
                 return Err("Could not rasterize launcher notice text".into());
             }
@@ -541,7 +701,7 @@ mod tests {
                 border_argb: 0x40ff_ffff,
                 text_argb: 0xffff_ffff,
                 muted_argb: 0xffa0_b0c0,
-                font_family: "Segoe UI Variable Text".into(),
+                font_family: "Tahoma".into(),
                 font_size: 14.0,
                 width: 320.0,
                 gap: 24.0,
@@ -600,7 +760,7 @@ mod tests {
         assert!(geometry(&snapshot, 1000).is_err());
         snapshot = fixture(1.0);
         snapshot.notices[0].title = "x".repeat(161);
-        assert!(rasterize(&snapshot, 1000).is_err());
+        assert!(rasterize(&snapshot, 1000, None).is_err());
     }
 
     #[cfg(windows)]
@@ -609,7 +769,7 @@ mod tests {
         let snapshot = fixture(1.0);
         let shape = geometry(&snapshot, 1000).unwrap();
         let background = background(&snapshot.style, shape);
-        let cards = rasterize(&snapshot, 1000).unwrap();
+        let cards = rasterize(&snapshot, 1000, None).unwrap();
         assert_eq!(cards.len(), 1);
         assert!(
             cards[0]
@@ -632,7 +792,7 @@ mod tests {
         let mut snapshot = fixture(1.5);
         snapshot.style.font_family = "NoSuchLauncherTypeface".into();
         snapshot.notices[0].body = "длинный текст & ".repeat(20);
-        let cards = rasterize(&snapshot, 400).unwrap();
+        let cards = rasterize(&snapshot, 400, None).unwrap();
         assert_eq!(cards[0].width, 328);
         assert_eq!(
             cards[0].rgba.len(),

@@ -23,7 +23,7 @@ def compute_proof(archives, transport):
     spec.loader.exec_module(recipe)
     patched = recipe.changes(recipe.locked_inputs(archives / SOURCE_ARCHIVE), transport)
     validate_patched_sources(patched)
-    return {"schemaVersion": 1, "upstreamCommit": recipe.COMMIT,
+    return {"schemaVersion": 1, "noticeFontMode": "roboto-v1", "upstreamCommit": recipe.COMMIT,
             "upstreamSourceSha256": recipe.SOURCE_SHA, "recipeSha256": recipe.recipe_sha(),
             "steamTransportCommit": recipe.TRANSPORT_COMMIT,
             "steamTransportSourceSha256": recipe.TRANSPORT_SHA,
@@ -34,9 +34,9 @@ def compute_proof(archives, transport):
 def verify_proof(receipt, proof=None):
     proof = read_json(PROOF) if proof is None else proof
     validate_receipt_coverage(receipt)
-    for key in ("schemaVersion", "upstreamCommit", "upstreamSourceSha256", "recipeSha256",
+    for key in ("schemaVersion", "noticeFontMode", "upstreamCommit", "upstreamSourceSha256", "recipeSha256",
                 "steamTransportCommit", "steamTransportSourceSha256", "patchedFiles"):
-        if proof[key] != receipt[key]:
+        if proof.get(key) != receipt.get(key):
             raise ValueError("Mandatory layers: stale source outcome proof: " + key)
     if (proof["policySha256"] != file_info(INTEGRATION / "required_layers.py")["sha256"]
             or proof["requiredLayers"] != sorted(REQUIRED_LAYER_IDS)):

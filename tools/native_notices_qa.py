@@ -17,7 +17,7 @@ import time
 
 from PIL import Image, ImageChops
 
-from release_acceptance import execution_context
+from release_acceptance import execution_context, NOTICE_FONT_FILES, NOTICE_FONT_MODE
 from stage_runtime import file_info
 
 
@@ -28,7 +28,7 @@ GAP = 12
 LIFE_MS = 7000
 STYLE = {
     "bgArgb": "FFE311C5", "borderArgb": "FFE311C5", "textArgb": "FF000000",
-    "mutedArgb": "FF000000", "fontFamily": "Segoe UI", "fontSize": 16,
+    "mutedArgb": "FF000000", "fontFamily": "Roboto", "fontMode": NOTICE_FONT_MODE, "fontSize": 16,
     "width": CARD_WIDTH, "gap": GAP, "padding": 12, "radius": 0,
     "riseMs": 0, "fadeMs": 0, "lifeMs": LIFE_MS,
 }
@@ -267,8 +267,9 @@ class WindowProbe:
 
 
 class Session:
-    def __init__(self, candidate, controller, cache, qa):
+    def __init__(self, candidate, controller, cache, qa, font_dir):
         self.candidate, self.controller, self.cache, self.qa = candidate, controller, cache, qa
+        self.font_dir = font_dir
         self.client = candidate / "native/horizon-client.exe"
         self.bootstrap = candidate / "native/launch-rust-edition.exe"
         self.game, self.directory = qa / "game", qa / "session"
@@ -285,6 +286,11 @@ class Session:
             "guiScale:2\nnarrator:0\nfullscreen:false\nlang:en_us\n", encoding="utf-8")
         self.sentinel = b'{"owner":"native-notices-qa","doNotRewrite":true}\n'
         (self.directory / "session.json").write_bytes(self.sentinel)
+        for name, expected in NOTICE_FONT_FILES.items():
+            target = self.directory / name
+            shutil.copyfile(self.font_dir / name, target)
+            if file_info(target) != expected:
+                raise ValueError(f"Native notice fixture must use the launcher's exact {name}")
         atomic_write(self.directory / "style.properties", properties(STYLE))
         self.send(0)
         environment = dict(os.environ)
@@ -341,6 +347,7 @@ class Session:
                 last = value
                 now = unix_ms()
                 if value.get("backend") == "native-ui-v1" and not value.get("error") \
+                        and value.get("fontMode") == NOTICE_FONT_MODE \
                         and value["renderedCount"] == count and value["transformations"] == 0 \
                         and after < value["timestampUnixMs"] <= now \
                         and now - value["timestampUnixMs"] <= 1500 \
@@ -603,6 +610,8 @@ def main():
     parser.add_argument("--controller", required=True, type=Path)
     parser.add_argument("--cache", required=True, type=Path,
                         help="Existing verified bootstrap cache; resources are shared read-only inputs")
+    parser.add_argument("--launcher-fonts", required=True, type=Path,
+                        help="Directory with the launcher's exact packaged Roboto Regular and SemiBold")
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     if os.name != "nt":
@@ -612,9 +621,10 @@ def main():
     qa = registered_output(args.out)
     context = execution_context(candidate)
     qa.mkdir(parents=True)
-    session = Session(candidate, controller, cache, qa)
+    session = Session(candidate, controller, cache, qa, args.launcher_fonts.resolve(strict=True))
     report = {"schemaVersion": 1, "status": "FAIL", "acceptanceContext": context,
               "client": file_info(session.client), "bootstrap": file_info(session.bootstrap),
+              "fontMode": NOTICE_FONT_MODE, "fontFiles": NOTICE_FONT_FILES,
               "startup": "exact bootstrap child; native-ui-v1; real presented unscaled screenshots",
               "checks": {}, "captures": session.captures, "fixtureRemoved": False}
     success = False

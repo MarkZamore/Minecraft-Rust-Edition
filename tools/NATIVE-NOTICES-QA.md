@@ -6,7 +6,7 @@
 
 ```powershell
 python tools/native_notices_qa.py --candidate $candidate --controller $controller `
-    --cache $verifiedBootstrapCache --out $registeredRun/notices-qa
+    --cache $verifiedBootstrapCache --launcher-fonts $launcherFonts --out $registeredRun/notices-qa
 ```
 
 `$verifiedBootstrapCache` — действующий проверенный кеш самостоятельного bootstrap.
@@ -26,7 +26,10 @@ python tools/native_notices_qa.py --candidate $candidate --controller $controlle
 - снимки настоящего конечного кадра через unscaled `horizon-ctl screenshot`,
   измеренные прямоугольники карточек и размер реального HWND;
 - свежие post-present heartbeats `native-ui-v1`, actual child PID, count 0–3,
-  transformations=0 и отсутствие ошибки до и после каждой фотографии;
+  transformations=0, `fontMode=roboto-v1` и отсутствие ошибки до и после каждой
+  фотографии. Макет использует два точных TTF из `Program/Assets/Fonts` лаунчера.
+  Физический выбор файлов проверяет дочерний процесс, а размеры и SHA-256
+  входов записываются в отчёт;
 - проверки первого меню, трёх карточек, семисекундного срока, сохранения прежней
   карточки при оборванном UTF-8/Unicode properties до её исходного срока;
 - timestamp +1500 мс: сначала нет карточки, затем она появляется;

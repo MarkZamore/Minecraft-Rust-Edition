@@ -35,7 +35,7 @@ def module_snapshot(pid):
     return json.loads(value.stdout)
 
 
-def exercise(candidate, controller, cache, output):
+def exercise(candidate, controller, cache, output, launcher_fonts):
     context = execution_context(candidate)
     policy_path = candidate / "native/presentation.json"
     defaults = validate_environment_defaults(read_json(policy_path)["environmentDefaults"])
@@ -54,7 +54,7 @@ def exercise(candidate, controller, cache, output):
         for index in range(1, 4):
             qa = output / f"run-{index}"
             qa.mkdir()
-            session = Session(candidate, controller, cache, qa)
+            session = Session(candidate, controller, cache, qa, launcher_fonts)
             success = False
             try:
                 parent_before = dict(os.environ)
@@ -116,6 +116,8 @@ def main():
     parser.add_argument("--candidate", required=True, type=Path)
     parser.add_argument("--controller", required=True, type=Path)
     parser.add_argument("--cache", required=True, type=Path)
+    parser.add_argument("--launcher-fonts", required=True, type=Path,
+                        help="Directory with the launcher's exact packaged Roboto Regular and SemiBold")
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     if os.name != "nt":
@@ -123,7 +125,7 @@ def main():
     output = registered_output(args.out)
     output.mkdir(parents=True)
     exercise(args.candidate.resolve(strict=True), args.controller.resolve(strict=True),
-             args.cache.resolve(strict=True), output)
+             args.cache.resolve(strict=True), output, args.launcher_fonts.resolve(strict=True))
 
 
 if __name__ == "__main__":

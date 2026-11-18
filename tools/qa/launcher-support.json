@@ -1,13 +1,19 @@
 {
   "status": "PASS",
-  "verifiedAtUtc": "2026-11-07T23:13:55.711700+00:00",
-  "releaseNumber": 478,
-  "commitSha": "98e3146e5bc469e54deedf3512681a9a351320ed",
-  "assetId": 722162871,
-  "sizeBytes": 157872128,
-  "sha256": "3338b80f0eb01c6247ca2b5847199c68a6250eb5465736bb4063c94df40ff6c7",
+  "verifiedAtUtc": "2026-11-18T10:57:55.306957+00:00",
+  "releaseNumber": 542,
+  "commitSha": "0a96f6839a0e626a38b4e35f436a5d90e080e470",
+  "assetId": 762997022,
+  "sizeBytes": 9254912,
+  "sha256": "6cf16a01c4e8ef347a782950c7cd0a618a871a7f935b40af1f509ca6f054ea66",
   "url": "https://github.com/MarkZamore/LANMinecraft/releases/download/latest/LANMinecraft.exe",
   "requiredFeature": "native-launcher-notices-v1",
   "minimumSupportingRelease": 477,
-  "executedByThisPackTask": false
+  "fontMode": "roboto-v1",
+  "executedByThisPackTask": false,
+  "updateMetadata": {
+    "sizeBytes": 329,
+    "sha256": "d7459b6837d2c62d17a540b38676909ffe97b0368d6ce67bb9647a51043e6d9a",
+    "url": "https://github.com/MarkZamore/LANMinecraft/releases/download/latest/update.json"
+  }
 }

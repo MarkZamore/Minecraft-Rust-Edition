@@ -17,7 +17,7 @@ pub(super) type PresentCallback = Box<dyn FnOnce() + Send>;
 pub(super) struct Overlay {
     service: Option<Arc<state::Service>>,
     gpu: Option<render::Renderer>,
-    encoded_count: Option<usize>,
+    encoded_frame: Option<(usize, bool)>,
 }
 
 impl Overlay {
@@ -25,7 +25,7 @@ impl Overlay {
         Self {
             service: state::service(),
             gpu: None,
-            encoded_count: None,
+            encoded_frame: None,
         }
     }
 
@@ -39,7 +39,7 @@ impl Overlay {
         size: [u32; 2],
         format: wgpu::TextureFormat,
     ) {
-        self.encoded_count = None;
+        self.encoded_frame = None;
         let Some(service) = &self.service else {
             return;
         };
@@ -49,7 +49,7 @@ impl Overlay {
         let Some(prepared) = service.prepared(size[0]) else {
             // The successful empty native UI frame still has a real heartbeat.
             // The worker marks readiness only after it has a complete snapshot.
-            self.encoded_count = Some(0);
+            self.encoded_frame = Some((0, false));
             return;
         };
         if prepared.cards.len() != prepared.snapshot.notices.len() {
@@ -57,7 +57,7 @@ impl Overlay {
             return;
         }
         if prepared.cards.is_empty() {
-            self.encoded_count = Some(0);
+            self.encoded_frame = Some((0, prepared.snapshot.style.packaged_fonts));
             return;
         }
         let gpu = self
@@ -94,15 +94,17 @@ impl Overlay {
             motion,
             state::unix_ms(),
         ) {
-            Ok(count) => self.encoded_count = Some(count),
+            Ok(count) => self.encoded_frame = Some((count, style.packaged_fonts)),
             Err(error) => service.report_error(&error),
         }
     }
 
     /// Captures this frame's count, not a later frame's changing shared state.
     pub(super) fn callback(&self) -> Option<PresentCallback> {
-        let count = self.encoded_count?;
+        let (count, packaged_fonts) = self.encoded_frame?;
         let service = self.service.clone()?;
-        Some(Box::new(move || service.report_presented(count)))
+        Some(Box::new(move || {
+            service.report_presented(count, packaged_fonts)
+        }))
     }
 }

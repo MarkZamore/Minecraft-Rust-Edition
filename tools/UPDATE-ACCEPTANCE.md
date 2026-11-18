@@ -2,7 +2,7 @@
 
 Проверяются две независимые границы. `check_required_layers.py` вычисляет
 результат точного рецепта из подписанного архива и закреплённого Steam-кода.
-Контракт проверяет 13 обязательных групп, включая авторизацию, lifecycle,
+Контракт проверяет 14 обязательных групп, включая авторизацию, lifecycle,
 приглашения, меню/команды, скины, список миров, заголовок, значок и native UI уведомлений. Комментарий
 вместо вызова не проходит проверку. Это проверка исходников, а не доказательство
 игрового поведения. Отдельный слой держит Steam-раздел по умолчанию, явный
@@ -68,6 +68,10 @@
    `ui-keys`: Enter, Delete, F5, F5, Ctrl+A, Backspace, Enter. Перед каждым
    действием UI-драйвер заново находит настоящее окно указанного `processId`,
    сверяет его путь и заголовок и получает свежий снимок, затем нажимает клавишу.
+   Штатный драйвер запускается рядом с тестом
+   `python tools/server_list_desktop_driver.py --qa-pid $ownedPythonPid
+   --candidate $candidate --requests $serverQa/ui-keys`, где `$ownedPythonPid` —
+   PID процесса `server_list_qa.py`.
    После действия атомарно записывает одноимённый `.ack.json` с `id`, `key`,
    `processId`, `status: "PASS"` и фактическим `performedUnixMs` (Unix ms).
    Запрос содержит `action: "press_key"`, путь EXE, заголовок, номер запуска и
@@ -80,7 +84,7 @@
    эффект, не очищая личный список по именам/адресам/маркерам.
 
    Запустить также `tools/native_notices_qa.py --candidate $candidate
-   --controller $controller --cache $cache --out $noticeQa`; использовать
+   --controller $controller --cache $cache --launcher-fonts $launcherFonts --out $noticeQa`; использовать
    `$noticeQa/native-notices-qa.json` как `$nativeNotices`. Он проверяет настоящий
    bootstrap/дочерний PID, финальные PNG и свежий post-present heartbeat в меню,
    мире и полном экране, очередь/срок жизни/будущее время/оборванные файлы, DPI и
@@ -99,12 +103,16 @@
    `dpi` содержит измеренные ширины из PNG и реальные GUI scale/UI до и после;
    проверяется ширина 240/480 пикселей и масштаб ровно два без изменения игры.
 
+   Запустить `tools/overlay_compatibility_qa.py --candidate $candidate
+   --controller $controller --cache $cache --launcher-fonts $launcherFonts --out $compatQa`
+   и передать `$compatQa/overlay-compatibility-qa.json` как `$compatibility`.
    Записать пакет доказательств; coldPreparation берётся из холодного smoke,
    либо отдельного --preparation. До проверки обновления --update можно опустить.
 
    ```powershell
    python tools/release_acceptance.py --candidate $candidate --smoke $smoke `
        --multiplayer $multiplayer --servers $serverList --native-notices $nativeNotices `
+       --compatibility $compatibility `
        --out tools/release-acceptance.json `
        --defer-live-steam 'Точное сохранённое решение пользователя'
    ```

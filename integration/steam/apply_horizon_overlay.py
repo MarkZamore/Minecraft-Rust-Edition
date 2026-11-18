@@ -987,6 +987,7 @@ def main():
         apply_or_validate(args.source.resolve(strict=True), original, patched, args.receipt is None)
     evidence = {
         "schemaVersion": 1,
+        "noticeFontMode": "roboto-v1",
         "upstreamCommit": COMMIT,
         "upstreamSourceSha256": SOURCE_SHA,
         "recipeSha256": recipe_sha(),

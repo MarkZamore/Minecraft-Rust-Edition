@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
+  "noticeFontMode": "roboto-v1",
   "upstreamCommit": "2ebf00a0281c592f79191e76fce0e7d522c6f425",
   "upstreamSourceSha256": "90479a75b886e0b39663c1116c0424e90d0d0ea4e9633668c1c3fed09bc7d645",
-  "recipeSha256": "3136e8496a553cc3ab98637bae70482dff7ee64ed797665069ab81f7bdd8b510",
+  "recipeSha256": "4decabee42e09fa5a66f7279a87e4f5e3cffda5a47e85fbac839506a1645fed0",
   "steamTransportCommit": "89b0ce80b31366601906e69ba5fb0c4a323ec9c6",
   "steamTransportSourceSha256": "f0d3f400397aaae5f56b508575019dd7fbed30e22dbf60cd6a67cd2cce505033",
   "patchedFiles": {
@@ -15,11 +16,11 @@
     "crates/horizon-client-render/src/gfx/frame_gen.rs": "ceea8b94efc915df6ef344cf09203fb824e2c41acbdcebea066ba93a6f4999e5",
     "crates/horizon-client-render/src/gfx/gpu_culling.rs": "292ffc1fa2609e9e238cd72b084bbc96ab11f13a5ca26451d1afd3c28c8a40c2",
     "crates/horizon-client-render/src/gfx/lanmc_notice_layout.rs": "07e97f1d1716f3bd6699c0df2b4c5c8eec8615dfe150ce7876db5af528b24f67",
-    "crates/horizon-client-render/src/gfx/lanmc_notice_protocol.rs": "7c9d2fddb9aa650ec9f6751aac048d19d4166fd48a477aa3f8d256d39433d48f",
-    "crates/horizon-client-render/src/gfx/lanmc_notice_raster.rs": "770e118c24f9d2480fd2b895b52bb79897a37d687c3fd785083ee63c95c4978d",
+    "crates/horizon-client-render/src/gfx/lanmc_notice_protocol.rs": "d29911ed743481d391b70ec47456c334669eec40b2f7550ff377bfbdebd726b5",
+    "crates/horizon-client-render/src/gfx/lanmc_notice_raster.rs": "b00b953a6d149c809fe06e7cfbfda49ddba6af2dc01f48ecc37f37eb591e5cc0",
     "crates/horizon-client-render/src/gfx/lanmc_notice_render.rs": "7f09731194d55b814830bb134565ecb92f947dce06fb2021052e66baf0fc0f30",
-    "crates/horizon-client-render/src/gfx/lanmc_notice_state.rs": "1f693184ae77dc69923f403d046189e88692203e4b3be719868a7ffd9e8649ec",
-    "crates/horizon-client-render/src/gfx/lanmc_notices.rs": "11002348d63f3af4fb709519f67b80c278de53dccd17726d155bc716c7d2c87c",
+    "crates/horizon-client-render/src/gfx/lanmc_notice_state.rs": "63d5470f352d617bc961229cc16c2232a9150c42d80088671d510c0475354eb9",
+    "crates/horizon-client-render/src/gfx/lanmc_notices.rs": "90cc2d0e370196adc102692c795cd33b68deb085678ac5cec9f246df743852ab",
     "crates/horizon-client-render/src/gfx/pack_center_depth.rs": "513a4dd3ea53a52858c2b27f5fdbf6b5cb9dc29d8af327b661bf17f6d68f0b7f",
     "crates/horizon-client-render/src/gfx/submit.rs": "eb5d57c205aa46ca2ec6bbc53febf8871ea1f9bd835b0ad9bdffb34f645df377",
     "crates/horizon-client/build.rs": "3030fbd9f3cc7ff316d23929e4e1fd23e5407f1ca867f38ef91f591fa32b79bd",
@@ -49,7 +50,7 @@
     "crates/horizon-client/src/title.rs": "81bf485925bdbf811609810a39686e4cb6b9c314a2a72aeb2bfc0820b34bee1e",
     "crates/horizon-client/src/title/tests.rs": "f9bbf0322d3b8ee1d35c661a3ee2b037d20e82564b265e49b7a70d51cab57009",
     "crates/lanmc-notice-platform/Cargo.toml": "6e53ce6333f69444fc40bec827ace6319a17a839015914c07b70d41018dfd72a",
-    "crates/lanmc-notice-platform/src/lib.rs": "0cbaf8337b4ed6f4b587f63a7a50d28dfe99c49d69f8d3056d9203d914e84469",
+    "crates/lanmc-notice-platform/src/lib.rs": "4cd33b626942199fd2afa8b40af6bed95bcd64cde8dd101d14baa4999927a68a",
     "crates/lanmc-steam-native/Cargo.toml": "c0d4812ceccb70f59611a583fe2a071ae53f0e9057c86132770bf7438833ca61",
     "crates/lanmc-steam-native/src/invitation.rs": "d9f259e90e9e4cc70c7f96c3b995383e2921a914c1744bdaee2299491eaa7778",
     "crates/lanmc-steam-native/src/lib.rs": "a649bd661a17e504e746255ed81adead2e23675356125e0efe78b5b2bdb62ee1",
@@ -57,8 +58,8 @@
     "crates/lanmc-steam-native/src/worker.rs": "063e568df783d2c32cd139691709ff5c2bf93a395d4ed717180b92db765efba1",
     "packaging/icons/rust-edition.ico": "7544306e6d3193a12c64ecaedf4c81d982c6a4601ef1e62abd24b875767631ee"
   },
-  "clientSha256": "70ca11bd2beace848ebaadb88c31fbcec9d1284c687e55af24fd83ec00a5813b",
-  "clientSizeBytes": 92608000,
+  "clientSha256": "8d14cae5f2a0e789ff58f895767c88882e6cf644d17143d79884f4d3ee656ff6",
+  "clientSizeBytes": 92609536,
   "steamDllSha256": "eb17909a76668cf9ae0b92a618a34a50f6c73d3a6787cb4dd8ce36a8b10bfb75",
   "steamDllSizeBytes": 317080
 }

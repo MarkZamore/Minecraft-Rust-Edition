@@ -445,8 +445,8 @@ class RequiredLayersTests(unittest.TestCase):
              b'lanmc_notice_platform = { path = "../lanmc-notice-platform" }',
              b'lanmc_notice_platform = "0.1.0"'),
             ("crates/lanmc-notice-platform/src/lib.rs", b"#![forbid(unsafe_op_in_unsafe_fn)]", b""),
-            (adapter, b"lanmc_notice_platform::rasterize(&converted, viewport_width)",
-             b"bypass_platform(&converted, viewport_width)"),
+            (adapter, b"lanmc_notice_platform::rasterize(&converted, viewport_width, fonts)",
+             b"bypass_platform(&converted, viewport_width, fonts)"),
         ]:
             with self.subTest(path=path):
                 broken = dict(self.patched)
@@ -460,7 +460,10 @@ class RequiredLayersTests(unittest.TestCase):
             ("lanmc_notices.rs", b"service: state::service(),", b"service: None,"),
             ("lanmc_notice_state.rs", b"protocol::parse_snapshot(style, notices, now)",
              b"unchecked_snapshot(style, notices, now)"),
-            ("lanmc_notice_state.rs", b"raster::rasterize(&snapshot, width)", b"old_raster(&snapshot, width)"),
+            ("lanmc_notice_state.rs", b"raster::rasterize(&snapshot, width, fonts)",
+             b"old_raster(&snapshot, width)"),
+            ("lanmc_notices.rs", b"service.report_presented(count, packaged_fonts)",
+             b"service.report_presented(count, true)"),
             ("lanmc_notice_render.rs", b"layout::layout(dimensions, &sizes, motion, now_ms)",
              b"scaled_twice(dimensions, &sizes, motion, now_ms)"),
         ]:

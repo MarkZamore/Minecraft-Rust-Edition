@@ -76,7 +76,14 @@ def _notice_main_title(value):
         widget.get("id") in {"browse-mods", "open-mod-folder", "done"} for widget in value["widgets"])
 
 
-def verify_native_notices(report, files, context, name):
+NOTICE_FONT_MODE = "roboto-v1"
+NOTICE_FONT_FILES = {
+    "Roboto-Regular.ttf": {"sizeBytes": 123720, "sha256": "dece7c71bbe61710787f0839c722c65e87355dd2eb4a823e6b5488121ff81e4b"},
+    "Roboto-SemiBold.ttf": {"sizeBytes": 124288, "sha256": "f478ba88b0292e685e487901dfbb1401457d32d6ebee4030cdfd5698235bffa8"},
+}
+
+
+def verify_native_notices(report, files, context, name, required_font_mode=None):
     require(isinstance(report, dict) and report.get("schemaVersion") == 1
             and report.get("status") == "PASS", "native notice runtime QA missing")
     require(report.get("acceptanceContext") == context, "native notice report has another payload")
@@ -85,6 +92,11 @@ def verify_native_notices(report, files, context, name):
             "native notice report has another executable")
     require(report.get("startup") == "exact bootstrap child; native-ui-v1; real presented unscaled screenshots",
             "native notices were not tested through the exact bootstrap child")
+    if required_font_mode is not None:
+        require(required_font_mode == NOTICE_FONT_MODE
+                and report.get("fontMode") == NOTICE_FONT_MODE
+                and report.get("fontFiles") == NOTICE_FONT_FILES,
+                "native notice QA did not use both exact launcher font files")
     require(report.get("fixtureRemoved") is True
             and all(report.get("checks", {}).get(key) == "PASS" for key in NATIVE_NOTICE_CHECKS),
             "native notice scenarios or cleanup incomplete")
@@ -114,6 +126,9 @@ def verify_native_notices(report, files, context, name):
                 and heartbeat["renderedCount"] == expected_count and _notice_int(stamp)
                 and stamp > 0 and 0 <= observed-stamp <= 1500,
                 "native notice heartbeat is stale, foreign or not actually presented")
+        if required_font_mode is not None:
+            require(heartbeat.get("fontMode") == required_font_mode,
+                    "presented native notice frame did not use the launcher fonts")
         return stamp
 
     for filename, expected_count in NATIVE_NOTICE_CAPTURES.items():
@@ -412,7 +427,7 @@ def verify_startup(record, files, receipt, name):
                 and not any(argument == flag or argument.startswith(flag + "=")
                             for argument in run["arguments"] for flag in harness)
                 for run in runs), "server-list report used harness startup or incomplete runs")
-    verify_native_notices(record.get("nativeNotices"), files, context, name)
+    verify_native_notices(record.get("nativeNotices"), files, context, name, receipt.get("noticeFontMode"))
     verify_overlay_compatibility(record.get("compatibility"), files, context, name)
     # Steam deferral cannot waive any of the required checks above.
     steam = record["liveSteam"]
