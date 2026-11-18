@@ -125,6 +125,8 @@ try
     handler.Offline = true;
     await MustThrow<PackApplyFailedException>(() => service.SyncAsync(pack, null, CancellationToken.None));
     await MustThrow<InvalidOperationException>(() => instances.PrepareAsync(pack));
+    Check(handler.OfflineMetadataRequests > 0, "Offline refusal must include the unavailable GitHub API fallback.");
+    report["offlineMetadataRequests"] = handler.OfflineMetadataRequests;
     report["persistentPendingAndOfflineRefusal"] = "PASS";
 
     handler.Offline = false;
@@ -316,11 +318,19 @@ sealed class ReleaseHandler(Release release, PackSyncSource source) : HttpMessag
     public bool InterruptPayload { get; set; }
     public int PayloadRequests;
     public int InterruptedRequests;
+    public int OfflineMetadataRequests;
     public long InterruptedBytes;
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
         var uri = request.RequestUri!;
+        var metadataPath = $"/repos/{source.Owner}/{source.Repo}/releases/tags/{Uri.EscapeDataString(source.Tag)}";
+        if (Offline && request.Method == HttpMethod.Get && uri.Scheme == "https" && uri.IsDefaultPort
+            && uri.Host == "api.github.com" && uri.AbsolutePath == metadataPath)
+        {
+            Interlocked.Increment(ref OfflineMetadataRequests);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        }
         var path = $"/{source.Owner}/{source.Repo}/releases/download/{source.Tag}/";
         if (request.Method != HttpMethod.Get || uri.Scheme != "https" || uri.Host != "github.com"
             || !uri.AbsolutePath.StartsWith(path, StringComparison.Ordinal))
