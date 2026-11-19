@@ -13,8 +13,9 @@ if (args is ["--install-for-launcher", var launcherWorkspace, var distribution, 
     return;
 }
 
-if (args.Length != 4)
-    throw new ArgumentException("Usage: NativeUpdateQa <launcher-workspace> <old-dist> <new-dist> <new-artifacts-output>");
+var experimental = args is [_, _, _, _, "--launcher-fixture", _];
+if (args.Length != 4 && !experimental)
+    throw new ArgumentException("Usage: NativeUpdateQa <launcher-workspace> <old-dist> <new-dist> <new-artifacts-output> [--launcher-fixture <verified-archives>]");
 
 var workspace = Path.TrimEndingDirectorySeparator(Path.GetFullPath(args[0]));
 var artifactRoot = Path.Combine(workspace, "artifacts", "agent-runs");
@@ -23,7 +24,7 @@ Check(output.StartsWith(artifactRoot + Path.DirectorySeparatorChar, StringCompar
     && !Directory.Exists(output) && !File.Exists(output), "Use a new output beneath workspace artifacts/agent-runs.");
 CheckOrdinaryPath(workspace, output);
 var previous = Release.Read(args[1]);
-var target = Release.Read(args[2]);
+var target = experimental ? ReadExperimentalRelease(artifactRoot, args[2], args[5]) : Release.Read(args[2]);
 const string pack = "Minecraft Rust Edition";
 var source = new PackSyncSource("MarkZamore", "Minecraft-Rust-Edition", "pack-latest");
 Check(previous.Id == "minecraft-9" && target.Id == previous.Id && previous.RelativePath == pack
@@ -60,6 +61,7 @@ var launcher = typeof(PortablePackSyncService).Assembly;
 var report = new Dictionary<string, object?>
 {
     ["status"] = "RUNNING",
+    ["fixtureOnly"] = experimental,
     ["launcherSourceRevision"] = launcher.GetCustomAttributes<AssemblyMetadataAttribute>()
         .SingleOrDefault(attribute => attribute.Key == "SourceRevisionId")?.Value,
     ["launcherAssemblySha256"] = Hash(launcher.Location),
@@ -170,7 +172,7 @@ try
     report["idempotence"] = "PASS";
     report["repeatPayloadBytes"] = repeated.BytesDownloaded;
     report["personalSentinelsPreserved"] = sentinels.Count;
-    report["status"] = "PASS";
+    report["status"] = experimental ? "FIXTURE_PASS" : "PASS";
 }
 catch (Exception error)
 {
@@ -202,6 +204,20 @@ finally
         File.WriteAllText(Path.Combine(output, "report.json"), result);
         Console.WriteLine(result);
     }
+}
+
+static Release ReadExperimentalRelease(string artifactRoot, string manifest, string archives)
+{
+    manifest = Path.GetFullPath(manifest);
+    archives = Path.GetFullPath(archives);
+    foreach (var path in new[] { manifest, archives })
+    {
+        Check(path.StartsWith(artifactRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase),
+            "Use experimental inputs only inside artifacts/agent-runs.");
+        CheckOrdinaryPath(artifactRoot, path);
+    }
+    Check(Path.GetFileName(manifest) == "launcher-update-fixture.json", "Use the explicitly named launcher update fixture.");
+    return Release.ReadPath(manifest, archives);
 }
 
 static async Task InstallForLauncher(string launcherWorkspace, string distribution, string registeredRun)
@@ -376,10 +392,11 @@ static void DeleteFixture(string directory)
 sealed record ManagedFile(string Path, long SizeBytes, string Sha256);
 sealed record PayloadAsset(string Name, long SizeBytes, string Sha256, string[] Covers);
 sealed record Release(string Manifest, string Id, string RelativePath, string Revision,
+    string AssetDirectory,
     IReadOnlyDictionary<string, PayloadAsset> Assets,
     IReadOnlyDictionary<string, ManagedFile> Files)
 {
-    public string AssetPath(PayloadAsset asset) => Path.Combine(Path.GetDirectoryName(Manifest)!, "assets", asset.Name);
+    public string AssetPath(PayloadAsset asset) => Path.Combine(AssetDirectory, asset.Name);
 
     public PayloadAsset AssetFor(string path) =>
         Assets.Values.Single(asset => asset.Covers.Contains(path, StringComparer.Ordinal));
@@ -397,8 +414,14 @@ sealed record Release(string Manifest, string Id, string RelativePath, string Re
 
     public static Release Read(string dist)
     {
-        var path = Path.Combine(Path.GetFullPath(dist), PortablePackSyncService.PackManifestAssetName);
-        if (!File.Exists(path)) path = Path.Combine(Path.GetFullPath(dist), "candidate-manifest.json");
+        var root = Path.GetFullPath(dist);
+        var path = Path.Combine(root, PortablePackSyncService.PackManifestAssetName);
+        if (!File.Exists(path)) path = Path.Combine(root, "candidate-manifest.json");
+        return ReadPath(path, Path.Combine(root, "assets"));
+    }
+
+    public static Release ReadPath(string path, string assetsDirectory)
+    {
         using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
         var value = doc.RootElement;
         var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
@@ -409,7 +432,7 @@ sealed record Release(string Manifest, string Id, string RelativePath, string Re
         var files = value.GetProperty("files").Deserialize<ManagedFile[]>(json)!
             .ToDictionary(file => file.Path, StringComparer.Ordinal);
         return new(path, value.GetProperty("packId").GetString()!, value.GetProperty("relativePath").GetString()!,
-            value.GetProperty("revision").GetString()!, assets, files);
+            value.GetProperty("revision").GetString()!, assetsDirectory, assets, files);
     }
 }
 
