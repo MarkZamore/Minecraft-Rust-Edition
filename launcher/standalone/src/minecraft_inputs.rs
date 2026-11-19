@@ -57,19 +57,25 @@ impl InputFile {
     }
 }
 
-pub(super) fn acquire(pins: &Pins, cache: &Path, source: Option<Minecraft>) -> Result<Minecraft> {
+pub(super) fn acquire(
+    pins: &Pins,
+    cache: &Path,
+    source: Option<MinecraftSource>,
+) -> Result<Minecraft> {
     let root = child(cache, "minecraft")?;
     let version_dir = child(&root, &format!("versions/{}", pins.version))?;
     create_unlinked_dir(&version_dir)?;
     let manifest = child(&version_dir, &format!("{}.json", pins.version))?;
-    let expected = source
-        .as_ref()
-        .map(|input| hash::<Sha1>(&input.manifest))
-        .transpose()?
-        .unwrap_or_else(|| pins.manifest_sha1.clone());
+    let approved = source.as_ref().and_then(|source| {
+        source
+            .manifest_sha1
+            .as_deref()
+            .map(|sha1| (&source.files.manifest, sha1))
+    });
+    let expected = approved.map_or(pins.manifest_sha1.as_str(), |(_, sha1)| sha1);
     if !manifest.is_file() || hash::<Sha1>(&manifest)? != expected {
-        if let Some(input) = &source {
-            fs::copy(&input.manifest, &manifest)?;
+        if let Some((source_manifest, _)) = approved {
+            fs::copy(source_manifest, &manifest)?;
             ensure!(
                 hash::<Sha1>(&manifest)? == expected,
                 "Minecraft manifest changed while copying"
@@ -79,7 +85,7 @@ pub(super) fn acquire(pins: &Pins, cache: &Path, source: Option<Minecraft>) -> R
                 "https://piston-meta.mojang.com/v1/packages/{expected}/{}.json",
                 pins.version
             );
-            download::<Sha1>(&url, None, &expected, &manifest)?;
+            download::<Sha1>(&url, None, expected, &manifest)?;
         }
     }
     let version: Value = serde_json::from_reader(File::open(&manifest)?)?;
@@ -103,10 +109,11 @@ pub(super) fn acquire(pins: &Pins, cache: &Path, source: Option<Minecraft>) -> R
                 ),
         "Minecraft client does not match Horizon's pin"
     );
+    let source = source.as_ref().map(|source| &source.files);
     let mut files = vec![InputFile {
         artifact: client,
         target: input.client.clone(),
-        source: source.as_ref().map(|input| input.client.clone()),
+        source: source.map(|input| input.client.clone()),
     }];
     // These entries are authenticated by the pinned version JSON. Fetching the
     // listed artifacts also covers the preparer's platform-specific library selection.
@@ -127,7 +134,6 @@ pub(super) fn acquire(pins: &Pins, cache: &Path, source: Option<Minecraft>) -> R
             artifact,
             target: child(&input.libraries, relative)?,
             source: source
-                .as_ref()
                 .map(|input| child(&input.libraries, relative))
                 .transpose()?,
         });
@@ -141,7 +147,6 @@ pub(super) fn acquire(pins: &Pins, cache: &Path, source: Option<Minecraft>) -> R
         artifact: serde_json::from_value(index.clone())?,
         target: child(&input.assets, &relative)?,
         source: source
-            .as_ref()
             .map(|input| child(&input.assets, &relative))
             .transpose()?,
     };
@@ -188,7 +193,6 @@ pub(super) fn acquire(pins: &Pins, cache: &Path, source: Option<Minecraft>) -> R
             },
             target: child(&input.assets, &relative)?,
             source: source
-                .as_ref()
                 .map(|input| child(&input.assets, &relative))
                 .transpose()?,
         });
@@ -228,6 +232,86 @@ pub(super) fn acquire(pins: &Pins, cache: &Path, source: Option<Minecraft>) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unrecognized_shared_manifest_can_still_donate_verified_inputs() -> Result<()> {
+        let root = env::temp_dir().join(format!("lanmc-minecraft-donor-{}", std::process::id()));
+        fs::create_dir(&root)?;
+        let result = (|| {
+            let cache = root.join("cache");
+            let shared = root.join("shared");
+            let client = b"pinned client";
+            let library = b"pinned library";
+            let object = b"pinned asset";
+            let client_sha1 = format!("{:x}", Sha1::digest(client));
+            let library_sha1 = format!("{:x}", Sha1::digest(library));
+            let object_sha1 = format!("{:x}", Sha1::digest(object));
+            let index = serde_json::to_vec(&serde_json::json!({
+                "objects": { "asset": { "hash": object_sha1, "size": object.len() } }
+            }))?;
+            let index_sha1 = format!("{:x}", Sha1::digest(&index));
+            let version = serde_json::to_vec(&serde_json::json!({
+                "id": "26.3",
+                "downloads": { "client": {
+                    "url": format!("https://piston-data.mojang.com/v1/objects/{client_sha1}/client.jar"),
+                    "sha1": client_sha1, "size": client.len()
+                } },
+                "libraries": [{ "downloads": { "artifact": {
+                    "path": "fixture/library.jar",
+                    "url": "https://libraries.minecraft.net/fixture/library.jar",
+                    "sha1": library_sha1, "size": library.len()
+                } } }],
+                "assetIndex": {
+                    "id": "34",
+                    "url": format!("https://piston-meta.mojang.com/v1/packages/{index_sha1}/34.json"),
+                    "sha1": index_sha1, "size": index.len()
+                }
+            }))?;
+            let pins = Pins {
+                version: "26.3".into(),
+                manifest_sha1: format!("{:x}", Sha1::digest(&version)),
+                accepted_manifest_sha1: Vec::new(),
+                client_sha1,
+                server_sha1: String::new(),
+                java_major: 25,
+            };
+            let write_file = |path: &Path, bytes: &[u8]| -> Result<()> {
+                fs::create_dir_all(path.parent().context("Missing fixture parent")?)?;
+                fs::write(path, bytes)?;
+                Ok(())
+            };
+            let manifest = "versions/26.3/26.3.json";
+            let foreign_manifest = b"{\"id\":\"26.3\",\"metadata\":\"republished\"}";
+            let object_path = format!("objects/{}/{object_sha1}", &object_sha1[..2]);
+            write_file(&shared.join(manifest), foreign_manifest)?;
+            write_file(&shared.join("versions/26.3/26.3.jar"), client)?;
+            write_file(&shared.join("libraries/fixture/library.jar"), library)?;
+            write_file(&shared.join("assets/indexes/34.json"), &index)?;
+            write_file(&shared.join("assets").join(&object_path), object)?;
+            write_file(&cache.join("minecraft").join(manifest), &version)?;
+
+            let donor = select_minecraft_source(&pins, [shared.clone()], false)?
+                .context("Expected optional donor despite the newer manifest")?;
+            assert!(donor.manifest_sha1.is_none());
+            let prepared = acquire(&pins, &cache, Some(donor))?;
+            assert_eq!(fs::read(prepared.manifest)?, version);
+            assert_eq!(fs::read(prepared.client)?, client);
+            assert_eq!(
+                fs::read(prepared.libraries.join("fixture/library.jar"))?,
+                library
+            );
+            assert_eq!(fs::read(prepared.assets.join("indexes/34.json"))?, index);
+            assert_eq!(fs::read(prepared.assets.join(object_path))?, object);
+            assert_eq!(fs::read(shared.join(manifest))?, foreign_manifest);
+            let rejected = select_minecraft_source(&pins, [shared], true)
+                .err()
+                .context("Explicit unverified manifests must still be rejected")?;
+            assert!(rejected.to_string().contains("--minecraft-dir"));
+            Ok(())
+        })();
+        fs::remove_dir_all(&root)?;
+        result
+    }
 
     #[test]
     fn repair_and_retry_preserve_sources_and_reject_unverified_downloads() -> Result<()> {

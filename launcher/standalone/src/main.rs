@@ -66,6 +66,11 @@ struct Minecraft {
     assets: PathBuf,
 }
 
+struct MinecraftSource {
+    files: Minecraft,
+    manifest_sha1: Option<String>,
+}
+
 fn main() -> ExitCode {
     match run() {
         Ok(code) => ExitCode::from(u8::try_from(code).unwrap_or(1)),
@@ -359,27 +364,58 @@ fn find_minecraft(pins: &Pins, explicit: Option<PathBuf>, cache: &Path) -> Resul
         roots.extend(env::var_os("APPDATA").map(|path| PathBuf::from(path).join(".minecraft")));
         roots
     };
+    let source = select_minecraft_source(pins, candidates, required)?;
+    minecraft_inputs::acquire(pins, cache, source)
+}
+
+fn select_minecraft_source(
+    pins: &Pins,
+    candidates: impl IntoIterator<Item = PathBuf>,
+    required: bool,
+) -> Result<Option<MinecraftSource>> {
+    let mut fallback = None;
     for root in candidates {
-        let dir = root.join("versions").join(&pins.version);
-        let input = Minecraft {
-            manifest: dir.join(format!("{}.json", pins.version)),
-            client: dir.join(format!("{}.jar", pins.version)),
-            libraries: root.join("libraries"),
-            assets: root.join("assets"),
+        let version = format!("versions/{0}/{0}", pins.version);
+        let input = (|| -> Result<Minecraft> {
+            Ok(Minecraft {
+                manifest: child(&root, &format!("{version}.json"))?,
+                client: child(&root, &format!("{version}.jar"))?,
+                libraries: child(&root, "libraries")?,
+                assets: child(&root, "assets")?,
+            })
+        })();
+        let input = match input {
+            Ok(input) => input,
+            Err(error) if required => return Err(error),
+            Err(_) => continue,
         };
-        if !input.manifest.is_file()
-            || !input.client.is_file()
-            || !input.libraries.is_dir()
-            || !input.assets.is_dir()
+        if input.manifest.is_file()
+            && input.client.is_file()
+            && input.libraries.is_dir()
+            && input.assets.is_dir()
         {
-            continue;
+            let manifest_sha1 = hash::<Sha1>(&input.manifest)?;
+            if (pins.manifest_sha1 == manifest_sha1
+                || pins.accepted_manifest_sha1.contains(&manifest_sha1))
+                && hash::<Sha1>(&input.client)? == pins.client_sha1
+            {
+                return Ok(Some(MinecraftSource {
+                    files: input,
+                    manifest_sha1: Some(manifest_sha1),
+                }));
+            }
         }
-        let manifest_hash = hash::<Sha1>(&input.manifest)?;
-        if (pins.manifest_sha1 == manifest_hash
-            || pins.accepted_manifest_sha1.contains(&manifest_hash))
-            && hash::<Sha1>(&input.client)? == pins.client_sha1
+
+        // A newer shared version manifest is not trusted. Its files are still
+        // useful individually once the pinned manifest proves their hashes.
+        if !required
+            && fallback.is_none()
+            && (input.client.is_file() || input.libraries.is_dir() || input.assets.is_dir())
         {
-            return minecraft_inputs::acquire(pins, cache, Some(input));
+            fallback = Some(MinecraftSource {
+                files: input,
+                manifest_sha1: None,
+            });
         }
     }
     ensure!(
@@ -387,7 +423,7 @@ fn find_minecraft(pins: &Pins, explicit: Option<PathBuf>, cache: &Path) -> Resul
         "--minecraft-dir does not contain verified Minecraft {} files",
         pins.version
     );
-    minecraft_inputs::acquire(pins, cache, None)
+    Ok(fallback)
 }
 
 fn server_jar(
