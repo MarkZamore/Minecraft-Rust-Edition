@@ -48,6 +48,7 @@ SOURCE_NOTICE_PATHS = (
 )
 RECIPE_FILES = (
     "apply_horizon_overlay.py",
+    "server_title_input_overlay.py",
     "horizon-cargo.lock",
     "lanmc_presentation.rs",
     "lanmc_skins.rs",
