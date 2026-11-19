@@ -2,9 +2,16 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Minecraft;
+
+if (args is ["--install-for-launcher", var launcherWorkspace, var distribution, var registeredRun])
+{
+    await InstallForLauncher(launcherWorkspace, distribution, registeredRun);
+    return;
+}
 
 if (args.Length != 4)
     throw new ArgumentException("Usage: NativeUpdateQa <launcher-workspace> <old-dist> <new-dist> <new-artifacts-output>");
@@ -142,6 +149,7 @@ try
         && updated.FilesChanged == remaining.Count + remainingRemoved && updated.BytesDownloaded == downloadBytes
         && !PortablePackSyncService.IsUpdatePending(canonical), "Retry must converge to the exact new revision.");
     VerifyFiles(canonical, target);
+    report["nativeWindowsX64Images"] = VerifyWindowsX64Images(canonical, target);
     await instances.PrepareAsync(pack);
     Check(!Directory.Exists(Path.Combine(game, "native")), "Instance preparation copied the native payload.");
     foreach (var (relative, originalTime) in unchanged)
@@ -196,6 +204,80 @@ finally
     }
 }
 
+static async Task InstallForLauncher(string launcherWorkspace, string distribution, string registeredRun)
+{
+    var workspace = Path.TrimEndingDirectorySeparator(Path.GetFullPath(launcherWorkspace));
+    var artifactRoot = Path.Combine(workspace, "artifacts", "agent-runs");
+    var run = Path.TrimEndingDirectorySeparator(Path.GetFullPath(registeredRun));
+    Check(string.Equals(Path.GetDirectoryName(run), artifactRoot, StringComparison.OrdinalIgnoreCase) &&
+        File.Exists(Path.Combine(run, "RUN.json")), "Use a registered artifacts/agent-runs child directory.");
+
+    var release = Release.Read(distribution);
+    var repository = (release.Id, release.RelativePath) switch
+    {
+        ("minecraft-9", "Minecraft Rust Edition") => "Minecraft-Rust-Edition",
+        ("minecraft-10", "Minecraft Rust Mods") => "Minecraft-Rust-Mods",
+        _ => throw new InvalidDataException("Expected one of the two Rust pack distributions.")
+    };
+    var alias = release.RelativePath + " QA";
+    var hash = Hash(release.Manifest);
+    release.VerifyAssets();
+
+    var paths = new AppPaths(Path.Combine(run, "launcher-installation"));
+    var pack = paths.CombineUnderPacks(alias);
+    var resultPath = Path.Combine(run, release.Id + "-installed.json");
+    CheckOrdinaryPath(workspace, pack);
+    Check(!Directory.Exists(pack) && !File.Exists(pack) && !File.Exists(resultPath),
+        "The disposable pack or its report already exists.");
+
+    var json = new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true };
+    var source = new PackSyncSource("MarkZamore", repository, "pack-latest");
+    var marker = Path.Combine(pack, PortablePackSyncService.SourceMarkerFileName);
+    try
+    {
+        paths.Ensure();
+        Directory.CreateDirectory(pack);
+        File.WriteAllText(marker, JsonSerializer.Serialize(new { schemaVersion = 1, source.Owner, source.Repo, source.Tag }, json));
+        using var handler = new ReleaseHandler(release, source);
+        using var http = new HttpClient(handler);
+        var sync = new PortablePackSyncService(paths, new Logger(paths.LogFile), http);
+        var installed = await sync.SyncAsync(alias, null, CancellationToken.None);
+        Check(installed.Outcome == PackSyncOutcome.Installed && installed.Revision == release.Revision,
+            "The candidate distribution did not install.");
+        VerifyFiles(pack, release);
+        var nativeWindowsX64Images = VerifyWindowsX64Images(pack, release);
+        release.VerifyAssets();
+        Check(Hash(release.Manifest) == hash, "The candidate manifest changed during installation.");
+
+        // In the normal WPF launcher the alias is a personal build and uses the
+        // verified receipt above. It never requests the older published release.
+        File.Delete(marker);
+        var result = JsonSerializer.Serialize(new
+        {
+            pack = release.RelativePath,
+            alias,
+            release.Revision,
+            manifestSha256 = hash,
+            assets = release.Assets.Values.Select(asset => new { asset.Name, asset.SizeBytes, asset.Sha256 }),
+            managedFiles = release.Files.Count,
+            nativeWindowsX64Images,
+            clientSha256 = release.Files["native/horizon-client.exe"].Sha256,
+            bootstrapSha256 = release.Files["native/launch-rust-edition.exe"].Sha256
+        }, json);
+        File.WriteAllText(resultPath, result);
+        Console.WriteLine(result);
+    }
+    catch
+    {
+        if (Directory.Exists(pack))
+        {
+            CheckOrdinaryPath(workspace, pack);
+            DeleteFixture(pack);
+        }
+        throw;
+    }
+}
+
 static void Check(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
@@ -223,6 +305,26 @@ static void VerifyFiles(string root, Release release)
         var path = Path.Combine(root, file.Path);
         Check(new FileInfo(path).Length == file.SizeBytes && Hash(path) == file.Sha256, "Wrong installed bytes: " + file.Path);
     }
+}
+
+static string[] VerifyWindowsX64Images(string root, Release release)
+{
+    var paths = release.Files.Keys
+        .Where(path => path.StartsWith("native/", StringComparison.OrdinalIgnoreCase) &&
+            (Path.GetExtension(path).Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
+             Path.GetExtension(path).Equals(".dll", StringComparison.OrdinalIgnoreCase)))
+        .Order(StringComparer.Ordinal).ToArray();
+    Check(paths.Length > 0, "Expected installed native Windows images.");
+    foreach (var path in paths)
+    {
+        using var reader = new PEReader(File.OpenRead(Path.Combine(root, path)));
+        var headers = reader.PEHeaders;
+        var library = Path.GetExtension(path).Equals(".dll", StringComparison.OrdinalIgnoreCase);
+        Check(headers.CoffHeader.Machine == Machine.Amd64 && headers.PEHeader?.Magic == PEMagic.PE32Plus &&
+            headers.CoffHeader.Characteristics.HasFlag(Characteristics.Dll) == library,
+            "Unexpected Windows x64 ABI for installed file: " + path);
+    }
+    return paths;
 }
 
 static bool MatchesFile(string root, ManagedFile file)

@@ -23,7 +23,7 @@ STEAM_LOCK = ROOT / "tools/steam-lock.json"
 SIGNATURES = ROOT / "tools/upstream"
 RUNTIME_ARCHIVE = "horizon-windows-x64.zip"
 SOURCE_ARCHIVE = "horizon-source.tar.gz"
-ONBOARDING_SOURCE_SHA256 = "f395c83abe16e2c976630430c1935826d1e07b5edc3450eccb021e2b468bdc4e"
+ONBOARDING_SOURCE_SHA256 = "7a7b45840d477637596c66766af56819d34ec556a749f2335163c0fe74d1d443"
 RUNTIME_PREFIX = "horizon-windows-x64/"
 SUPPORT_PATHS = (
     "crates/horizon-prepare/",
@@ -32,9 +32,13 @@ SUPPORT_PATHS = (
 )
 RUNTIME_FILES = {
     "horizon-client.exe", "horizon-prepare.exe", "LICENSE", "research-lock.json",
+    "horizon-wasm-std.wasm", "dxcompiler.dll", "DXC-LICENSE-LLVM.txt",
+    "DXC-LICENSE-MS.txt", "DXC-NOTICE.txt",
 }
 SOURCE_NOTICE_PATHS = (
     "THIRD_PARTY_NOTICES.md",
+    "LICENSES/GPL-3.0.txt",
+    "LICENSES/MIT.txt",
     "third_party/naga/LICENSE.APACHE",
     "third_party/naga/LICENSE.MIT",
     "third_party/wgpu-hal/LICENSE.APACHE",
@@ -117,16 +121,9 @@ def verify_onboarding_narrator(source, commit):
     raise ValueError("Horizon onboarding source changed. Review the inactive Narrator before staging.")
 
 
-def verify_upstream(archives, openssl, scratch):
-    lock = read_json(LOCK)
-    commit = lock["commit"]
-    if not re.fullmatch(r"[0-9a-f]{40}", commit):
-        raise ValueError("Expected an exact upstream commit")
-
-    sums = (SIGNATURES / "SHA256SUMS").read_bytes()
-    signed = f"horizon release {lock['signedTag']}\n".encode("ascii") + sums
-    signature = base64.b64decode((SIGNATURES / "SHA256SUMS.sig").read_bytes().strip(), validate=True)
-    key = base64.b64decode(lock["ed25519Key"], validate=True)
+def verify_release_signature(sums, tag, filename, key, openssl, scratch):
+    signed = f"horizon release {tag}\n".encode("ascii") + sums
+    signature = base64.b64decode((SIGNATURES / filename).read_bytes().strip(), validate=True)
     if len(signature) != 64 or len(key) != 32:
         raise ValueError("Malformed Ed25519 key or signature")
     with tempfile.TemporaryDirectory(dir=scratch) as temporary:
@@ -138,6 +135,22 @@ def verify_upstream(archives, openssl, scratch):
              "-in", str(paths[0]), "-inkey", str(paths[1]), "-sigfile", str(paths[2])],
             check=True,
         )
+
+
+def verify_upstream(archives, openssl, scratch):
+    lock = read_json(LOCK)
+    commit = lock["commit"]
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise ValueError("Expected an exact upstream commit")
+
+    tag = lock["signedTag"]
+    version = lock["version"]
+    if not re.fullmatch(rf"{re.escape(tag)}-[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}-{commit[:7]}", version):
+        raise ValueError("Upstream release version does not identify the pinned commit")
+    sums = (SIGNATURES / "SHA256SUMS").read_bytes()
+    key = base64.b64decode(lock["ed25519Key"], validate=True)
+    verify_release_signature(sums, tag, "SHA256SUMS.sig", key, openssl, scratch)
+    verify_release_signature(sums, version, "SHA256SUMS.v2.sig", key, openssl, scratch)
 
     signed_hashes = {}
     for line in sums.decode("ascii").splitlines():

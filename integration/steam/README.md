@@ -1,6 +1,6 @@
 # Слой Steam для Horizon
 
-Слой привязан к Nightly `2ebf00a0281c592f79191e76fce0e7d522c6f425` и исходникам транспорта e4steam `89b0ce80b31366601906e69ba5fb0c4a323ec9c6`. Он заменяет публикацию интегрированного мира и автоматический поиск через LAN на Steam при запуске с профилем LANMinecraft. Ручной список серверов остаётся доступен. Файлы мира и личные настройки принадлежат штатным механизмам Horizon.
+Слой привязан к Nightly `f00125f61f794aaa3d4e950d301f353b35b6ee3d` и исходникам транспорта e4steam `89b0ce80b31366601906e69ba5fb0c4a323ec9c6`. Он заменяет публикацию интегрированного мира и автоматический поиск через LAN на Steam при запуске с профилем LANMinecraft. Ручной список серверов остаётся доступен. Файлы мира и личные настройки принадлежат штатным механизмам Horizon.
 
 Кнопка «Открыть для сети» в меню паузы сразу публикует мир и возвращает в игру. Чат показывает числовой локальный порт с пояснением, что это внутренний порт Steam. После подтверждения Steam появляются копируемый адрес `<lobby-id>.steam`, «Пригласить друзей (Steam)» и «Закрыть общий доступ», а при следующем открытии меню на месте кнопки появляется «Жалобы». Команды гостей наследуют разрешение команд владельца мира; сервер сохраняет штатную проверку прав. Действия чата действуют только для текущей публикации у владельца. При ошибке публикации кнопку можно нажать снова. Гость видит настоящее название мира и ник хозяина в списке «Сетевая игра». Локальный TCP-порт ограничен loopback. Подключение допускается после подтверждения Steam и одноразовой привязки к соединению. Имя и UUID гостя определяются по этой привязке. Скины загружаются из локального реестра лаунчера с проверкой размера, SHA256 и формата.
 
@@ -16,18 +16,18 @@
 
 ## Сборка Windows x64
 
-Понадобятся Python 3.12+, Rust 1.98.1 `x86_64-pc-windows-msvc`, MSVC и Windows SDK. Поместите проверенный `horizon-source.tar.gz`, распакованное дерево `$source` и `$target` в текущий зарегистрированный стенд LANMinecraft. `$steamTransport` указывает на `source/native` из закреплённого checkout e4steam, `$steamDll` на Valve `steam_api64.dll` из `steamworks-sys` 0.13.0. Сверьте подпись Valve и SHA256 в `tools/steam-lock.json`. Целевой каталог Cargo держите отдельно от распакованных исходников.
+Понадобятся Python 3.12+, Rust 1.99.1 `x86_64-pc-windows-msvc`, MSVC и Windows SDK. Поместите проверенный `horizon-source.tar.gz`, распакованное дерево `$source` и `$target` в текущий зарегистрированный стенд LANMinecraft. `$steamTransport` указывает на `source/native` из закреплённого checkout e4steam, `$steamDll` на Valve `steam_api64.dll` из `steamworks-sys` 0.13.0. Сверьте подпись Valve и SHA256 в `tools/steam-lock.json`. Целевой каталог Cargo держите отдельно от распакованных исходников.
 
 ```powershell
 python integration/steam/apply_horizon_overlay.py --source-archive $archive `
     --source $source --steam-transport $steamTransport
 $env:CARGO_TARGET_DIR = $target
 $env:RUSTFLAGS = '-C target-feature=+crt-static'
-$env:HORIZON_VERSION = 'nightly-2026-11-07-2ebf00a'
-$env:HORIZON_NIGHTLY = '2026-11-07 2ebf00a'
-cargo build --locked --release --manifest-path (Join-Path $source 'Cargo.toml') `
-    -p horizon-client --bin horizon-client
-$client = Join-Path $target 'release/horizon-client.exe'
+$env:HORIZON_VERSION = 'nightly-2026-11-19-f00125f'
+$env:HORIZON_NIGHTLY = '2026-11-19 f00125f'
+cargo +1.99.1 build --locked --release --manifest-path (Join-Path $source 'Cargo.toml') `
+    --target x86_64-pc-windows-msvc -p horizon-game --bin horizon-client
+$client = Join-Path $target 'x86_64-pc-windows-msvc/release/horizon-client.exe'
 python integration/steam/apply_horizon_overlay.py --source-archive $archive `
     --source $source --steam-transport $steamTransport --receipt $receipt `
     --client $client --steam-dll $steamDll

@@ -1,4 +1,4 @@
-"""Type-check the notice backend against the exact built WGPU and upload APIs.
+"""Type-check the notice backend against the exact GPU and HDR APIs.
 
 This emits Rust metadata only. It neither builds the game nor creates a GPU,
 window, notices session or user profile. Use an output in a registered task run.
@@ -17,7 +17,9 @@ def main():
     parser.add_argument("--deps", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
-    upload = (args.upstream / "crates/horizon-client-render/src/gfx/upload.rs").resolve(strict=True)
+    graphics = args.upstream / "crates/horizon-client-render/src/gfx"
+    upload = (graphics / "upload.rs").resolve(strict=True)
+    coverage = (graphics / "hud_coverage.rs").resolve(strict=True)
     backend = (Path(__file__).resolve().parents[1] / "integration/steam/lanmc_notices.rs").resolve(strict=True)
     platform = backend.parent / "notice-platform/src/lib.rs"
     engine_lib = args.upstream / "crates/horizon-client-render/src/lib.rs"
@@ -37,10 +39,11 @@ def main():
     (output / "platform-compiler.log").write_text(platform_result.stdout + platform_result.stderr, encoding="utf-8")
     if platform_result.returncode:
         raise SystemExit(platform_result.stderr)
-    # #[path] uses exact source files, including the real staging upload API.
+    # #[path] links the exact upload and HDR coverage APIs from the engine.
     harness.write_text(
         "#![allow(dead_code)]\n#![forbid(unsafe_code)]\nmod gfx {\n"
         + f"#[path = {json.dumps(upload.as_posix())}] pub mod upload;\n"
+        + f"#[path = {json.dumps(coverage.as_posix())}] mod hud_coverage;\n"
         + f"#[path = {json.dumps(backend.as_posix())}] mod notices;\n}}\n",
         encoding="utf-8",
     )
@@ -50,7 +53,7 @@ def main():
                  str(harness), "-o", str(metadata)]
     selected = {"lanmc_notice_platform": {"path": str(platform_library),
                 "sha256": hashlib.sha256(platform_library.read_bytes()).hexdigest()}}
-    for name in ("wgpu", "bytemuck"):
+    for name in ("wgpu", "bytemuck", "naga"):
         libraries = list(deps.glob(f"lib{name}-*.rlib"))
         if not libraries:
             raise ValueError("Missing exact built dependency: " + name)
@@ -62,12 +65,13 @@ def main():
     (output / "compiler.log").write_text(result.stdout + result.stderr, encoding="utf-8")
     report = {"status": "PASS" if result.returncode == 0 else "FAIL",
               "scope": "Rust metadata/type check; no game/GPU launch",
-              "source": str(backend), "upstreamUpload": str(upload), "libraries": selected}
+              "source": str(backend), "upstreamUpload": str(upload),
+              "upstreamHudCoverage": str(coverage), "libraries": selected}
     report["sources"] = {
         str(path): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in (backend, *(backend.with_name(name) for name in (
             "lanmc_notice_protocol.rs", "lanmc_notice_state.rs", "lanmc_notice_raster.rs",
-            "lanmc_notice_render.rs", "lanmc_notice_layout.rs")), upload, platform, engine_lib)
+            "lanmc_notice_render.rs", "lanmc_notice_layout.rs")), upload, coverage, platform, engine_lib)
     }
     report["rustc"] = subprocess.check_output(["rustc", "--version"], text=True).strip()
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

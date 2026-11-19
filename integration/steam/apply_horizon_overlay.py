@@ -15,9 +15,9 @@ HERE = Path(__file__).resolve().parent
 NOTICE_SPEC = importlib.util.spec_from_file_location("edition_notice_overlay", HERE / "notice_overlay.py")
 NOTICE_OVERLAY = importlib.util.module_from_spec(NOTICE_SPEC)
 NOTICE_SPEC.loader.exec_module(NOTICE_OVERLAY)
-COMMIT = "2ebf00a0281c592f79191e76fce0e7d522c6f425"
-SOURCE_SHA = "90479a75b886e0b39663c1116c0424e90d0d0ea4e9633668c1c3fed09bc7d645"
-SOURCE_SIZE = 47_015_509
+COMMIT = "f00125f61f794aaa3d4e950d301f353b35b6ee3d"
+SOURCE_SHA = "25bc638f5e74fd0ff5a3c3c2d6da05869fcc18b267e10600c7f794640afe6633"
+SOURCE_SIZE = 59_593_320
 TRANSPORT_COMMIT = "89b0ce80b31366601906e69ba5fb0c4a323ec9c6"
 TRANSPORT_SHA = "f0d3f400397aaae5f56b508575019dd7fbed30e22dbf60cd6a67cd2cce505033"
 STEAM_DLL_SIZE = 317_080
@@ -29,16 +29,20 @@ TRANSPORT = "crates/lanmc-steam-native/"
 SOURCE_PATHS = {
     "Cargo.toml",
     "Cargo.lock",
+    "crates/horizon-game/Cargo.toml",
+    "crates/horizon-game/src/main.rs",
     CLIENT_LIB + "Cargo.toml",
-    CLIENT + "build.rs",
+    "packaging/windows/exe.rs",
     *NOTICE_OVERLAY.SOURCES,
     *(CLIENT + "src/" + path for path in (
-        "entry.rs", "lib.rs", "client_lib.rs", "game.rs", "game/no_resources.rs",
-        "game/split/windows.rs", "game/integrated.rs", "game/lan.rs",
-        "game/remote.rs", "game/screens.rs", "game/friends.rs", "game/dedicated.rs",
-        "game/lan_screen.rs", "game/chat.rs", "lan/mod.rs",
+        "entry.rs", "lib.rs", "client_lib.rs", "game.rs", "game/runtime/no_resources.rs",
+        "game/runtime/split/windows.rs", "game/world/integrated.rs", "game/network/lan/mod.rs",
+        "game/network/remote/mod.rs", "game/interface/screens.rs", "game/network/friends.rs", "game/interface/dedicated/mod.rs",
+        "game/network/lan_screen.rs", "game/interface/chat.rs", "lan/mod.rs",
         "lan/conn.rs", "lan/discovery.rs", "multiplayer.rs", "title.rs", "title/tests.rs",
-        "game/ui_control.rs",
+        "game/runtime/ui_control.rs", "game/runtime/launch_options.rs",
+        "game/runtime/loading_screen.rs", "game/runtime/window_handler.rs",
+        "game/interface/screen_build.rs",
     )),
 }
 
@@ -91,24 +95,20 @@ def changes(inputs, transport):
          "[dependencies]\n",
          '[dependencies]\nlanmc_steam_native = { path = "../lanmc-steam-native" }\n')
     src("lib.rs", "pub mod entry;", "pub mod entry;\nmod lanmc_skins;\nmod lanmc_presentation;")
-    edit(patched, CLIENT + "build.rs", '.join("packaging/icons/horizon.ico");',
+    edit(patched, "packaging/windows/exe.rs", '.join("packaging/icons/horizon.ico");',
          '.join("packaging/icons/rust-edition.ico");')
-    edit(patched, CLIENT + "build.rs",
-         "//! Embeds Horizon's icon (`packaging/icons/horizon.ico`) in the Windows executables, as icon",
-         "//! Embeds the pack icon (`packaging/icons/rust-edition.ico`) in the Windows executables, as icon")
-    for path, count in (("game.rs", 2), ("game/no_resources.rs", 1)):
-        src(path, 'horizon_client::window::with_horizon_icon(\n'
-            '            Window::default_attributes().with_title("Horizon"),\n        )',
+    for path in ("game/runtime/loading_screen.rs", "game/runtime/window_handler.rs", "game/runtime/no_resources.rs"):
+        src(path, 'horizon_client::window::with_icon(Window::default_attributes().with_title("Horizon"))',
             'crate::lanmc_presentation::with_icon(\n'
             '            Window::default_attributes().with_title(crate::lanmc_presentation::title("Horizon")),\n'
-            '        )', count=count)
-    src("game/split/windows.rs", "horizon_client::window::with_horizon_icon(Window::default_attributes())",
+            '        )')
+    src("game/runtime/split/windows.rs", "horizon_client::window::with_icon(Window::default_attributes())",
         "crate::lanmc_presentation::with_icon(Window::default_attributes())")
-    src("game/split/windows.rs", '.with_title(format!("Horizon {key}"))',
+    src("game/runtime/split/windows.rs", '.with_title(format!("Horizon {key}"))',
         '.with_title(crate::lanmc_presentation::title(format!("Horizon {key}")))')
-    src("game/split/windows.rs", '.with_title("Horizon")',
+    src("game/runtime/split/windows.rs", '.with_title("Horizon")',
         '.with_title(crate::lanmc_presentation::title("Horizon"))')
-    src("game/split/windows.rs", "    pub(super) fn title(&self, k: usize) -> String {",
+    src("game/runtime/split/windows.rs", "    pub(super) fn title(&self, k: usize) -> String {",
         """    pub(super) fn title(&self, k: usize) -> String {
         if let Some(name) = crate::lanmc_presentation::name() {
             return name.to_owned();
@@ -144,12 +144,28 @@ def changes(inputs, transport):
         '''fn ping_all(servers: &[ServerEntry], pings: &Pings, icons: &Icons) {''')
     src("multiplayer.rs", "        let (pings, icons, file) = (pings.clone(), icons.clone(), file.to_owned());",
         "        let (pings, icons) = (pings.clone(), icons.clone());")
-    src("multiplayer.rs", '''                            let icon = pixels.map(|_| encoded);
+    src("multiplayer.rs", '''                        // A new favicon replaces the saved one (an invalid one
+                        // clears it) and servers.dat is saved again.
+                        if let Some(png) = favicon_bytes(&json) {
+                            let encoded = crate::lan::base64(&png);
+                            let pixels = icon_pixels(&png);
+                            match &pixels {
+                                Some(p) => icons.lock().unwrap().insert(address.clone(), p.clone()),
+                                None => icons.lock().unwrap().remove(&address),
+                            };
+                            // ServerData.validateIcon: up to 1024x1024 is kept,
+                            // though only a 64x64 icon is drawn.
+                            let icon = valid_icon(&png).then_some(encoded);
                             if icon != saved {
                                 save_icon(&file, &address, icon);
-                            }''', '''                            // Viewing a saved list never rewrites user-owned NBT.
-                            // Keep status favicons in memory until the player edits or connects.
-                            let _ = (pixels, encoded);''')
+                            }
+                        }''', '''                        // Status favicons stay in the view until an explicit edit or connection.
+                        if let Some(png) = favicon_bytes(&json) {
+                            match icon_pixels(&png) {
+                                Some(p) => icons.lock().unwrap().insert(address.clone(), p),
+                                None => icons.lock().unwrap().remove(&address),
+                            };
+                        }''')
     src("multiplayer.rs", "const HEADER: f32 = 33.0;",
         "const VIEW_Y: f32 = 33.0;\nconst HEADER: f32 = VIEW_Y + 24.0;")
     src("multiplayer.rs", "((HEADER - 9.0) / 2.0).floor(),", "((VIEW_Y - 9.0) / 2.0).floor(),")
@@ -205,10 +221,10 @@ def changes(inputs, transport):
                 Some(40),''')
     src("multiplayer.rs", "                if let Some((address, lan)) = selected.and_then(|i| entry_address(servers, lan, i))",
         "                if let Some((address, lan)) = selected_entry_address(servers, lan, *selected, selected_steam_address.as_deref())")
-    src("multiplayer.rs", "            (Self::List { .. }, Some(41)) => {", '''            (Self::List { .. }, Some(48)) => *self = Self::list(saves),
-            (Self::List { .. }, Some(49)) => *self = Self::list_view(saves, true),
+    src("multiplayer.rs", "            (Self::List { .. }, Some(41)) => {", '''            (Self::List { .. }, Some(48)) => return Outcome::Open(Box::new(Self::list(saves))),
+            (Self::List { .. }, Some(49)) => return Outcome::Open(Box::new(Self::list_view(saves, true))),
             (Self::List { .. }, Some(41)) => {''')
-    src("multiplayer.rs", "            (Self::List { .. }, Some(45)) => *self = Self::list(saves),",
+    src("multiplayer.rs", "            (Self::List { .. }, Some(45)) => return Outcome::Open(Box::new(Self::list(saves))),",
         "            (Self::List { .. }, Some(45)) => self.refresh(saves),")
     src("multiplayer.rs", '''                    scroll,
                     held,
@@ -233,14 +249,17 @@ def changes(inputs, transport):
                     }
                     *selected_steam_address = lan.then(|| address.clone());
                     *selected = Some(index);''')
-    src("multiplayer.rs", '''                let _ = servers::save(&servers_file(saves), &list);
-                *self = Self::list(saves);''', '''                let updated = (*index).filter(|&i| i < list.len()).or_else(|| list.len().checked_sub(1));
-                let _ = servers::save(&servers_file(saves), &list);
-                *self = Self::list_view(saves, true);
-                if let Self::List { selected, .. } = self { *selected = updated; }''')
+    src("multiplayer.rs", '''                let _ = servers::save_all(&servers_file(saves), &list, &hidden);
+                drop(guard);
+                return Outcome::Open(Box::new(Self::list(saves)));''', '''                let updated = (*index).filter(|&i| i < list.len()).or_else(|| list.len().checked_sub(1));
+                let _ = servers::save_all(&servers_file(saves), &list, &hidden);
+                drop(guard);
+                let mut saved = Self::list_view(saves, true);
+                if let Self::List { selected, .. } = &mut saved { *selected = updated; }
+                return Outcome::Open(Box::new(saved));''')
     src("multiplayer.rs", '''            (
                 Self::Edit { .. }
-                | Self::Direct { .. }''', '''            (Self::Edit { .. }, Some(51)) => *self = Self::list_view(saves, true),
+                | Self::Direct { .. }''', '''            (Self::Edit { .. }, Some(51)) => return Outcome::Open(Box::new(Self::list_view(saves, true))),
             (
                 Self::Direct { .. }''')
     src("multiplayer.rs", '''            scroll,
@@ -262,23 +281,10 @@ def changes(inputs, transport):
         "        let next = match selected_row_index(servers, &games, *selected, selected_steam_address.as_deref()) {")
     src("multiplayer.rs", "        *selected = next;",
         "        *selected_steam_address = next.and_then(|i| i.checked_sub(servers.len())).and_then(|i| games.get(i)).map(|g| g.address.clone());\n        *selected = next;")
-    src("multiplayer.rs", '''            _ => {
-                *self = Self::list(saves);
-                false
-            }
-        }
-    }
-}''', '''            Self::Edit { .. } => {
-                *self = Self::list_view(saves, true);
-                false
-            }
-            _ => {
-                *self = Self::list(saves);
-                false
-            }
-        }
-    }
-}''')
+    src("multiplayer.rs", '''            Self::ConfirmDelete { list, .. } => Outcome::Open(list.clone()),
+            _ => Outcome::Open(Box::new(Self::list(saves))),''', '''            Self::ConfirmDelete { list, .. } => Outcome::Open(list.clone()),
+            Self::Edit { .. } => Outcome::Open(Box::new(Self::list_view(saves, true))),
+            _ => Outcome::Open(Box::new(Self::list(saves))),''')
     src("multiplayer.rs", "fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option<(String, bool)> {", '''// A Steam selection belongs to an address/lobby, never to a mutable discovery row.
 fn selected_row_index(servers: &[ServerEntry], games: &[crate::lan::discovery::LanGame], selected: Option<usize>, steam: Option<&str>) -> Option<usize> {
     if let Some(address) = steam {
@@ -360,16 +366,16 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
         "        let scanner = Scanner {\n            enabled: true,\n            inner: Arc::new(ScanInner {")
     src("title.rs", '''            (Mode::Main, Some(4)) => {
                 // TitleScreen.init: SafetyScreen first, unless it was turned off.
-                self.mode = if self.skip_multiplayer_warning {
+                self.set_mode(if self.skip_multiplayer_warning {
                     Mode::Multiplayer(crate::multiplayer::Screen::list(&self.saves))
                 } else {
                     Mode::MultiplayerWarning { check: false }
-                };
+                });
                 Action::None
             }''',
         '''            (Mode::Main, Some(4)) => {
                 // Edition opens its Steam-first list without changing the saved preference.
-                self.mode = Mode::Multiplayer(crate::multiplayer::Screen::list(&self.saves));
+                self.set_mode(Mode::Multiplayer(crate::multiplayer::Screen::list(&self.saves)));
                 Action::None
             }''')
     src("title/tests.rs",
@@ -380,11 +386,13 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
     assert!(!f.title.skip_multiplayer_warning);
 ''')
     src("title/tests.rs", '            f.click("Proceed");\n', "", 1)
-    src("title/tests.rs", '\n    f.click("Proceed");\n', '\n', 3)
+    src("title/tests.rs", '\n    f.click("Proceed");\n', '\n', 4)
     src("title.rs", "            *screen = crate::multiplayer::Screen::list(&self.saves);",
         "            screen.refresh(&self.saves);")
-    src("title.rs", "        let outcome = screen.click(hit, x, y, size, &self.saves);",
-        "        let outcome = screen.click(hit, x, y, size, &self.saves);\n        if hit.is_none() || matches!(hit, Some(48 | 49)) { self.focused_button = None; }")
+    src("title.rs", "        match screen.click(hit, x, y, size, &self.saves) {",
+        "        let outcome = screen.click(hit, x, y, size, &self.saves);\n"
+        "        if hit.is_none() || matches!(hit, Some(48 | 49)) { self.focused_button = None; }\n"
+        "        match outcome {")
     src("title.rs", "    pub fn refresh_servers(&mut self) {", '''    pub fn multiplayer_node_ids(&self, w: f32, h: f32) -> Vec<(&'static str, [f32; 4])> {
         let Mode::Multiplayer(screen @ crate::multiplayer::Screen::List { .. }) = &self.mode else { return Vec::new(); };
         screen.buttons(w, h).into_iter().filter_map(|(x, y, width, _, _, id)| {
@@ -396,7 +404,7 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
         }).collect()
     }
     pub fn refresh_servers(&mut self) {''')
-    src("game/ui_control.rs", "        let mut nodes = widgets::tree(&widgets::last_labelled(), &widgets::last_targets(), size);", '''        let mut nodes = widgets::tree(&widgets::last_labelled(), &widgets::last_targets(), size);
+    src("game/runtime/ui_control.rs", "        let mut nodes = widgets::tree(&widgets::last_labelled(), &widgets::last_targets(), size);", '''        let mut nodes = widgets::tree(&widgets::last_labelled(), &widgets::last_targets(), size);
         if let (Some(title), Some([w, h])) = (&self.title, size) {
             for (id, rect) in title.multiplayer_node_ids(w, h) {
                 if let Some(node) = nodes.iter_mut().find(|node| node.rect.iter().zip(rect).all(|(a, b)| (*a - b).abs() < 0.5)) {
@@ -404,36 +412,29 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
                 }
             }
         }''')
-    src("game.rs", '''        let player_dir = horizon_client::logging::player_dir();
-        if let Err(e) = horizon_client::multiplayer::add_official_server(&player_dir) {
-            log::warn!("could not add the official server to servers.dat: {e}");
-        }
-        if let Err(e) = horizon_client::multiplayer::add_partner_servers(&player_dir) {
-            log::warn!("could not add the partner servers to servers.dat: {e}");
-        }
-''', "")
     src("game.rs", '''    // Someone is playing: the anonymous ping behind the launcher's "N playing now", and the
     // official server in their list (servers.dat in the game folder, the working directory). Not
     // for a server, a benchmark, a run that quits by itself, a harness's fixture or a run that
     // horizon-ctl drives: those start in a source checkout and wrote the list there.
-''', '''    // Keep Horizon's normal player heartbeat. The pack never seeds or migrates public
-    // recommendations into the player's saved server list; Steam discovery is separate.
+''', '''    // Run the plain client's registered startup hooks. The official distribution's
+    // server-list migration hook is not linked into this build.
 ''')
     src("client_lib.rs", "pub mod lan;", "pub mod lan;\npub mod lanmc_steam;")
-    src("entry.rs", '        crash::install(home.clone(), side);',
-        '''        crash::install(home.clone(), side);
-        if side == "client" {
-            if let Err(error) = crate::lanmc_steam::init() {
-                log::error!("LANMinecraft Steam startup failed: {error}");
-                eprintln!("LANMinecraft Steam startup failed: {error}");
-                std::process::exit(1);
-            }
-        }''')
-    src("game.rs", "        split::launcher::read_now();",
+    src("entry.rs", '    crash::install(home.clone(), side);',
+        '''    crash::install(home.clone(), side);
+    if side == "client" {
+        if let Err(error) = crate::lanmc_steam::init() {
+            log::error!("LANMinecraft Steam startup failed: {error}");
+            eprintln!("LANMinecraft Steam startup failed: {error}");
+            std::process::exit(1);
+        }
+    }''')
+    src("game/runtime/launch_options.rs", "        if !o.developer_single_player {\n            split::launcher::read_now();",
         '''        if let Some(name) = crate::lanmc_steam::owner_name() {
             o.player_name = Some(name.to_owned());
         }
-        split::launcher::read_now();''')
+        if !o.developer_single_player {
+            split::launcher::read_now();''')
     src("lan/mod.rs",
         '''    pub listen: bool,
     /// Ops bypass a full server''',
@@ -443,22 +444,26 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
     /// Ops bypass a full server''')
     src("lan/mod.rs", "            bind: None,\n            port,",
         "            bind: None,\n            lanmc_steam: false,\n            port,")
-    src("game/dedicated.rs", "            listen: true,",
+    src("game/interface/dedicated/mod.rs", "            listen: true,",
         "            listen: true,\n            lanmc_steam: false,")
-    src("game/integrated.rs", "            owner: offline_uuid(&player),",
-        "            owner: crate::lanmc_steam::owner_uuid(&player).unwrap_or_else(|| offline_uuid(&player)),")
-    src("game/integrated.rs",
+    src("game/world/integrated.rs", '''        let owner = auth
+            .as_ref()
+            .map_or_else(|| offline_uuid(&player), |a| a.uuid);''',
+        '''        let owner = crate::lanmc_steam::owner_uuid(&player).unwrap_or_else(||
+            auth.as_ref().map_or_else(|| offline_uuid(&player), |a| a.uuid)
+        );''')
+    src("game/world/integrated.rs",
         '''        let player = auth
             .as_ref()
             .map_or_else(|| self.options.player_name(), |a| a.name.clone());''',
         '''        let player = crate::lanmc_steam::owner_name().map(str::to_owned).unwrap_or_else(|| {
             auth.as_ref().map_or_else(|| self.options.player_name(), |a| a.name.clone())
         });''')
-    src("game/integrated.rs", "            online: horizon_client::lan::OnlineMode::lan(),",
+    src("game/world/integrated.rs", "            online: horizon_client::lan::OnlineMode::lan(),",
         '''            lanmc_steam: crate::lanmc_steam::active(),
             online: (!crate::lanmc_steam::active())
                 .then(horizon_client::lan::OnlineMode::lan).flatten(),''')
-    src("game/integrated.rs",
+    src("game/world/integrated.rs",
         '''        let listener = Lan::bind(None, settings.port).map_err(|e| e.to_string())?;
         let port = listener.local_addr().map_err(|e| e.to_string())?.port();
         log::info!("Published LAN server on port {port}");''',
@@ -471,13 +476,13 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
         } else {
             log::info!("Published LAN server on port {port}");
         }''')
-    src("game/integrated.rs", "        s.pending = Some(Publish::Close);",
+    src("game/world/integrated.rs", "        s.pending = Some(Publish::Close);",
         "        crate::lanmc_steam::unpublish();\n        s.pending = Some(Publish::Close);")
-    src("game/integrated.rs", "        self.native_lifecycle.begin_close();",
+    src("game/world/integrated.rs", "        self.native_lifecycle.begin_close();",
         "        self.native_lifecycle.begin_close();\n        crate::lanmc_steam::unpublish();")
-    src("game/integrated.rs", "host.hub.lan.listen_on(listener, true)",
+    src("game/world/integrated.rs", "host.hub.lan.listen_on(listener, true)",
         "host.hub.lan.listen_on(listener, !crate::lanmc_steam::active())")
-    src("game/lan.rs",
+    src("game/network/lan/mod.rs",
         '''        self.system_message(Text::translate(
             "menu.multiplayerOptions.publish.started.lan",
             &[Text::literal(port.to_string())],
@@ -492,7 +497,7 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
                 &[Text::literal(port.to_string())],
             ));
         }''')
-    src("game/friends.rs",
+    src("game/network/friends.rs",
         '''    pub(super) fn friends_start(&mut self) -> Result<()> {
         if self.friends.is_some() {''',
         '''    pub(super) fn friends_start(&mut self) -> Result<()> {
@@ -501,8 +506,8 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
         }
         if self.friends.is_some() {''')
     # Steam is independent of Horizon's optional `friends` feature. Keep this
-    # frontend method in the unconditional Game impl, not game/friends.rs.
-    src("game.rs",
+    # frontend method in the unconditional window handler.
+    src("game/runtime/window_handler.rs",
         "    pub(super) fn idle(&mut self, event_loop: &dyn EventLoopCtl) {",
         """    pub(super) fn poll_steam_sharing(&mut self) {
         if let Some(message) = crate::lanmc_steam::sharing_notice() {
@@ -518,7 +523,7 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
                 }
                 let address = crate::lanmc_steam::address(lobby);
                 let name = crate::lanmc_steam::owner_name().ok_or("Steam identity unavailable")?.to_owned();
-                self.connect_server_with_options(&address, &name, None, true)
+                self.connect_server_with_options(&address, &name, None, true, false)
             })();
             if let Err(error) = result {
                 log::warn!("Steam invitation could not be joined: {error}");
@@ -529,16 +534,18 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
 
     pub(super) fn idle(&mut self, event_loop: &dyn EventLoopCtl) {
         self.poll_steam_sharing();""")
-    src("game/chat.rs",
+    src("game/interface/chat.rs",
         """            Some(ClickEvent::Custom { id, payload }) => {
                 if let Some(remote) = &self.remote {
-                    remote.session.send_custom_click(&id, payload);
+                    remote
+                        .session
+                        .send_custom_click(&id, payload.map(std::sync::Arc::unwrap_or_clone));
                 }
             }""",
         """            Some(ClickEvent::Custom { id, payload }) => {
                 if id.starts_with(crate::lanmc_steam::ACTION_PREFIX) {
                     if self.integrated.is_some() {
-                        match crate::lanmc_steam::sharing_action(&id, payload.as_ref()) {
+                        match crate::lanmc_steam::sharing_action(&id, payload.as_deref()) {
                             Some(crate::lanmc_steam::SharingAction::Invite) => {
                                 if let Err(error) = crate::lanmc_steam::invite_friends() {
                                     self.system_message(Text::literal(error));
@@ -549,21 +556,37 @@ fn entry_address(servers: &[ServerEntry], lan: &Scanner, index: usize) -> Option
                         }
                     }
                 } else if let Some(remote) = &self.remote {
-                    remote.session.send_custom_click(&id, payload);
+                    remote
+                        .session
+                        .send_custom_click(&id, payload.map(std::sync::Arc::unwrap_or_clone));
                 }
             }""")
-    src("game/lan_screen.rs", "    pub(super) fn open_world_options(&mut self) {",
+    src("game/network/lan_screen.rs", "    pub(super) fn open_world_options(&mut self) {",
         "    #[allow(dead_code)] // The pack uses Open to LAN directly in the pause menu.\n"
         "    pub(super) fn open_world_options(&mut self) {")
-    src("game/screens.rs", "/// PauseScreen buttons:",
-        '''#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum PauseNetwork {
+    src("game/interface/screen_build.rs",
+        "/// What `PauseScreen.init` reads and the paused screen can see change while it",
+        '''#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) enum PauseNetwork {
+    #[default]
     Open,
     Opening,
     Reports,
 }
 
-impl PauseNetwork {
+/// What `PauseScreen.init` reads and the paused screen can see change while it''')
+    src("game/interface/screen_build.rs",
+        "/// is open: the connection (the disconnect label), a server's links, the\n"
+        "/// custom-additions dialog and the extra page rows.",
+        "/// is open: the connection, network sharing status, a server's links, the\n"
+        "/// custom-additions dialog and the extra page rows.")
+    src("game/interface/screen_build.rs",
+        "pub(super) struct PauseInputs {\n    pub(super) remote: bool,",
+        "pub(super) struct PauseInputs {\n    pub(super) remote: bool,\n    pub(super) network: PauseNetwork,")
+    src("game/interface/screens.rs", "use super::screen_build::{PauseInputs, PauseLayout};",
+        "use super::screen_build::{PauseInputs, PauseLayout, PauseNetwork};")
+    src("game/interface/screens.rs", "/// PauseScreen buttons:",
+        '''impl PauseNetwork {
     fn for_world(remote: bool, listening: bool, steam_published: Option<bool>) -> Self {
         if remote || steam_published == Some(true) || (listening && steam_published.is_none()) {
             Self::Reports
@@ -576,10 +599,10 @@ impl PauseNetwork {
 }
 
 /// PauseScreen buttons:''')
-    src("game/screens.rs",
-        "    split: bool,\n) -> Vec<(f32, f32, f32, &'static str, u8, bool)> {",
-        "    split: bool,\n    network: PauseNetwork,\n) -> Vec<(f32, f32, f32, &'static str, u8, bool)> {")
-    src("game/screens.rs",
+    src("game/interface/screens.rs",
+        "    rows: &[(&'static str, u8)],\n) -> Vec<(f32, f32, f32, &'static str, u8, bool)> {",
+        "    rows: &[(&'static str, u8)],\n    network: PauseNetwork,\n) -> Vec<(f32, f32, f32, &'static str, u8, bool)> {")
+    src("game/interface/screens.rs",
         '''            "options.worldOptions.button",
             9,
             true,''',
@@ -589,7 +612,9 @@ impl PauseNetwork {
             },
             9,
             network != PauseNetwork::Opening,''')
-    src("game/screens.rs", "    pub(super) fn draw_pause_menu(&mut self, batch: &mut HudBatch) {",
+    src("game/interface/screens.rs", "self.friends_shown()", "self.pause_friends_available()", count=4)
+    src("game/interface/screens.rs",
+        "    /// What `PauseScreen.init` reads and this screen can see change while it",
         '''    fn pause_network(&self) -> PauseNetwork {
         PauseNetwork::for_world(
             self.external_server(),
@@ -599,42 +624,24 @@ impl PauseNetwork {
     }
 
     fn pause_friends_available(&self) -> bool {
-        !crate::lanmc_steam::active() && self.friends_view().shown
+        !crate::lanmc_steam::active() && self.friends_shown()
     }
 
-    pub(super) fn draw_pause_menu(&mut self, batch: &mut HudBatch) {''')
-    src("game/screens.rs", "let friends = self.friends_view().shown;",
-        "let friends = self.pause_friends_available();", count=3)
-    src("game/screens.rs", "(self.friends_view().shown", "(self.pause_friends_available()")
-    for additions, count in (
-        ("additions.is_some()", 2),
-        ("self.pause_screen_additions().is_some()", 1),
-    ):
-        args = (
-            "            self.external_server(),\n"
-            "            links,\n"
-            f"            {additions},\n"
-            "            self.options.split_guest || self.split_hud.menu,\n"
-        )
-        src("game/screens.rs", args, args + "            self.pause_network(),\n", count)
-    src("game/screens.rs",
-        '''                    self.external_server(),
-                    links,
-                    self.pause_screen_additions().is_some(),
-                    self.options.split_guest || self.split_hud.menu,
-                );''',
-        '''                    self.external_server(),
-                    links,
-                    self.pause_screen_additions().is_some(),
-                    self.options.split_guest || self.split_hud.menu,
-                    self.pause_network(),
-                );''')
-    src("game/screens.rs",
+    /// What `PauseScreen.init` reads and this screen can see change while it''')
+    src("game/interface/screens.rs",
+        "        PauseInputs {\n            remote: self.external_server(),",
+        "        PauseInputs {\n            remote: self.external_server(),\n            network: self.pause_network(),")
+    src("game/interface/screens.rs",
+        "        old.remote == self.external_server()\n            && old.links",
+        "        old.remote == self.external_server()\n            && old.network == self.pause_network()\n            && old.links")
+    src("game/interface/screens.rs", "                &inputs.rows,\n            ),",
+        "                &inputs.rows,\n                inputs.network,\n            ),")
+    src("game/interface/screens.rs",
         '''            9 => self.open_world_options(),
-            10 => self.screen = Screen::Friends,''',
+            10 => self.set_screen(Screen::Friends),''',
         '''            9 => match self.pause_network() {
                 PauseNetwork::Reports => self.open_social(true),
-                PauseNetwork::Opening => {}
+                PauseNetwork::Opening => {},
                 PauseNetwork::Open => {
                     if let Err(error) = self.lan_open(super::lan::LanSettings {
                         port: 0,
@@ -647,35 +654,44 @@ impl PauseNetwork {
                         self.system_message(Text::literal(error.to_string()));
                     } else {
                         self.pause_focus = None;
-                        self.screen = Screen::Playing;
+                        self.set_screen(Screen::Playing);
                         self.capture(true);
                     }
                 }
             },
-            10 if self.pause_friends_available() => self.screen = Screen::Friends,''')
-    src("game/screens.rs",
-        "    use super::{Screen, death_buttons, pause_buttons, pause_icon_focus_ids, pause_icons};",
-        '''    use super::{PauseNetwork, Screen, death_buttons, pause_icon_focus_ids, pause_icons};
+            10 if self.pause_friends_available() => self.set_screen(Screen::Friends),''')
+    src("game/interface/screens.rs",
+        '''        ADDED_PAGES, PLAYER_REPORTING, SPLIT_SETTINGS, Screen, death_buttons, icon_label,
+        pause_buttons, pause_icon_focus_ids, pause_icons, reporting_active,
+    };''',
+        '''        ADDED_PAGES, PLAYER_REPORTING, PauseNetwork, SPLIT_SETTINGS, Screen, death_buttons,
+        icon_label, pause_icon_focus_ids, pause_icons, reporting_active,
+    };
 
     fn pause_buttons(
-        w: f32, h: f32, remote: bool, links: bool, additions: bool, split: bool,
+        w: f32,
+        h: f32,
+        remote: bool,
+        links: bool,
+        additions: bool,
+        rows: &[(&'static str, u8)],
     ) -> Vec<(f32, f32, f32, &'static str, u8, bool)> {
-        super::pause_buttons(w, h, remote, links, additions, split,
+        super::pause_buttons(w, h, remote, links, additions, rows,
             PauseNetwork::for_world(remote, false, None))
     }''')
-    src("game/screens.rs",
+    src("game/interface/screens.rs",
         "fn pause_menu_uses_disconnect_for_servers_and_keeps_world_options()",
         "fn pause_menu_uses_disconnect_for_servers_and_places_the_network_action()")
-    src("game/screens.rs", "            assert!(buttons.iter().any(|b| b.4 == 9 && b.5));",
+    src("game/interface/screens.rs", "            assert!(buttons.iter().any(|b| b.4 == 9 && b.5));",
         '''            let network = buttons.iter().find(|b| b.4 == 9).unwrap();
             assert_eq!(network.3, if remote { "menu.playerReporting" } else { "menu.multiplayerOptions.button" });
             assert!(network.5);
             assert!(buttons.iter().all(|b| b.3 != "options.worldOptions.button"));''')
-    src("game/screens.rs", "    fn pause_icons_report_bugs_and_feedback_are_active_like_vanilla() {",
+    src("game/interface/screens.rs", "    fn pause_icons_report_bugs_and_feedback_are_active_like_vanilla() {",
         '''    fn pause_slot_waits_for_steam_and_keeps_its_position_when_reportable() {
         let slot = |listening, steam| {
             let state = PauseNetwork::for_world(false, listening, steam);
-            super::pause_buttons(427.0, 240.0, false, false, false, false, state)
+            super::pause_buttons(427.0, 240.0, false, false, false, &[], state)
                 .into_iter().find(|b| b.4 == 9).unwrap()
         };
         let open = slot(false, Some(false));
@@ -709,14 +725,16 @@ impl PauseNetwork {
     src("lan/conn.rs", "    let (mut name, mut address) = (hello.name.clone(), address);",
         """    let mut name = portable.as_ref().map_or_else(|| hello.name.clone(), |(_, name)| name.clone());
     let mut address = address;""")
-    src("lan/conn.rs", "    let (uuid, mut properties) = match (online, forwarding) {",
-        """    let (uuid, mut properties) = if let Some((uuid, _)) = portable {
+    src("lan/conn.rs", "    let (uuid, properties) = match (online, forwarding) {",
+        """    let (uuid, properties) = if let Some((uuid, _)) = portable {
         (uuid, Vec::new())
     } else { match (online, forwarding) {""")
     src("lan/conn.rs",
-        """        (None, None) => (offline_uuid(&hello.name), Vec::new()),
+        """            None => (offline_uuid(&hello.name), Vec::new()),
+        },
     };""",
-        """        (None, None) => (offline_uuid(&hello.name), Vec::new()),
+        """            None => (offline_uuid(&hello.name), Vec::new()),
+        },
     }};""")
     src("lan/discovery.rs", "    games.push(LanGame { motd, address });",
         "    games.push(LanGame { motd, address, steam_host: None });")
@@ -768,8 +786,9 @@ impl PauseNetwork {
                                 }],''')
     src("multiplayer.rs", '                motd: "LAN".into(),\n                address: address.into(),',
         '                motd: "LAN".into(),\n                address: address.into(),\n                steam_host: None,')
-    src("game/remote.rs",
+    src("game/network/remote/mod.rs",
         '''    ) -> Result<()> {
+        self.realm_session = realm;
         self.reset_tutorial();
         self.perf.world_opening();''',
         '''    ) -> Result<()> {
@@ -777,9 +796,10 @@ impl PauseNetwork {
         let is_portable = steam_endpoint.is_some() || (local.is_some() && crate::lanmc_steam::owner_uuid(name).is_some());
         let steam_address = steam_endpoint.map(|endpoint| endpoint.to_string());
         let address = steam_address.as_deref().unwrap_or(address);
+        self.realm_session = realm;
         self.reset_tutorial();
         self.perf.world_opening();''')
-    src("game/remote.rs",
+    src("game/network/remote/mod.rs",
         '''        let auth = self.auth();
         let name = auth.as_ref().map_or(name, |a| a.name.as_str());''',
         '''        let auth = if is_portable { None } else { self.auth() };
@@ -788,18 +808,18 @@ impl PauseNetwork {
         } else {
             auth.as_ref().map_or(name, |a| a.name.as_str())
         };''')
-    src("game/remote.rs",
+    src("game/network/remote/mod.rs",
         '        let user = auth.as_ref().map_or_else(\n            || {\n                (\n                    name.to_owned(),\n                    horizon_protocol::crypto::offline_uuid(name),\n                )\n            },\n            |a| (a.name.clone(), a.uuid),\n        );\n        self.server_packs_connect(local.is_none().then_some(address), user);',
         '        let user = auth.as_ref().map_or_else(\n            || {\n                (\n                    name.to_owned(),\n                    if is_portable {\n                        crate::lanmc_steam::owner_uuid(name)\n                            .unwrap_or_else(|| horizon_protocol::crypto::offline_uuid(name))\n                    } else {\n                        horizon_protocol::crypto::offline_uuid(name)\n                    },\n                )\n            },\n            |a| (a.name.clone(), a.uuid),\n        );\n        self.server_packs_connect(local.is_none().then_some(address), user);')
-    src("game/remote.rs", "pub(super) struct Remote {",
+    src("game/network/remote/mod.rs", "pub(super) struct Remote {",
         "pub(super) struct Remote {\n    lanmc_portable: bool,")
-    src("game/remote.rs",
-        '        self.remote = Some(Remote {\n            session,\n            save_folder: None,\n            brand: "unknown".into(),',
-        '        self.remote = Some(Remote {\n            lanmc_portable: is_portable,\n            session,\n            save_folder: None,\n            brand: "unknown".into(),')
-    src("game/remote.rs",
-        '        self.remote = Some(Remote {\n            session,\n            save_folder: None,\n            brand: "horizon-studio".into(),',
-        '        self.remote = Some(Remote {\n            lanmc_portable: false,\n            session,\n            save_folder: None,\n            brand: "horizon-studio".into(),')
-    src("game/remote.rs",
+    src("game/network/remote/mod.rs",
+        '            session,\n            brand: "unknown".into(),',
+        '            lanmc_portable: is_portable,\n            session,\n            brand: "unknown".into(),')
+    src("game/network/remote/mod.rs",
+        '            session,\n            brand: "horizon-studio".into(),',
+        '            lanmc_portable: false,\n            session,\n            brand: "horizon-studio".into(),')
+    src("game/network/remote/mod.rs",
         '''        let mut capes: HashMap<u128, String> = HashMap::new();
         for (uuid, textures) in entries {''',
         '''        let mut capes: HashMap<u128, String> = HashMap::new();
@@ -811,7 +831,7 @@ impl PauseNetwork {
             Vec::new()
         };
         for (uuid, textures) in entries {''')
-    src("game/remote.rs",
+    src("game/network/remote/mod.rs",
         '''        // An offline name's skin from the launcher, where neither the server''',
         '''        for (uuid, skin) in portable_skins {
             if !self.skin_slots.contains(&skin.location)

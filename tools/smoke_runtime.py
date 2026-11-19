@@ -174,7 +174,7 @@ def set_test_language(game, code):
 
 def smoke(executable, controller, resources, qa, standalone=None, expected_title=None,
           expect_cold=False, reuse_world=False, check_pause=False):
-    from release_acceptance import execution_context
+    from release_acceptance import empty_mods_page_exit, execution_context
     acceptance_context = execution_context(executable.parent.parent)
     suffix = "-update" if reuse_world else ""
     first_index = 3 if reuse_world else 1
@@ -191,9 +191,10 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
             raise RuntimeError("The first screen enabled narration")
         control("options", "mods")
         mods = control("ui")
-        if {widget["id"] for widget in mods["widgets"]} != {"browse-mods", "open-mod-folder", "done"}:
+        close_mods = empty_mods_page_exit(mods)
+        if close_mods is None:
             raise RuntimeError(f"The native Mods page differs from the reviewed empty inventory: {mods!r}")
-        control("click", "done")
+        control("click", close_mods)
         world = [WORLD] if reuse_world else [WORLD, "137248", "creative"]
         control("open", *world)
         photograph(control, preview)

@@ -90,6 +90,8 @@ def describe_candidate(candidate):
 
 
 def observed_inventory(candidate, report_path):
+    from release_acceptance import empty_mods_page_exit
+
     report = read_json(report_path)
     files = inventory(candidate)
     descriptor = read_json(candidate / "portable-pack.json")
@@ -99,7 +101,7 @@ def observed_inventory(candidate, report_path):
         report["client"] != files["native/horizon-client.exe"] or
         report["bootstrap"] != files[descriptor["nativeRuntime"]["executable"]] or
         report["windowTitle"] != presentation["name"] or
-        {item["id"] for item in report["modsPage"]["widgets"]} != {"browse-mods", "open-mod-folder", "done"}
+        empty_mods_page_exit(report["modsPage"]) is None
     ):
         raise ValueError("Smoke report does not prove the packaged native client and empty Mods page")
     return {
@@ -222,13 +224,13 @@ def main():
     try:
         if args.propose_inventory:
             observation = observed_inventory(args.candidate, args.propose_inventory)
-            print(json_bytes(observation).decode("utf-8"), end="")
+            sys.stdout.buffer.write(json_bytes(observation))
             return
         library_tool = load_library_tool(args.library_tool)
         if args.propose_lock:
             _, _, distribution = describe_candidate(args.candidate)
             library_tool.build_library(args.candidate, distribution["upstreamCommit"])
-            print(json_bytes(distribution).decode("utf-8"), end="")
+            sys.stdout.buffer.write(json_bytes(distribution))
             return
         verify_revision(args.revision)
         if not args.verify_only and args.out.exists():

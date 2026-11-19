@@ -35,7 +35,7 @@ impl Overlay {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
+        target: (&wgpu::TextureView, Option<&wgpu::TextureView>),
         size: [u32; 2],
         format: wgpu::TextureFormat,
     ) {
@@ -60,10 +60,11 @@ impl Overlay {
             self.encoded_frame = Some((0, prepared.snapshot.style.packaged_fonts));
             return;
         }
+        let with_coverage = target.1.is_some();
         let gpu = self
             .gpu
-            .get_or_insert_with(|| render::Renderer::new(device, format));
-        gpu.set_format(device, format);
+            .get_or_insert_with(|| render::Renderer::new(device, format, with_coverage));
+        gpu.set_target(device, format, with_coverage);
         let cards: Vec<_> = prepared
             .cards
             .iter()

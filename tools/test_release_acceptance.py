@@ -32,6 +32,21 @@ class ReleaseAcceptanceTests(unittest.TestCase):
         self.verify()
         gate.verify_update(self.record, self.manifest)
 
+    def test_empty_mods_page_retains_both_reviewed_layouts(self):
+        self.assertEqual(gate.empty_mods_page_exit(self.record["smoke"]["modsPage"]), "done")
+        page = {"screen": "title", "widgets": [
+            {"id": name, "enabled": enabled} for name, enabled in (
+                ("a-z", True), ("field-0", True), ("open-mods-folder", True), ("back", True),
+                ("homepage", False), ("issues", False), ("config", False),
+            )
+        ]}
+        self.assertEqual(gate.empty_mods_page_exit(page), "back")
+        page["widgets"][-1]["enabled"] = True
+        self.assertIsNone(gate.empty_mods_page_exit(page))
+        page["widgets"][-1]["enabled"] = False
+        page["widgets"].append(page["widgets"][-1])
+        self.assertIsNone(gate.empty_mods_page_exit(page))
+
     def test_changed_exe_bootstrap_dll_preparer_preset_and_descriptor_reject_old_qa(self):
         for name in ("native/horizon-client.exe", "native/launch-rust-edition.exe",
                      "native/steam_api64.dll", "native/horizon-prepare.exe",

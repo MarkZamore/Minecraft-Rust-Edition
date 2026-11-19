@@ -1,4 +1,4 @@
-"""Exact Horizon 2ebf00a integration for the launcher's built-in native UI notices.
+"""Horizon integration for the launcher's built-in native UI notices.
 
 This augments the pack's existing mandatory source overlay. It is not a mod and
 never changes the window, input, author graphics settings or game's GUI scale.
@@ -40,18 +40,33 @@ def apply(patched: dict[str, bytes], here: Path) -> None:
     edit("gfx.rs", "pub mod submit;", "pub mod submit;\nmod lanmc_notices;")
     edit("gfx.rs", "    first_frame: FirstFrame,\n",
          "    first_frame: FirstFrame,\n    lanmc_notices: lanmc_notices::Overlay,\n")
-    edit("gfx.rs", "            display: DisplayWatch::default(),\n",
-         "            display: DisplayWatch::default(),\n            lanmc_notices: lanmc_notices::Overlay::new(),\n")
+    edit("gfx.rs", "            display_fresh: false,\n",
+         "            display_fresh: false,\n            lanmc_notices: lanmc_notices::Overlay::new(),\n")
+    edit("gfx.rs", "self.draw_overlay(&mut encoder, frame, &view_target, &target_texture, &overlay);",
+         """self.draw_overlay(
+                &mut encoder, frame, (&view_target, overlay_format), &target_texture, &overlay,
+            );""")
+    edit("gfx.rs", """    fn draw_overlay(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        frame: &Frame,
+        view_target: &wgpu::TextureView,""", """    fn draw_overlay(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        frame: &Frame,
+        (view_target, format): (&wgpu::TextureView, wgpu::TextureFormat),""")
     edit("gfx.rs", """        if overlay.real {
             self.own_timing = timing;
         }
         readback
 """, """        // The composited window draws once after all panes; offscreen/scaled
         // captures are not a presented UI frame and must not refresh a heartbeat.
+        // HDR composites the HUD from color and coverage together.
         if self.surface.is_some() {
+            let format = if coverage.is_some() { hud_coverage::HUD_FORMAT } else { format };
             self.lanmc_notices.draw(
-                &self.device, &self.queue, encoder, view_target,
-                [self.config.width, self.config.height], self.frame_format,
+                &self.device, &self.queue, encoder, (hud_target, coverage.as_ref()),
+                [self.config.width, self.config.height], format,
             );
         }
         if overlay.real {
@@ -76,33 +91,22 @@ def apply(patched: dict[str, bytes], here: Path) -> None:
          "            (encoder, surface_frame, None, self.lanmc_notices.callback())\n")
     edit("gfx.rs", "        let mut fg_made = false;\n",
          "        let mut fg_made = false;\n        let mut notice_generated_callback = None;\n")
-    edit("gfx.rs", """                self.draw_overlay(&mut encoder, frame, &generated_view, generated, &overlay);
-            }
-        } else if scaled.is_some() {""", """                self.draw_overlay(&mut encoder, frame, &generated_view, generated, &overlay);
-                notice_generated_callback = self.lanmc_notices.callback();
-            } else if frame_gen::generated_only() && self.surface.is_some() {
-                // The debug presenter may show the initial copied generated
-                // frame too. Its launcher UI is independent of author HUD debug.
-                self.lanmc_notices.draw(
-                    &self.device, &self.queue, &mut encoder, &generated_view,
-                    [self.config.width, self.config.height], self.frame_format,
-                );
-                notice_generated_callback = self.lanmc_notices.callback();
-            }
-        } else if scaled.is_some() {""")
+    edit("gfx.rs", """            fg_made = self.draw_generated(&mut encoder, frame, &camera, &overlay, onto);""",
+         """            (fg_made, notice_generated_callback) =
+                self.draw_generated(&mut encoder, frame, &camera, &overlay, onto);""")
     edit("gfx.rs", "            self.queue.present(surface_frame);\n",
          """            self.queue.present(surface_frame);
             if let Some(callback) = after_present {
                 callback();
             }
 """)
-    edit("gfx.rs", "self.frame_gen.present(real, generated, fg_made);",
+    edit("gfx.rs", "self.present_generated(real, generated, fg_made);",
          """let after_present = if frame_gen::generated_only() {
                 notice_generated_callback
             } else {
                 after_present
             };
-            self.frame_gen.present(real, generated, fg_made, after_present);""")
+            self.present_generated(real, generated, fg_made, after_present);""")
 
     edit("gfx/submit.rs", "    pub after: Option<AfterSubmit>,\n",
          """    pub after: Option<AfterSubmit>,
@@ -148,7 +152,7 @@ def apply(patched: dict[str, bytes], here: Path) -> None:
         self.queue.present(frame);
         true
 """, """        self.lanmc_notices.draw(
-            &self.device, &self.queue, &mut encoder, &target,
+            &self.device, &self.queue, &mut encoder, (&target, None),
             [self.config.width, self.config.height], self.config.format,
         );
         let after_present = self.lanmc_notices.callback();
@@ -162,6 +166,44 @@ def apply(patched: dict[str, bytes], here: Path) -> None:
 
     # Frame-generation's presenter owns the actual surface. A callback attached
     # to the real frame fires only if that frame was copied and presented.
+    edit("gfx/frame_gen.rs", """        (view_target, target, generated): (&wgpu::TextureView, &wgpu::Texture, &wgpu::Texture),
+    ) -> bool {""", """        (view_target, target, generated): (&wgpu::TextureView, &wgpu::Texture, &wgpu::Texture),
+    ) -> (bool, Option<super::lanmc_notices::PresentCallback>) {""")
+    edit("gfx/frame_gen.rs", """        if made || peak.is_some() && generated_only() {
+            self.draw_overlay(encoder, frame, made_onto.0, made_onto.1, overlay);
+            if let Some(hdr) = &self.hdr {
+                hdr.present(&self.queue, encoder, generated, None);
+            }
+        }""", """        let mut after_present = None;
+        if made || peak.is_some() && generated_only() {
+            let made_format = if peak.is_some() { format } else { generated.format().remove_srgb_suffix() };
+            self.draw_overlay(encoder, frame, (made_onto.0, made_format), made_onto.1, overlay);
+            after_present = self.lanmc_notices.callback();
+            if let Some(hdr) = &self.hdr {
+                hdr.present(&self.queue, encoder, generated, None);
+            }
+        } else if generated_only() && self.surface.is_some() {
+            // The first debug frame can present the copied world without game HUD.
+            // Its launcher notices still go in the frame that will be shown.
+            self.lanmc_notices.draw(
+                &self.device, &self.queue, encoder, (&generated_view, None),
+                [self.config.width, self.config.height], generated.format().remove_srgb_suffix(),
+            );
+            after_present = self.lanmc_notices.callback();
+        }""")
+    edit("gfx/frame_gen.rs", """        made
+    }
+
+    /// Hands this frame's pair""", """        (made, after_present)
+    }
+
+    /// Hands this frame's pair""")
+    edit("gfx/frame_gen.rs", """        made: bool,
+    ) {
+        self.frame_gen.present(real, generated, made);""", """        made: bool,
+        after_present: Option<super::lanmc_notices::PresentCallback>,
+    ) {
+        self.frame_gen.present(real, generated, made, after_present);""")
     edit("gfx/frame_gen.rs", "    pub fn present(&mut self, real: wgpu::Texture, generated: wgpu::Texture, made: bool) {",
          """    pub fn present(
         &mut self, real: wgpu::Texture, generated: wgpu::Texture, made: bool,
@@ -169,8 +211,8 @@ def apply(patched: dict[str, bytes], here: Path) -> None:
     ) {""")
     edit("gfx/frame_gen.rs", "                interval: self.interval,\n",
          "                interval: self.interval,\n                after_present,\n", count=3)
-    edit("gfx/frame_gen.rs", "    interval: Duration,\n}\n\n/// The thread",
-         "    interval: Duration,\n    after_present: Option<Box<dyn FnOnce() + Send>>,\n}\n\n/// The thread")
+    edit("gfx/frame_gen.rs", "    interval: Duration,\n}\n\n/// Whether the present thread",
+         "    interval: Duration,\n    after_present: Option<Box<dyn FnOnce() + Send>>,\n}\n\n/// Whether the present thread")
     edit("gfx/frame_gen.rs", """                let show = |texture: &wgpu::Texture| {
                     if failed_here.load(Ordering::Relaxed) {
                         return;
@@ -190,8 +232,10 @@ def apply(patched: dict[str, bytes], here: Path) -> None:
                     };
 """)
     edit("gfx/frame_gen.rs", """                    queue.present(target);
+                    shown_here.store(true, Ordering::Relaxed);
                 };
 """, """                    queue.present(target);
+                    shown_here.store(true, Ordering::Relaxed);
                     true
                 };
 """)

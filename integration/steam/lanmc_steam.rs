@@ -1,6 +1,6 @@
 //! Host and admit a Horizon world through the launcher-owned Steam identity.
 use horizon_client::text::{ClickEvent, Style, Text};
-use horizon_world::nbt::Tag;
+use horizon_core::nbt::Tag;
 use lanmc_steam_native::SteamBridge;
 use sha1::{Digest, Sha1};
 use std::{
@@ -168,7 +168,7 @@ fn sharing_text(lobby: u64) -> Text {
             underlined: Some(true),
             click: Some(ClickEvent::Custom {
                 id: format!("{ACTION_PREFIX}{name}"),
-                payload: Some(Tag::String(lobby.to_string().as_str().into())),
+                payload: Some(Tag::String(lobby.to_string().as_str().into()).into()),
             }),
             ..Style::default()
         })
@@ -327,7 +327,7 @@ mod tests {
             action_for_lobby(
                 Some(17),
                 &close,
-                Some(&Tag::String(horizon_world::nbt::JavaString(vec![0xd800])))
+                Some(&Tag::String(horizon_core::nbt::JavaString(vec![0xd800])))
             ),
             None
         );

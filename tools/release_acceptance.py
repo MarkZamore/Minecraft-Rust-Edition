@@ -39,6 +39,29 @@ def require(condition, message):
         raise ValueError("Release acceptance: " + message)
 
 
+def empty_mods_page_exit(page):
+    """Return the close action for a reviewed Mods screen with no selected mod."""
+    if not isinstance(page, dict) or page.get("screen") != "title":
+        return None
+    widgets = page.get("widgets")
+    if not isinstance(widgets, list) or not all(
+        isinstance(widget, dict) and isinstance(widget.get("id"), str)
+        and isinstance(widget.get("enabled"), bool) for widget in widgets
+    ):
+        return None
+    enabled = {widget["id"]: widget["enabled"] for widget in widgets}
+    if len(enabled) != len(widgets):
+        return None
+    if enabled == {"browse-mods": True, "open-mod-folder": True, "done": True}:
+        return "done"
+    if enabled == {
+        "a-z": True, "field-0": True, "open-mods-folder": True, "back": True,
+        "homepage": False, "issues": False, "config": False,
+    }:
+        return "back"
+    return None
+
+
 NATIVE_NOTICE_CHECKS = (
     "bootstrapChildPidAndTitle", "titleVisiblePixelsAndFreshPresentation",
     "threeCardsAndSevenSecondExpiry", "malformedAndTornKeepPriorUntilOriginalExpiry",
@@ -380,8 +403,7 @@ def verify_startup(record, files, receipt, name):
         require(report["client"] == files["native/horizon-client.exe"], "report has another EXE")
     require(smoke["bootstrap"] == files["native/launch-rust-edition.exe"], "bootstrap was not tested")
     require(smoke["windowTitle"] == name, "wrong window title")
-    require({w["id"] for w in smoke["modsPage"]["widgets"]}
-            == {"browse-mods", "open-mod-folder", "done"}, "Mods inventory differs")
+    require(empty_mods_page_exit(smoke["modsPage"]) is not None, "Mods inventory differs")
     before, after = smoke["firstState"], smoke["reopenedState"]
     require(all(before[key] == after[key] for key in ("dimension", "gamemode")), "world state did not survive reopening")
     a, b = before["player"]["position"], after["player"]["position"]

@@ -3,7 +3,7 @@
 
 #[path = "lanmc_notice_layout.rs"]
 mod layout;
-use crate::gfx::upload::Uploads;
+use crate::gfx::{hud_coverage, upload::Uploads};
 pub(super) use layout::Motion;
 use std::borrow::Cow;
 
@@ -31,17 +31,22 @@ struct CachedCard {
 }
 
 pub(super) struct Renderer {
-    pipeline: wgpu::RenderPipeline,
+    pipeline: hud_coverage::Pipeline,
     layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
     format: wgpu::TextureFormat,
+    with_coverage: bool,
     vertices: wgpu::Buffer,
     uploads: Uploads,
     cards: [Option<CachedCard>; 3],
 }
 
 impl Renderer {
-    pub(super) fn new(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
+    pub(super) fn new(
+        device: &wgpu::Device,
+        format: wgpu::TextureFormat,
+        with_coverage: bool,
+    ) -> Self {
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("LANMinecraft notice texture layout"),
             entries: &[
@@ -72,10 +77,11 @@ impl Renderer {
             ..Default::default()
         });
         Self {
-            pipeline: pipeline(device, &layout, format),
+            pipeline: pipeline(device, &layout, format, with_coverage),
             layout,
             sampler,
             format,
+            with_coverage,
             vertices: device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("LANMinecraft notice vertices"),
                 size: (18 * std::mem::size_of::<Vertex>()) as u64,
@@ -87,10 +93,16 @@ impl Renderer {
         }
     }
 
-    pub(super) fn set_format(&mut self, device: &wgpu::Device, format: wgpu::TextureFormat) {
-        if self.format != format {
-            self.pipeline = pipeline(device, &self.layout, format);
+    pub(super) fn set_target(
+        &mut self,
+        device: &wgpu::Device,
+        format: wgpu::TextureFormat,
+        with_coverage: bool,
+    ) {
+        if self.format != format || self.with_coverage != with_coverage {
+            self.pipeline = pipeline(device, &self.layout, format, with_coverage);
             self.format = format;
+            self.with_coverage = with_coverage;
         }
     }
 
@@ -102,7 +114,7 @@ impl Renderer {
         device: &wgpu::Device,
         _queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
+        (target, coverage): (&wgpu::TextureView, Option<&wgpu::TextureView>),
         dimensions: [u32; 2],
         cards: &[RenderCard<'_>],
         motion: Motion,
@@ -212,23 +224,20 @@ impl Renderer {
         self.uploads
             .buffer(encoder, &self.vertices, 0, bytemuck::cast_slice(&vertices));
         self.uploads.finish(encoder);
+        let attachments = [
+            Some(hud_coverage::attachment(target)),
+            coverage.map(hud_coverage::attachment),
+        ];
+        let attachment_count = 1 + usize::from(coverage.is_some());
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("LANMinecraft final notices"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: target,
-                resolve_target: None,
-                depth_slice: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
+            color_attachments: &attachments[..attachment_count],
             depth_stencil_attachment: None,
             timestamp_writes: None,
             occlusion_query_set: None,
             multiview_mask: None,
         });
-        pass.set_pipeline(&self.pipeline);
+        pass.set_pipeline(self.pipeline.get(coverage.is_some()));
         pass.set_vertex_buffer(0, self.vertices.slice(..));
         pass.set_viewport(
             0.0,
@@ -259,10 +268,12 @@ fn pipeline(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
     format: wgpu::TextureFormat,
-) -> wgpu::RenderPipeline {
+    with_coverage: bool,
+) -> hud_coverage::Pipeline {
+    let source = wgpu::ShaderSource::Wgsl(Cow::Borrowed(SHADER));
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("LANMinecraft notice shader"),
-        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(SHADER)),
+        source: source.clone(),
     });
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("LANMinecraft notice pipeline layout"),
@@ -270,7 +281,7 @@ fn pipeline(
         ..Default::default()
     });
     let attributes = wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32];
-    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+    let descriptor = wgpu::RenderPipelineDescriptor {
         label: Some("LANMinecraft final notice pipeline"),
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
@@ -298,7 +309,9 @@ fn pipeline(
         }),
         multiview_mask: None,
         cache: None,
-    })
+    };
+    hud_coverage::Pipeline::new(device, &descriptor, source, with_coverage)
+        .expect("The launcher notice shader has a color output")
 }
 
 const SHADER: &str = r#"

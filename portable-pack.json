@@ -5,6 +5,6 @@
     "executable": "native/launch-rust-edition.exe",
     "platform": "windows-x64",
     "adapter": "portable-native",
-    "version": "nightly-2026-11-07-2ebf00a"
+    "version": "nightly-2026-11-19-f00125f"
   }
 }

@@ -85,6 +85,25 @@ def recipe_fixture():
                     continue
 
     walk(function.body, {"CLIENT": "crates/horizon-client/", "CLIENT_LIB": "crates/horizon-client-lib/"})
+    # These locked upstream inputs keep the official distribution's migration
+    # out of the built binary without removing the engine's generic hook.
+    files["crates/horizon-game/Cargo.toml"] = b'''
+        [package]
+        name = "horizon-game"
+        [[bin]]
+        name = "horizon-client"
+        path = "src/main.rs"
+    '''
+    files["crates/horizon-game/src/main.rs"] = b'''
+        fn main() {
+            horizon_guest_stack::prepare_main();
+            std::hint::black_box(&GAME_IDENTITY);
+            horizon_game::main();
+        }
+    '''
+    files["crates/horizon-client/src/game.rs"] += (
+        b"horizon_hooks::engine::started(&horizon_hooks::Started::new(&version, &game_dir));\n"
+    )
     notice_tree = ast.parse((STEAM / "notice_overlay.py").read_text(encoding="utf-8"))
     notice_apply = next(node for node in notice_tree.body
                         if isinstance(node, ast.FunctionDef) and node.name == "apply")
@@ -163,9 +182,9 @@ class RequiredLayersTests(unittest.TestCase):
         guard.validate_receipt_coverage(self.receipt)
 
     def test_removed_whole_mandatory_file_or_artwork_is_rejected(self):
-        for path in ["crates/horizon-client/src/game/chat.rs", "crates/horizon-client/src/game/screens.rs",
+        for path in ["crates/horizon-client/src/game/interface/chat.rs", "crates/horizon-client/src/game/interface/screens.rs",
                      "crates/horizon-client/src/lan/conn.rs", "crates/lanmc-steam-native/src/worker.rs",
-                     "crates/horizon-client/src/lanmc_skins.rs", "crates/horizon-client/src/game/no_resources.rs",
+                     "crates/horizon-client/src/lanmc_skins.rs", "crates/horizon-client/src/game/runtime/no_resources.rs",
                      "packaging/icons/rust-edition.ico"]:
             with self.subTest(path=path):
                 broken = dict(self.patched)
@@ -184,7 +203,7 @@ class RequiredLayersTests(unittest.TestCase):
             (root + "multiplayer.rs", b"*selected_steam_address = lan.then(|| address.clone());", b""),
             (root + "title.rs", b'49 => "saved-servers"', b'49 => "legacy"'),
             (root + "title.rs", b"screen.refresh(&self.saves);", b"ignored();"),
-            (root + "game/ui_control.rs", b"title.multiplayer_node_ids(w, h)", b"ignored()"),
+            (root + "game/runtime/ui_control.rs", b"title.multiplayer_node_ids(w, h)", b"ignored()"),
         ]:
             with self.subTest(path=path, token=old):
                 broken = dict(self.patched)
@@ -204,8 +223,8 @@ class RequiredLayersTests(unittest.TestCase):
     def test_multiplayer_warning_cannot_return_in_prepared_sources(self):
         path = "crates/horizon-client/src/title.rs"
         self.lose(path,
-                  b"self.mode = Mode::Multiplayer(crate::multiplayer::Screen::list(&self.saves));",
-                  b"self.mode = Mode::MultiplayerWarning { check: false };")
+                  b"self.set_mode(Mode::Multiplayer(crate::multiplayer::Screen::list(&self.saves)));",
+                  b"self.set_mode(Mode::MultiplayerWarning { check: false });")
         with self.assertRaisesRegex(ValueError, "steam-default-and-saved-view"):
             guard.validate_patched_sources(self.patched)
 
@@ -223,13 +242,14 @@ class RequiredLayersTests(unittest.TestCase):
             guard.validate_patched_sources(self.patched)
 
     def test_permission_regression_to_hardcoded_false_is_rejected(self):
-        self.lose("crates/horizon-client/src/game/screens.rs",
+        self.lose("crates/horizon-client/src/game/interface/screens.rs",
                   b"server.call(|game| game.allow_commands()).unwrap_or(false)", b"false")
         with self.assertRaisesRegex(ValueError, "pause-and-host-command-permission"):
             guard.validate_patched_sources(self.patched)
 
     def test_returning_to_pause_instead_of_playing_is_rejected(self):
-        self.lose("crates/horizon-client/src/game/screens.rs", b"self.screen = Screen::Playing;", b"self.screen = Screen::Paused;")
+        self.lose("crates/horizon-client/src/game/interface/screens.rs",
+                  b"self.set_screen(Screen::Playing);", b"self.set_screen(Screen::Paused);")
         with self.assertRaisesRegex(ValueError, "pause-and-host-command-permission"):
             guard.validate_patched_sources(self.patched)
 
@@ -240,8 +260,9 @@ class RequiredLayersTests(unittest.TestCase):
 
     def test_window_and_taskbar_icon_hooks_are_both_required(self):
         for path, token in [
-            ("crates/horizon-client/src/game/no_resources.rs", b"crate::lanmc_presentation::with_icon("),
-            ("crates/horizon-client/src/game/split/windows.rs", b"crate::lanmc_presentation::with_icon("),
+            ("crates/horizon-client/src/game/runtime/loading_screen.rs", b"crate::lanmc_presentation::with_icon("),
+            ("crates/horizon-client/src/game/runtime/no_resources.rs", b"crate::lanmc_presentation::with_icon("),
+            ("crates/horizon-client/src/game/runtime/split/windows.rs", b"crate::lanmc_presentation::with_icon("),
             ("crates/horizon-client/src/lanmc_presentation.rs", b"with_window_icon(icon.clone())"),
             ("crates/horizon-client/src/lanmc_presentation.rs", b"with_taskbar_icon(attributes, icon)"),
         ]:
@@ -252,7 +273,7 @@ class RequiredLayersTests(unittest.TestCase):
                     guard.validate_patched_sources(broken)
 
     def test_internal_port_notice_cannot_be_removed(self):
-        self.lose("crates/horizon-client/src/game/lan.rs", "Локальный порт сервера: {port}".encode(), b"removed")
+        self.lose("crates/horizon-client/src/game/network/lan/mod.rs", "Локальный порт сервера: {port}".encode(), b"removed")
         with self.assertRaisesRegex(ValueError, "steam-publish-close-loopback"):
             guard.validate_patched_sources(self.patched)
 
@@ -266,15 +287,26 @@ class RequiredLayersTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "automatic public server seeding"):
                     guard.validate_patched_sources(broken)
 
+    def test_plain_binary_cannot_link_official_startup_migration(self):
+        for path, added in [
+            ("crates/horizon-game/Cargo.toml", b'\n[dependencies]\nhorizon-official = { path = "../horizon-official" }'),
+            ("crates/horizon-game/src/main.rs", b"\nuse horizon_official::register;"),
+        ]:
+            with self.subTest(path=path):
+                broken = dict(self.patched)
+                broken[path] += added
+                with self.assertRaisesRegex(ValueError, "forbids linking official startup migration"):
+                    guard.validate_patched_sources(broken)
+
     def test_commented_out_frontend_hook_does_not_count(self):
-        self.lose("crates/horizon-client/src/game.rs", b"self.poll_steam_sharing();",
+        self.lose("crates/horizon-client/src/game/runtime/window_handler.rs", b"self.poll_steam_sharing();",
                   b"/* retired /* nested note */ self.poll_steam_sharing(); */")
         with self.assertRaisesRegex(ValueError, "steam-frontend-invitations"):
             guard.validate_patched_sources(self.patched)
 
     def test_steam_polling_cannot_move_back_into_optional_author_friends(self):
-        game_path = "crates/horizon-client/src/game.rs"
-        friends_path = "crates/horizon-client/src/game/friends.rs"
+        game_path = "crates/horizon-client/src/game/runtime/window_handler.rs"
+        friends_path = "crates/horizon-client/src/game/network/friends.rs"
         game = self.patched[game_path]
         start = game.index(b"    pub(super) fn poll_steam_sharing(&mut self) {")
         end = game.index(b"    pub(super) fn idle(", start)
@@ -286,7 +318,7 @@ class RequiredLayersTests(unittest.TestCase):
             guard.validate_patched_sources(self.patched)
 
     def test_author_friends_stays_disabled_in_steam_mode(self):
-        self.lose("crates/horizon-client/src/game/friends.rs",
+        self.lose("crates/horizon-client/src/game/network/friends.rs",
                   b"return Err(crate::lanmc_steam::steam_only_label().into());", b"return Ok(());")
         with self.assertRaisesRegex(ValueError, "steam-frontend-invitations"):
             guard.validate_patched_sources(self.patched)
@@ -327,12 +359,13 @@ class RequiredLayersTests(unittest.TestCase):
                 guard.validate_receipt_coverage(value)
         for digest in [None, "", "f" * 63, "G" * 64, 13]:
             broken = copy.deepcopy(self.receipt)
-            broken["patchedFiles"]["crates/horizon-client/src/game/chat.rs"] = digest
+            broken["patchedFiles"]["crates/horizon-client/src/game/interface/chat.rs"] = digest
             with self.subTest(digest=digest), self.assertRaises(ValueError):
                 guard.validate_receipt_coverage(broken)
 
     def test_harmless_comments_and_crlf_do_not_break_source_contract(self):
-        self.patched["crates/horizon-client/src/game.rs"] = self.patched["crates/horizon-client/src/game.rs"].replace(
+        path = "crates/horizon-client/src/game/runtime/window_handler.rs"
+        self.patched[path] = self.patched[path].replace(
             b"self.poll_steam_sharing();", b"/* local UI polling */ self.poll_steam_sharing();")
         self.patched = {path: data.replace(b"\n", b"\r\n") if path.endswith(".rs") else data
                         for path, data in self.patched.items()}
@@ -385,6 +418,8 @@ class RequiredLayersTests(unittest.TestCase):
             ("crates/horizon-client-render/src/gfx.rs", b"self.lanmc_notices.draw(", b"/* self.lanmc_notices.draw( */ removed("),
             ("crates/horizon-client-render/src/gfx/frame_gen.rs", b"if show(&pair.second)", b"if true"),
             ("crates/horizon-client-render/src/gfx.rs", b"if self.surface.is_some()", b"if true"),
+            ("crates/horizon-client-render/src/gfx.rs", b"(hud_target, coverage.as_ref())", b"(hud_target, None)"),
+            ("crates/horizon-client-render/src/gfx/lanmc_notice_render.rs", b"coverage.map(hud_coverage::attachment)", b"None"),
         ]:
             with self.subTest(path=path):
                 broken = dict(self.patched)
@@ -403,11 +438,11 @@ class RequiredLayersTests(unittest.TestCase):
             guard.validate_patched_sources(self.patched)
 
     def test_frame_generation_uses_the_callback_for_the_image_actually_shown(self):
-        path = "crates/horizon-client-render/src/gfx.rs"
-        for old, new in [
-            (b"if frame_gen::generated_only() {\n                notice_generated_callback",
+        render = "crates/horizon-client-render/src/"
+        for path, old, new in [
+            (render + "gfx.rs", b"if frame_gen::generated_only() {\n                notice_generated_callback",
              b"if frame_gen::generated_only() {\n                after_present"),
-            (b"else if frame_gen::generated_only() && self.surface.is_some()",
+            (render + "gfx/frame_gen.rs", b"else if generated_only() && self.surface.is_some()",
              b"else if false"),
         ]:
             with self.subTest(token=old):

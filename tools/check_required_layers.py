@@ -52,7 +52,7 @@ def main():
     args = parser.parse_args()
     verify_upstream(args.archives, args.openssl, args.out.parent)
     proof = compute_proof(args.archives, args.steam_transport)
-    args.out.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
+    args.out.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":
