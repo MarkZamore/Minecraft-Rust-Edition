@@ -40,9 +40,11 @@ def client(executable, controller, resources, root, name):
 
         def control(*words, timeout=120):
             response = subprocess.run(
-                [str(controller), "--socket", str(endpoint), *words], cwd=game,
-                capture_output=True, encoding="utf-8", check=True, timeout=timeout,
+                [str(controller), "--socket", str(endpoint), "--timeout", str(max(1, int(timeout))), *words],
+                cwd=game, capture_output=True, encoding="utf-8", timeout=timeout + 5,
             )
+            if response.returncode:
+                raise RuntimeError(f"{words!r} failed: {response.stderr.strip() or response.stdout.strip()}")
             reply = json.loads(response.stdout)
             if isinstance(reply, dict) and "error" in reply:
                 raise RuntimeError(reply["error"])
