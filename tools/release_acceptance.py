@@ -41,7 +41,7 @@ def require(condition, message):
 
 def empty_mods_page_exit(page):
     """Return the close action for a reviewed Mods screen with no selected mod."""
-    if not isinstance(page, dict) or page.get("screen") != "title":
+    if not isinstance(page, dict) or page.get("screen") not in {"title", "options"}:
         return None
     widgets = page.get("widgets")
     if not isinstance(widgets, list) or not all(
@@ -96,7 +96,8 @@ def _notice_main_title(value):
         return False
     labels = {widget.get("label") for widget in value["widgets"] if widget.get("enabled") is True}
     return {"Singleplayer", "Multiplayer"}.issubset(labels) and not any(
-        widget.get("id") in {"browse-mods", "open-mod-folder", "done"} for widget in value["widgets"])
+        widget.get("id") in {"browse-mods", "open-mod-folder", "open-mods-folder", "done"}
+        for widget in value["widgets"])
 
 
 NOTICE_FONT_MODE = "roboto-v1"

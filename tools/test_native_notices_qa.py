@@ -45,15 +45,23 @@ class NativeNoticePixelProofTests(unittest.TestCase):
 
 
 class NativeNoticeHarnessTests(unittest.TestCase):
-    def option_session(self, screen, final):
+    def option_session(self, screen, final, *, current=False):
+        actions = {"browse-mods": True, "open-mod-folder": True, "done": True}
+        close_mods = "done"
+        if current:
+            actions = {
+                "a-z": True, "field-0": True, "open-mods-folder": True, "back": True,
+                "homepage": False, "issues": False, "config": False,
+            }
+            close_mods = "back"
+
         class Session:
             def __init__(self):
                 self.index = 0
                 self.clicked = []
                 self.pages = [
                     {"screen": screen, "widgets": [
-                        {"id": name, "enabled": True}
-                        for name in ["browse-mods", "open-mod-folder", "done"]]},
+                        {"id": name, "enabled": enabled} for name, enabled in actions.items()]},
                     {"screen": screen, "widgets": [{"id": "done", "enabled": True}]},
                     final,
                 ]
@@ -63,8 +71,8 @@ class NativeNoticeHarnessTests(unittest.TestCase):
                     self.index = 0
                 elif words == ("ui",):
                     return self.pages[self.index]
-                elif words == ("click", "done"):
-                    self.clicked.append("done")
+                elif words == ("click", close_mods if self.index == 0 else "done"):
+                    self.clicked.append(words[1])
                     self.index += 1
                 else:
                     raise AssertionError(words)
@@ -80,12 +88,21 @@ class NativeNoticeHarnessTests(unittest.TestCase):
         self.assertEqual(mods, ["browse-mods", "done", "open-mod-folder"])
         self.assertEqual(session.clicked, ["done", "done"])
         require_main_title(returned)
+        current = self.option_session("title", final, current=True)
+        mods, returned = check_mods(current)
+        self.assertEqual(mods, ["a-z", "back", "config", "field-0", "homepage", "issues", "open-mods-folder"])
+        self.assertEqual(current.clicked, ["back", "done"])
+        require_main_title(returned)
 
     def test_world_mods_pages_close_back_to_original_pause(self):
         final = {"screen": "paused", "widgets": [{"id": "return", "enabled": True}]}
         session = self.option_session("options", final)
         _, returned = check_mods(session)
         self.assertEqual(session.clicked, ["done", "done"])
+        self.assertEqual(returned, final)
+        current = self.option_session("options", final, current=True)
+        _, returned = check_mods(current)
+        self.assertEqual(current.clicked, ["back", "done"])
         self.assertEqual(returned, final)
 
     def test_mods_widgets_cannot_be_title_proof(self):

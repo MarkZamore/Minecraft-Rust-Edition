@@ -17,7 +17,7 @@ import time
 
 from PIL import Image, ImageChops
 
-from release_acceptance import execution_context, NOTICE_FONT_FILES, NOTICE_FONT_MODE
+from release_acceptance import empty_mods_page_exit, execution_context, NOTICE_FONT_FILES, NOTICE_FONT_MODE
 from stage_runtime import file_info
 
 
@@ -407,30 +407,33 @@ class Session:
 def check_mods(session):
     session.control("options", "mods")
     page = session.control("ui")
-    ids = {item["id"] for item in page["widgets"]}
-    if ids != {"browse-mods", "open-mod-folder", "done"}:
+    close_mods = empty_mods_page_exit(page)
+    if close_mods is None:
         raise AssertionError("Launcher notices changed the reviewed empty native mod inventory")
+    ids = sorted(item["id"] for item in page["widgets"])
     # Opening an options subpage pushes Mods above Main. Leave both pages so
     # the following title/world checks measure the real screen, not its options.
-    for _ in range(3):
+    session.control("click", close_mods)
+    for _ in range(2):
         page = session.control("ui")
         done = [item for item in page["widgets"] if item["id"] == "done"]
         if not done:
-            return sorted(ids), ui_shape(page)
+            return ids, ui_shape(page)
         if len(done) != 1 or not done[0]["enabled"]:
             raise AssertionError("The technical Mods inventory has no usable Done action")
         session.control("click", done[0]["id"])
     page = session.control("ui")
     if any(item["id"] == "done" for item in page["widgets"]):
         raise AssertionError("The technical Mods inventory did not return from options")
-    return sorted(ids), ui_shape(page)
+    return ids, ui_shape(page)
 
 
 def require_main_title(page):
     widgets = page.get("widgets", [])
     labels = {item.get("label") for item in widgets if item.get("enabled") is True}
     if page.get("screen") != "title" or not {"Singleplayer", "Multiplayer"}.issubset(labels) \
-            or any(item.get("id") in {"browse-mods", "open-mod-folder", "done"} for item in widgets):
+            or any(item.get("id") in {"browse-mods", "open-mod-folder", "open-mods-folder", "done"}
+                   for item in widgets):
         raise AssertionError("Title proof is not the actual main title screen")
 
 
