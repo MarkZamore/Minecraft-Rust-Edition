@@ -17,7 +17,8 @@ import time
 
 from PIL import Image, ImageChops
 
-from release_acceptance import empty_mods_page_exit, execution_context, NOTICE_FONT_FILES, NOTICE_FONT_MODE
+from release_acceptance import (empty_mods_page_exit, execution_context, NATIVE_NOTICE_CHAT_ROUTE,
+                                NOTICE_FONT_FILES, NOTICE_FONT_MODE)
 from stage_runtime import file_info
 
 
@@ -437,6 +438,58 @@ def require_main_title(page):
         raise AssertionError("Title proof is not the actual main title screen")
 
 
+def exercise_chat(session, report):
+    session.send(0)
+    session.wait_heartbeat(0)
+    before = session.window.inspect(session.renderer_pid)
+    foreground = before["foregroundHwnd"]
+    report["foregroundBeforeChat"] = foreground
+    if foreground <= 0:
+        raise AssertionError("No observable desktop foreground to check for focus changes")
+    start = session.control("screen")["screen"]
+    if start != "playing":
+        raise AssertionError("Chat input did not start in the live world")
+    chat_before = session.control("chat-log", "8")["chat"]
+    created = session.send(1)
+    session.wait_heartbeat(1, after=created - 1)
+    session.control("key", "t", "tap")
+    session.control("wait-for", "screen", "chat", "--timeout", "5")
+    session.control("type", "/list")
+    typed = session.control("screen")
+    if typed.get("screen") != "chat" or typed.get("chat_input") != "/list":
+        raise AssertionError("T/type did not enter /list into the native chat input")
+    frame = session.capture("world-chat-input-with-card", 1)
+    submitted = unix_ms()
+    session.control("key", "enter", "tap")
+    deadline = time.monotonic() + 10
+    while True:
+        chat = session.control("chat-log", "8")["chat"]
+        if any("online" in line.casefold() and line not in chat_before for line in chat):
+            replied = unix_ms()
+            break
+        if time.monotonic() >= deadline:
+            raise AssertionError("T/type/Enter /list did not reach the integrated server with a card present")
+        time.sleep(0.1)
+    after_reply = session.wait_heartbeat(1, after=replied)
+    observed = unix_ms()
+    after = session.window.inspect(session.renderer_pid)
+    report["foregroundAfterChat"] = after["foregroundHwnd"]
+    if foreground != frame["window"]["foregroundHwnd"] or foreground != after["foregroundHwnd"] \
+            or before["hwnd"] != frame["window"]["hwnd"] or before["hwnd"] != after["hwnd"]:
+        raise AssertionError("Foreground focus or the rendering window changed during notice/chat input")
+    end = session.control("screen")["screen"]
+    if end != "playing" or after_reply["timestampUnixMs"] >= created + LIFE_MS:
+        raise AssertionError("Chat did not return to the world while the notice remained visible")
+    report["technicalChat"] = chat
+    report["chatInput"] = {
+        "route": NATIVE_NOTICE_CHAT_ROUTE, "screenBefore": start, "screenAfter": end,
+        "typedScreen": {"screen": typed["screen"], "text": typed["chat_input"]}, "chatBefore": chat_before,
+        "gameHwndBefore": before["hwnd"], "gameHwndAfter": after["hwnd"],
+        "noticeCreatedUnixMs": created, "submittedUnixMs": submitted, "replyObservedUnixMs": replied,
+        "heartbeatAfterReply": after_reply, "heartbeatObservedUnixMs": observed,
+    }
+
+
 def exercise(session, report):
     checks = report["checks"]
     initial_mods, title_ui = check_mods(session)
@@ -552,31 +605,7 @@ def exercise(session, report):
     session.send(1)
     session.capture("fullscreen-world", 1)
     checks["actualFullscreenVisibleNotice"] = "PASS"
-    session.send(1)
-    chat_window = session.window.inspect(session.renderer_pid)
-    before = chat_window["foregroundHwnd"]
-    report["foregroundBeforeChat"] = before
-    if before <= 0 or before != chat_window["hwnd"]:
-        raise AssertionError("The tested native game window is not foreground before chat input")
-    chat_before = session.control("chat-log", "8")["chat"]
-    session.control("key", "t", "tap")
-    session.control("type", "/list")
-    session.capture("world-chat-input-with-card", 1)
-    session.control("key", "enter", "tap")
-    deadline = time.monotonic() + 10
-    while True:
-        chat = session.control("chat-log", "8")["chat"]
-        if chat != chat_before and "online" in str(chat).casefold():
-            break
-        if time.monotonic() >= deadline:
-            raise AssertionError("T/type/Enter /list did not reach the integrated server with a card present")
-        time.sleep(0.1)
-    after_window = session.window.inspect(session.renderer_pid)
-    after = after_window["foregroundHwnd"]
-    report["foregroundAfterChat"] = after
-    if before != after or after != after_window["hwnd"] or after_window["hwnd"] != chat_window["hwnd"]:
-        raise AssertionError("Foreground input focus changed during notice/chat input")
-    report["technicalChat"] = chat
+    exercise_chat(session, report)
     checks["worldAndChatInputWhileVisible"] = "PASS"
     session.send(0)
     session.wait_heartbeat(0)
@@ -625,7 +654,7 @@ def main():
     context = execution_context(candidate)
     qa.mkdir(parents=True)
     session = Session(candidate, controller, cache, qa, args.launcher_fonts.resolve(strict=True))
-    report = {"schemaVersion": 1, "status": "FAIL", "acceptanceContext": context,
+    report = {"schemaVersion": 2, "status": "FAIL", "acceptanceContext": context,
               "client": file_info(session.client), "bootstrap": file_info(session.bootstrap),
               "fontMode": NOTICE_FONT_MODE, "fontFiles": NOTICE_FONT_FILES,
               "startup": "exact bootstrap child; native-ui-v1; real presented unscaled screenshots",

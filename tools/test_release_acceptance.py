@@ -340,6 +340,43 @@ class NativeNoticeEvidenceTests(unittest.TestCase):
     def test_complete_structural_fixture_is_accepted(self):
         self.verify(self.report)
 
+    def test_native_chat_control_proof_is_bound_to_the_visible_frame_and_reply(self):
+        report = self.report
+        frame = next(capture for capture in report["captures"] if capture["file"] == "world-chat-input-with-card.png")
+        report.update(schemaVersion=2, foregroundBeforeChat=99, foregroundAfterChat=99)
+        frame["window"]["foregroundHwnd"] = 99
+        report["chatInput"] = {
+            "route": gate.NATIVE_NOTICE_CHAT_ROUTE, "screenBefore": "playing", "screenAfter": "playing",
+            "typedScreen": {"screen": "chat", "text": "/list"}, "gameHwndBefore": 12, "gameHwndAfter": 12,
+            "chatBefore": [], "noticeCreatedUnixMs": 900, "submittedUnixMs": 1260,
+            "replyObservedUnixMs": 1270, "heartbeatObservedUnixMs": 1400,
+            "heartbeatAfterReply": {**frame["heartbeatAfter"], "timestampUnixMs": 1350},
+        }
+        self.verify(report)
+
+        mutations = {
+            "wrong-route": lambda r: r["chatInput"].update(route="console-command"),
+            "wrong-text": lambda r: r["chatInput"]["typedScreen"].update(text="/time"),
+            "wrong-hwnd": lambda r: r["chatInput"].update(gameHwndAfter=99),
+            "foreground-changed": lambda r: r.update(foregroundAfterChat=12),
+            "foreground-stolen-at-frame": lambda r: next(c for c in r["captures"] if c["file"] == frame["file"])
+                ["window"].update(foregroundHwnd=12),
+            "old-reply": lambda r: r["chatInput"].update(chatBefore=r["technicalChat"]),
+            "pre-input-frame": lambda r: r["chatInput"].update(noticeCreatedUnixMs=1100),
+            "reply-after-expiration": lambda r: r["chatInput"].update(
+                replyObservedUnixMs=8000, heartbeatAfterReply={**frame["heartbeatAfter"], "timestampUnixMs": 8100},
+                heartbeatObservedUnixMs=8150),
+            "heartbeat-before-reply": lambda r: r["chatInput"]["heartbeatAfterReply"].update(timestampUnixMs=1265),
+            "card-not-presented": lambda r: r["chatInput"]["heartbeatAfterReply"].update(renderedCount=0),
+            "chat-not-closed": lambda r: r["chatInput"].update(screenAfter="chat"),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(mutation=name):
+                broken = copy.deepcopy(report)
+                mutate(broken)
+                with self.assertRaises(ValueError):
+                    self.verify(broken)
+
     def test_roboto_receipt_requires_exact_fonts_and_presented_font_ack(self):
         def verify(report):
             gate.verify_native_notices(report, self.files, self.context, "Unit pack", gate.NOTICE_FONT_MODE)

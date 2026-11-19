@@ -70,6 +70,7 @@ NATIVE_NOTICE_CHECKS = (
     "pauseMenuVisibleWithoutInputWidgets", "emptyQueueFreshHeartbeat",
     "sessionSentinelAndNoExtraMod", "exactCandidateUnchanged",
 )
+NATIVE_NOTICE_CHAT_ROUTE = "horizon-control-key-type-enter"
 NATIVE_NOTICE_CAPTURES = {
     "title-one.png": 1, "title-three.png": 3, "expired-three.png": 0,
     "torn-snapshot-retains-card.png": 1, "torn-snapshot-original-expiry.png": 0,
@@ -108,7 +109,8 @@ NOTICE_FONT_FILES = {
 
 
 def verify_native_notices(report, files, context, name, required_font_mode=None):
-    require(isinstance(report, dict) and report.get("schemaVersion") == 1
+    require(isinstance(report, dict) and _notice_int(report.get("schemaVersion"))
+            and report["schemaVersion"] in (1, 2)
             and report.get("status") == "PASS", "native notice runtime QA missing")
     require(report.get("acceptanceContext") == context, "native notice report has another payload")
     require(report.get("client") == files["native/horizon-client.exe"]
@@ -279,14 +281,39 @@ def verify_native_notices(report, files, context, name, required_font_mode=None)
     require(isinstance(before, dict) and before.get("screen") == "paused"
             and isinstance(before.get("widgets"), list) and before["widgets"] and before == after,
             "native notices changed game UI widgets or have no pause proof")
-    require(_notice_int(report.get("foregroundBeforeChat"))
-            and report["foregroundBeforeChat"] > 0
+    chat_frame = by_name["world-chat-input-with-card.png"]
+    foreground = report.get("foregroundBeforeChat")
+    chat = report.get("technicalChat")
+    require(_notice_int(foreground) and foreground > 0
             and _notice_int(report.get("foregroundAfterChat"))
-            and report["foregroundBeforeChat"] == report["foregroundAfterChat"]
-                == fullscreen["hwnd"] == by_name["world-chat-input-with-card.png"]["window"]["hwnd"]
-            and isinstance(report.get("technicalChat"), list)
-            and any("online" in str(line).casefold() for line in report["technicalChat"]),
+            and report["foregroundAfterChat"] == foreground
+            and fullscreen["hwnd"] == chat_frame["window"]["hwnd"]
+            and isinstance(chat, list) and all(isinstance(line, str) for line in chat)
+            and any("online" in line.casefold() for line in chat),
             "native notice input/focus and actual chat proof missing")
+    if report["schemaVersion"] == 1:
+        require(foreground == fullscreen["hwnd"], "historic native notice proof has another foreground window")
+        return
+
+    evidence = report.get("chatInput")
+    require(isinstance(evidence, dict) and evidence.get("route") == NATIVE_NOTICE_CHAT_ROUTE
+            and evidence.get("screenBefore") == "playing" and evidence.get("screenAfter") == "playing"
+            and evidence.get("typedScreen") == {"screen": "chat", "text": "/list"}
+            and evidence.get("gameHwndBefore") == fullscreen["hwnd"] == evidence.get("gameHwndAfter")
+            and chat_frame["window"].get("foregroundHwnd") == foreground,
+            "native control did not retain the rendering window, foreground and game chat route")
+    initial_chat = evidence.get("chatBefore")
+    require(isinstance(initial_chat, list) and all(isinstance(line, str) for line in initial_chat)
+            and any("online" in line.casefold() and line not in initial_chat for line in chat),
+            "native notice chat has no new integrated-server reply")
+    created, submitted, replied = (evidence.get(key) for key in
+                                   ("noticeCreatedUnixMs", "submittedUnixMs", "replyObservedUnixMs"))
+    confirmed = presented(evidence.get("heartbeatAfterReply"), evidence.get("heartbeatObservedUnixMs"), 1)
+    require(all(map(_notice_int, (created, submitted, replied))) and created > 0
+            and created <= chat_frame["heartbeatBefore"]["timestampUnixMs"]
+            <= chat_frame["capturedUnixMs"] <= chat_frame["heartbeatAfterObservedUnixMs"]
+            <= submitted <= replied < confirmed < created + timing["lifeMs"],
+            "native notice was not presented continuously through chat input and the reply")
 
 
 def verify_publication_port(pause):
