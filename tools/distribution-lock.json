@@ -2,16 +2,16 @@
   "schemaVersion": 1,
   "upstreamCommit": "f00125f61f794aaa3d4e950d301f353b35b6ee3d",
   "preview": {
-    "sizeBytes": 755199,
-    "sha256": "53c1091d8e42641dd11f2beedf6a3c189d1d7d62175e0fbd06b56153a33b655a"
+    "sizeBytes": 512398,
+    "sha256": "2b66a9a151df14166e32b0bb2a16a41552bb4bc261f0e34d120db332e4695c48"
   },
   "library/loaded-mods.json": {
     "sizeBytes": 83127,
-    "sha256": "3599a866119ea3ad72971ad571aa4693b538d1810b44c791f8dfe9a3f6b75616"
+    "sha256": "ba5173f104fd7364cef043e45e6a5e6622deea053e47a5b8232e729ca85f9b96"
   },
   "tools/overlay-receipt.json": {
-    "sizeBytes": 7445,
-    "sha256": "7ccad6743329740631f89c47427cfa4cb1954347372d658205af8c5acebd9cd9"
+    "sizeBytes": 7699,
+    "sha256": "192522d76ae927cca2c27e097297a54a8158855e19a754c0d68dd87082a965ea"
   },
   "files": {
     "configureddefaults/options.txt": {
@@ -435,8 +435,8 @@
       "sha256": "d2cc6c600e0e25428b3cdc1249abbb935792798c929a222de121a8e3727504d6"
     },
     "native/horizon-client.exe": {
-      "sizeBytes": 161070080,
-      "sha256": "18b16e1a8b190a184012a9d43cedef8ac79dd49c7a6433153fb4945a1c1cf632"
+      "sizeBytes": 161064960,
+      "sha256": "22fbc476b9f4dafc9d1dda789d3954bd2c9abc742417baffe7c8c94a873add36"
     },
     "native/horizon-prepare.exe": {
       "sizeBytes": 2347520,

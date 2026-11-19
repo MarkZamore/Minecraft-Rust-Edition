@@ -111,7 +111,7 @@
     "native/exporters/server/dev/horizonlab/parity/VanillaSimpleBlockOracle$World.class": "104984ef0c6ab5b42b40c661642fae7cdc45bd8224e4975856abad0b1d349d50",
     "native/exporters/server/dev/horizonlab/parity/VanillaSimpleBlockOracle.class": "280a14b3bd55f856e3c235ac755435917f6c02bfbeef1496f505f0c0760654ad",
     "native/exporters/server/dev/horizonlab/parity/VanillaStructureBlockExporter.class": "d2cc6c600e0e25428b3cdc1249abbb935792798c929a222de121a8e3727504d6",
-    "native/horizon-client.exe": "18b16e1a8b190a184012a9d43cedef8ac79dd49c7a6433153fb4945a1c1cf632",
+    "native/horizon-client.exe": "22fbc476b9f4dafc9d1dda789d3954bd2c9abc742417baffe7c8c94a873add36",
     "native/horizon-prepare.exe": "5b4210072ca39a36e44415a84277faa7c249b114a02d5f556228d6c39fef3906",
     "native/horizon-wasm-std.wasm": "3c647d91c7c943ffb65a31ec406392de328daa7a6d2779e44e71c3561068b7dc",
     "native/launch-rust-edition.exe": "9ad41d8b96070c55a04487f6e015d4431b0110e1b6b949ee0a871a963c6969c9",
