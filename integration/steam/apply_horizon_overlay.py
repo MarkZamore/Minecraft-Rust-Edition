@@ -15,6 +15,11 @@ HERE = Path(__file__).resolve().parent
 NOTICE_SPEC = importlib.util.spec_from_file_location("edition_notice_overlay", HERE / "notice_overlay.py")
 NOTICE_OVERLAY = importlib.util.module_from_spec(NOTICE_SPEC)
 NOTICE_SPEC.loader.exec_module(NOTICE_OVERLAY)
+TITLE_INPUT_SPEC = importlib.util.spec_from_file_location(
+    "edition_server_title_input_overlay", HERE / "server_title_input_overlay.py"
+)
+TITLE_INPUT_OVERLAY = importlib.util.module_from_spec(TITLE_INPUT_SPEC)
+TITLE_INPUT_SPEC.loader.exec_module(TITLE_INPUT_OVERLAY)
 COMMIT = "f00125f61f794aaa3d4e950d301f353b35b6ee3d"
 SOURCE_SHA = "25bc638f5e74fd0ff5a3c3c2d6da05869fcc18b267e10600c7f794640afe6633"
 SOURCE_SIZE = 59_593_320
@@ -34,6 +39,7 @@ SOURCE_PATHS = {
     CLIENT_LIB + "Cargo.toml",
     "packaging/windows/exe.rs",
     *NOTICE_OVERLAY.SOURCES,
+    *TITLE_INPUT_OVERLAY.SOURCES,
     *(CLIENT + "src/" + path for path in (
         "entry.rs", "lib.rs", "client_lib.rs", "game.rs", "game/runtime/no_resources.rs",
         "game/runtime/split/windows.rs", "game/world/integrated.rs", "game/network/lan/mod.rs",
@@ -858,6 +864,7 @@ pub(super) enum PauseNetwork {
         raise ValueError("Shared Steam transport does not match the reviewed source pin")
     patched.update((TRANSPORT + name, data) for name, data in steam_files.items())
     NOTICE_OVERLAY.apply(patched, HERE)
+    TITLE_INPUT_OVERLAY.apply(patched)
     return patched
 
 
@@ -899,6 +906,7 @@ def recipe_sha():
     return tree_sha(index({name: (HERE / name).read_bytes() for name in (
         Path(__file__).name, "lanmc_steam.rs", "lanmc_skins.rs", "lanmc_presentation.rs",
         "notice_overlay.py", *NOTICE_OVERLAY.COPY_FILES,
+        "server_title_input_overlay.py",
         *(f"notice-platform/{name}" for name in NOTICE_OVERLAY.PLATFORM_FILES),
         "horizon-cargo.lock", "rust-logo/artwork-lock.json", "rust-logo/render.py",
         "rust-logo/NOTICE.txt", "rust-logo/rust-logo.svg", "rust-logo/rust-logo.png",

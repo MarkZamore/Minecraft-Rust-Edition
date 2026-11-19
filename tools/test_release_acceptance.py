@@ -111,6 +111,42 @@ class ReleaseAcceptanceTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     gate.verify_startup(record, self.files, self.receipt, self.content["name"])
 
+    def test_new_native_title_dispatch_requires_new_evidence(self):
+        self.receipt["patchedFiles"]["crates/horizon-client/src/game/runtime/control.rs"] = "0" * 64
+        context = gate.context_from_files(self.files, self.receipt)
+        self.record["context"] = context
+        for kind in ("smoke", "multiplayer", "serverList"):
+            self.record[kind]["acceptanceContext"] = context
+        with self.assertRaisesRegex(ValueError, "native title key helper or protocol"):
+            self.verify()
+
+    def test_native_title_keys_bind_dispatch_to_request_process_and_deadline(self):
+        from server_list_qa import NativeTitleKeys, TITLE_KEY_ROUTE, verify_native_title_keys
+        client, title = r"C:\qa\horizon-client.exe", "Minecraft Rust Edition"
+        process = Mock(pid=123)
+        process.poll.return_value = None
+
+        def control(command, key, request):
+            self.assertEqual(command, "title-key")
+            return {"route": TITLE_KEY_ROUTE, "processId": process.pid,
+                    "requestId": request, "key": key}
+
+        probe = NativeTitleKeys(control, process, client, title, 5)
+        keys = ("f5", "ctrl-a", "backspace")
+        for key in keys:
+            probe.press(key)
+        verify_native_title_keys(probe.evidence, 5, client, title, keys)
+        for field, value in (("processId", 124), ("requestId", "replay"),
+                             ("route", "not-native"), ("key", "enter")):
+            with self.subTest(field=field):
+                events = copy.deepcopy(probe.evidence)
+                events[1]["acknowledgement"][field] = value
+                with self.assertRaisesRegex(ValueError, "exact owned native client"):
+                    verify_native_title_keys(events, 5, client, title, keys)
+        probe.evidence[-1]["receivedUnixMs"] = probe.evidence[-1]["request"]["createdUnixMs"] + 120_001
+        with self.assertRaisesRegex(ValueError, "exact owned native client"):
+            verify_native_title_keys(probe.evidence, 5, client, title, keys)
+
     def test_update_report_cannot_accept_another_archive_or_incomplete_recovery(self):
         for key, value in (("newAssetSha256", "0" * 64), ("retry", "FAIL"),
                            ("personalSentinelsPreserved", 0), ("fixtureRemoved", False)):

@@ -117,6 +117,15 @@ LAYERS = {
         (SRC + "game/runtime/ui_control.rs", "for (id, rect) in title.multiplayer_node_ids(w, h) {"),
         (SRC + "game/runtime/ui_control.rs", "node.id = id.to_owned();"),
     ),
+    "native-server-title-control": (
+        (SRC + "game.rs", "self.title_key_pressed(event_loop, event.physical_key, shortcut, event.text.as_deref())?;"),
+        (SRC + "game.rs", "if let Some(shortcut) = shortcut { self.title_shortcut(shortcut); return Ok(()); }"),
+        (SRC + "game.rs", "matches!(title.mode, horizon_client::title::Mode::Multiplayer(_))"),
+        (SRC + "game/interface/clipboard.rs", "self.edit_shortcut_letter(clipboard::shortcut_letter(&event.logical_key, event.physical_key))"),
+        (SRC + "game/runtime/control.rs", '"title-key" => { if !self.server_title_control_active() {'),
+        (SRC + "game/runtime/control.rs", "self.title_key_pressed(event_loop, winit::keyboard::PhysicalKey::Code(key), shortcut, None)?;"),
+        (SRC + "game/runtime/control.rs", '"route": "horizon-agent-control/title-key-v1"'),
+    ),
     "steam-peer-owner-and-membership": (
         (NATIVE + "worker.rs", "if matchmaking.lobby_owner(lobby) != owner || !matchmaking.lobby_members(lobby).contains(&self.local_id) || self.world_offer(lobby, owner).is_none()"),
         (NATIVE + "worker.rs", "matchmaking.lobby_data(lobby, VARIANT_KEY).as_deref() != Some(self.variant.as_str())"),

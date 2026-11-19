@@ -115,6 +115,20 @@ def recipe_fixture():
             except (KeyError, TypeError, ValueError):
                 pass
     walk(notice_apply.body, notice_globals, notice=True)
+    title_tree = ast.parse((STEAM / "server_title_input_overlay.py").read_text(encoding="utf-8"))
+    title_strings = [node.value for node in ast.walk(title_tree)
+                     if isinstance(node, ast.Constant) and isinstance(node.value, str)]
+    title_root = "crates/horizon-client/src/"
+    title_caller = next(text for text in title_strings if "event_loop, event.physical_key, shortcut" in text)
+    title_decl = next(text for text in title_strings if "fn server_title_control_active" in text)
+    inherited_title_shortcut = "if let Some(shortcut) = shortcut { self.title_shortcut(shortcut); return Ok(()); }"
+    files[title_root + "game.rs"] += (title_caller + title_decl.replace("{body}", inherited_title_shortcut)).encode()
+    files[title_root + "game/interface/clipboard.rs"] = next(
+        text for text in title_strings if "fn edit_shortcut_letter" in text
+    ).encode()
+    files[title_root + "game/runtime/control.rs"] = next(
+        text for text in title_strings if '"title-key" => {' in text
+    ).encode()
     for name in ["lanmc_notices.rs", "lanmc_notice_protocol.rs", "lanmc_notice_state.rs",
                  "lanmc_notice_raster.rs", "lanmc_notice_render.rs", "lanmc_notice_layout.rs"]:
         files["crates/horizon-client-render/src/gfx/" + name] = (STEAM / name).read_bytes()
@@ -178,6 +192,7 @@ class RequiredLayersTests(unittest.TestCase):
             "steam-frontend-invitations", "pause-and-host-command-permission", "current-host-chat-actions",
             "steam-world-list", "steam-peer-owner-and-membership", "sharing-cancellation-and-ready-claim",
             "portable-skins", "pack-window-title-and-icon", "native-launcher-notices", "steam-default-and-saved-view",
+            "native-server-title-control",
         })
         guard.validate_receipt_coverage(self.receipt)
 
@@ -286,6 +301,12 @@ class RequiredLayersTests(unittest.TestCase):
                 ).encode()
                 with self.assertRaisesRegex(ValueError, "automatic public server seeding"):
                     guard.validate_patched_sources(broken)
+
+    def test_native_title_key_must_use_the_same_guarded_handler_as_the_window(self):
+        path = "crates/horizon-client/src/game/runtime/control.rs"
+        self.lose(path, b"self.title_key_pressed(event_loop,", b"fake_key_reply(event_loop,")
+        with self.assertRaisesRegex(ValueError, "native-server-title-control"):
+            guard.validate_patched_sources(self.patched)
 
     def test_plain_binary_cannot_link_official_startup_migration(self):
         for path, added in [

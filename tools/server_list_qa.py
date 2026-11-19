@@ -9,7 +9,7 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import shutil
 import struct
 import subprocess
@@ -24,6 +24,9 @@ STEAM_WIDGET = "steam-worlds"
 SAVED_WIDGET = "saved-servers"
 REFRESH_WIDGET = "server-list-refresh"
 BACK_WIDGET = "server-list-back"
+TITLE_KEY_ROUTE = "horizon-agent-control/title-key-v1"
+TITLE_KEY_TIMEOUT_MS = 120_000
+SERVER_VIEW_KEYS = ("enter", "delete", "f5", "f5", "ctrl-a", "backspace", "enter")
 LEGACY_SERVERS = [
     {"name": "Horizon Official", "address": "play.playhorizon.dev"},
     {"name": "Afri-Network (South Africa)", "address": "afri-network.co.za"},
@@ -88,61 +91,56 @@ def ui_summary(state):
             for node in state["widgets"]]
 
 
-class DesktopKeys:
-    """Ask the UI driver for real keys without changing the tested client.
+class NativeTitleKeys:
+    """Send keys to the owned client's real title dispatcher through Agent Control."""
 
-    The native control protocol rejects key commands while the title is up.
-    Each atomic request must be serviced against the observed, owned window;
-    the UI driver writes a matching acknowledgement only after its key action.
-    """
-
-    def __init__(self, directory, process, client, title, run):
-        self.directory, self.process = directory, process
+    def __init__(self, control, process, client, title, run):
+        self.control, self.process = control, process
         self.client, self.title, self.run = client, title, run
         self.evidence = []
 
     def press(self, key):
-        if self.directory is None:
-            raise ValueError("Server-view keys require --ui-key-requests and a desktop UI driver")
-        self.directory.mkdir(parents=True, exist_ok=True)
+        if self.process.poll() is not None:
+            raise RuntimeError("Owned client exited before title key " + key)
         identifier = f"run-{self.run}-key-{len(self.evidence) + 1}"
         created = time.time_ns() // 1_000_000
-        request = {"id": identifier, "action": "press_key", "key": key,
+        request = {"id": identifier, "key": key,
                    "processId": self.process.pid, "executable": str(self.client),
                    "title": self.title, "run": self.run,
-                   "createdUnixMs": created, "timeoutMs": 120_000}
-        path = self.directory / f"{identifier}.request.json"
-        acknowledgement = self.directory / f"{identifier}.ack.json"
-        if path.exists() or acknowledgement.exists():
-            raise ValueError("Stale desktop-key checkpoint: " + identifier)
-        temporary = path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(request, ensure_ascii=False) + "\n", encoding="utf-8")
-        os.replace(temporary, path)
-        print(json.dumps({"desktopKeyRequest": str(path), **request}), flush=True)
-        deadline = time.monotonic() + 120
-        while time.monotonic() < deadline:
-            if self.process.poll() is not None:
-                raise RuntimeError("Owned client exited while waiting for desktop key " + identifier)
-            try:
-                ack = json.loads(acknowledgement.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                time.sleep(0.1)
-                continue
-            performed = ack.get("performedUnixMs")
-            if (ack.get("id") != identifier or ack.get("status") != "PASS"
-                    or ack.get("processId") != self.process.pid or ack.get("key") != key
-                    or not isinstance(performed, int) or isinstance(performed, bool)
-                    or not created <= performed <= created + request["timeoutMs"]):
-                raise RuntimeError("Desktop key was not acknowledged for the owned native window: " + repr(ack))
-            self.evidence.append({"request": request, "acknowledgement": ack})
-            # Wait for the window event to reach the ordinary UI before querying
-            # a new widget tree; the UI query still waits for the next draw.
-            time.sleep(0.25)
-            return
-        raise TimeoutError("Desktop key acknowledgement timed out: " + identifier)
+                   "createdUnixMs": created, "timeoutMs": TITLE_KEY_TIMEOUT_MS}
+        ack = self.control("title-key", key, identifier)
+        event = {"request": request, "acknowledgement": ack,
+                 "receivedUnixMs": time.time_ns() // 1_000_000}
+        self.evidence.append(event)
+        verify_native_title_keys(self.evidence, self.run, str(self.client), self.title,
+                                 tuple(row["request"]["key"] for row in self.evidence))
 
 
-def check_server_views(control, game, original, desktop_keys):
+def verify_native_title_keys(events, run, executable, title, keys):
+    def positive(value):
+        return type(value) is int and value > 0
+
+    if not isinstance(events, list) or len(events) != len(keys) or not keys:
+        raise ValueError("The client did not acknowledge the expected title key sequence")
+    pid = events[0].get("request", {}).get("processId")
+    for index, (event, key) in enumerate(zip(events, keys, strict=True), 1):
+        request, ack = event.get("request", {}), event.get("acknowledgement", {})
+        identifier = f"run-{run}-key-{index}"
+        created, received = request.get("createdUnixMs"), event.get("receivedUnixMs")
+        if (request.get("id") != identifier or type(request.get("run")) is not int
+                or request["run"] != run or request.get("key") != key
+                or not positive(pid) or request.get("processId") != pid
+                or request.get("timeoutMs") != TITLE_KEY_TIMEOUT_MS
+                or PureWindowsPath(request.get("executable", "")) != PureWindowsPath(executable)
+                or request.get("title") != title or not positive(created) or not positive(received)
+                or not created <= received <= created + TITLE_KEY_TIMEOUT_MS
+                or type(ack.get("processId")) is not int
+                or ack != {"route": TITLE_KEY_ROUTE, "processId": pid,
+                           "requestId": identifier, "key": key}):
+            raise ValueError("Title key was not acknowledged by the exact owned native client")
+
+
+def check_server_views(control, game, original, native_keys):
     """Exercise actual drawn rows and ordinary click/key routes, without joining a server."""
     evidence = {}
     expected_names = {row["name"] for row in LEGACY_SERVERS}
@@ -193,14 +191,14 @@ def check_server_views(control, game, original, desktop_keys):
     steam_default(state)
     evidence["defaultSteam"] = ui_summary(state)
     # A stale hidden selection must not activate a saved row via Enter.
-    desktop_keys.press("Enter")
+    native_keys.press("enter")
     steam_default(ui())
-    desktop_keys.press("Delete")
+    native_keys.press("delete")
     steam_default(ui())
     evidence["defaultEnterAndDeleteStayedInSteamView"] = True
     click_id(REFRESH_WIDGET)
     steam_default(ui())
-    desktop_keys.press("F5")
+    native_keys.press("f5")
     steam_default(ui())
     evidence["defaultRefreshStayedInSteamView"] = True
     click_id(SAVED_WIDGET)
@@ -216,7 +214,7 @@ def check_server_views(control, game, original, desktop_keys):
     state = ui()
     if widget_id(state, SAVED_WIDGET).get("selected") is not True and widget_id(state, SAVED_WIDGET)["enabled"]:
         raise RuntimeError("Refreshing Saved implicitly returned to the Steam view")
-    desktop_keys.press("F5")
+    native_keys.press("f5")
     state = ui()
     if widget_id(state, SAVED_WIDGET).get("selected") is not True and widget_id(state, SAVED_WIDGET)["enabled"]:
         raise RuntimeError("F5 in Saved implicitly returned to the Steam view")
@@ -244,8 +242,11 @@ def check_server_views(control, game, original, desktop_keys):
     if field["kind"] != "field" or not field["enabled"]:
         raise RuntimeError("The direct-address edit box is not accessible")
     control("click", field["id"])
-    desktop_keys.press("Ctrl+A")
-    desktop_keys.press("Backspace")
+    control("type", "prefix." + MANUAL_ADDRESS)
+    if not widget(ui(), {"Join Server"}, "button")["enabled"]:
+        raise RuntimeError("Direct-address field did not accept its initial text")
+    native_keys.press("ctrl-a")
+    native_keys.press("backspace")
     if widget(ui(), {"Join Server"}, "button")["enabled"]:
         raise RuntimeError("Direct-address field did not clear")
     control("type", MANUAL_ADDRESS)
@@ -265,7 +266,7 @@ def check_server_views(control, game, original, desktop_keys):
         click({MANUAL_NAME}, "row")
     click_id(STEAM_WIDGET)
     steam_default(ui())
-    desktop_keys.press("Enter")
+    native_keys.press("enter")
     steam_default(ui())
     evidence["selectionResetOnSteamSwitch"] = True
     # Re-enter through the actual title button, even after the last view was Saved.
@@ -277,12 +278,12 @@ def check_server_views(control, game, original, desktop_keys):
     click_id(BACK_WIDGET)
     unchanged()
     evidence["unknownNbtRetainedByteForByte"] = True
-    evidence["desktopKeys"] = desktop_keys.evidence
+    evidence["nativeTitleKeys"] = native_keys.evidence
     return evidence
 
 
 def ordinary_launch(client, controller, resources, qa, game, index, build_name, visual_check=False,
-                    view_original=None, ui_key_requests=None):
+                    view_original=None):
     endpoint = qa / f"control-{index}.json"
     log = qa / f"client-{index}.log"
     environment = dict(os.environ)
@@ -331,7 +332,7 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
                 time.sleep(40)
             servers = control("servers")["servers"]
             views = check_server_views(control, game, view_original,
-                                       DesktopKeys(ui_key_requests, process, client, build_name, index)) \
+                                       NativeTitleKeys(control, process, client, build_name, index)) \
                 if view_original is not None else None
             control("quit", timeout=20)
             if process.wait(timeout=45) != 0:
@@ -362,8 +363,6 @@ def main():
     parser.add_argument("--controller", required=True, type=Path)
     parser.add_argument("--resources", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--ui-key-requests", type=Path,
-                        help="Desktop-key request/acknowledgement directory inside --out; required for view checks")
     parser.add_argument("--visual-check", action="store_true",
                         help="Hold the first ordinary title screen for 40 seconds for visual review")
     args = parser.parse_args()
@@ -376,9 +375,6 @@ def main():
     if qa.exists():
         raise ValueError("Use a fresh QA output directory in a registered task stand")
     qa.mkdir(parents=True)
-    ui_key_requests = args.ui_key_requests.resolve() if args.ui_key_requests else None
-    if ui_key_requests is not None and not ui_key_requests.is_relative_to(qa):
-        raise ValueError("Desktop-key checkpoints must stay inside the fresh QA output directory")
     game = qa / "game"
     game.mkdir()
     # Fixture-only setting; it leaves the normal public-server startup path active.
@@ -389,6 +385,8 @@ def main():
     context = execution_context(candidate)
     report = {"schemaVersion": 1, "status": "FAIL", "acceptanceContext": context,
               "startup": "ordinary client; Agent Control enabled only in technical extras",
+              "nativeTitleKeyProtocol": TITLE_KEY_ROUTE,
+              "nativeTitleKeyHelperSha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               "runs": [], "checks": {}}
     succeeded = False
     try:
@@ -444,7 +442,7 @@ def main():
             (game / name).write_bytes(data)
         for index in (5, 6):
             run = ordinary_launch(client, controller, resources, qa, game, index, build_name,
-                                  view_original=original, ui_key_requests=ui_key_requests)
+                                  view_original=original)
             report["runs"].append(run)
             if run["servers"] != LEGACY_SERVERS or server_file.read_bytes() != original:
                 raise RuntimeError("Legacy/manual data changed across ordinary view-check startup")

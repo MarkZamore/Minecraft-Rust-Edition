@@ -477,6 +477,21 @@ def verify_startup(record, files, receipt, name):
                 and not any(argument == flag or argument.startswith(flag + "=")
                             for argument in run["arguments"] for flag in harness)
                 for run in runs), "server-list report used harness startup or incomplete runs")
+    if "crates/horizon-client/src/game/runtime/control.rs" in receipt.get("patchedFiles", {}):
+        from server_list_qa import SERVER_VIEW_KEYS, TITLE_KEY_ROUTE, verify_native_title_keys
+        helper = Path(__file__).with_name("server_list_qa.py")
+        require(servers.get("nativeTitleKeyProtocol") == TITLE_KEY_ROUTE
+                and servers.get("nativeTitleKeyHelperSha256") == hashlib.sha256(helper.read_bytes()).hexdigest(),
+                "server-list report has another native title key helper or protocol")
+        for index, run in enumerate(runs[4:], 5):
+            views = run.get("serverViews", {})
+            require(all(views.get(key) is True for key in (
+                        "defaultEnterAndDeleteStayedInSteamView", "defaultRefreshStayedInSteamView",
+                        "savedRefreshPreservedViewAndData", "selectionResetOnSteamSwitch",
+                        "titleReentryDefaultsToSteam", "unknownNbtRetainedByteForByte"))
+                    and views.get("manualDirectInput"),
+                    "server-list report did not exercise all ordinary title inputs")
+            verify_native_title_keys(views.get("nativeTitleKeys"), index, run["arguments"][0], name, SERVER_VIEW_KEYS)
     verify_native_notices(record.get("nativeNotices"), files, context, name, receipt.get("noticeFontMode"))
     verify_overlay_compatibility(record.get("compatibility"), files, context, name)
     # Steam deferral cannot waive any of the required checks above.
