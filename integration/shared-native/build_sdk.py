@@ -190,6 +190,35 @@ def export_patch_source(source: Path, sdk: types.ModuleType, build_id: str, cata
     return len(written)
 
 
+def verify_target(target, attempt, proof, previous_abi):
+    if (target.resolve(strict=True) != target or not target.is_dir() or target.is_junction()
+            or not attempt.is_file() or attempt.is_symlink() or attempt.is_junction()):
+        raise ValueError("The unfinished Cargo target is redirected or lacks its receipt")
+    previous = json.loads(attempt.read_bytes())
+    if previous_abi is None:
+        if previous != proof:
+            raise ValueError("The unfinished Cargo target belongs to another SDK build")
+    else:
+        unchanged = set(proof) - {"abiBuildId", "overlays"}
+        if (not re.fullmatch(r"[0-9a-f]{40}", previous_abi)
+                or previous_abi == proof["abiBuildId"] or previous.get("abiBuildId") != previous_abi
+                or previous.keys() != proof.keys() or any(previous[key] != proof[key] for key in unchanged)):
+            raise ValueError("Refreshing the Cargo target requires its exact old ABI and the same base inputs")
+
+    prebuilt = target / "prebuilt"
+    if prebuilt.resolve() != prebuilt:
+        raise ValueError("The old staging parent is redirected")
+    for staged in (prebuilt / "stage.next", prebuilt / "stage"):
+        if staged.is_symlink() or staged.is_junction() or (
+                staged.exists() and (staged.resolve(strict=True) != staged or not staged.is_dir())):
+            raise ValueError(f"The old staging directory is redirected: {staged}")
+        for directory, subdirectories, filenames in os.walk("\\\\?\\" + str(staged), followlinks=False):
+            for name in subdirectories + filenames:
+                path = Path(directory) / name
+                if name.casefold() == ".git" or path.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                    raise ValueError(f"The previous staging contains linked or source data: {path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=lambda value: Path(value).resolve(strict=True))
@@ -199,7 +228,9 @@ def main() -> None:
     parser.add_argument("--seams", type=lambda value: Path(value).resolve(strict=True))
     parser.add_argument("--plan-only", action="store_true")
     parser.add_argument("--export-patch-source", action="store_true")
-    parser.add_argument("--reuse-target", action="store_true", help="reuse the matching unfinished SDK build's Cargo cache")
+    cache = parser.add_mutually_exclusive_group()
+    cache.add_argument("--reuse-target", action="store_true", help="reuse the matching SDK build's Cargo cache")
+    cache.add_argument("--refresh-previous-abi", help="reuse a reviewed previous ABI's Cargo cache for changed overlays")
     args = parser.parse_args()
     if args.plan_only and args.export_patch_source:
         parser.error("--export-patch-source requires a staged SDK")
@@ -214,7 +245,8 @@ def main() -> None:
     attempt = args.run / "shared-sdk-attempt.json"
     patch_source = args.run / "shared-sdk-patch-source"
     outputs = [out, receipt]
-    if not args.reuse_target:
+    use_target = args.reuse_target or args.refresh_previous_abi is not None
+    if not use_target:
         outputs.extend((target, attempt))
     if args.export_patch_source:
         outputs.append(patch_source)
@@ -229,23 +261,18 @@ def main() -> None:
     if args.plan_only:
         print(json.dumps(proof, indent=2))
         return
-    if args.reuse_target:
-        if (target.resolve(strict=True) != target or not target.is_dir() or target.is_junction()
-                or not attempt.is_file() or attempt.is_symlink() or attempt.is_junction()
-                or json.loads(attempt.read_bytes()) != proof):
-            raise ValueError("The unfinished Cargo target belongs to another SDK build")
-        staged = target / "prebuilt/stage.next"
-        if staged.parent.resolve() != staged.parent or staged.is_symlink() or staged.is_junction():
-            raise ValueError("The old staging directory is redirected")
-        if staged.exists():
-            if staged.resolve(strict=True) != staged or not staged.is_dir():
-                raise ValueError("The old staging directory is redirected")
-            for directory, subdirectories, filenames in os.walk("\\\\?\\" + str(staged), followlinks=False):
-                for name in subdirectories + filenames:
-                    path = Path(directory) / name
-                    if name.casefold() == ".git" or path.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
-                        raise ValueError(f"The previous staging contains linked or source data: {path}")
-    else:
+    if use_target:
+        verify_target(target, attempt, proof, args.refresh_previous_abi)
+    if args.refresh_previous_abi is not None:
+        with tempfile.NamedTemporaryFile(dir=attempt.parent, delete=False, mode="w", encoding="utf-8",
+                                         newline="\n") as output:
+            next_attempt = Path(output.name)
+            output.write(json.dumps(proof, indent=2) + "\n")
+        try:
+            next_attempt.replace(attempt)
+        finally:
+            next_attempt.unlink(missing_ok=True)
+    elif not use_target:
         with attempt.open("x", encoding="utf-8", newline="\n") as output:
             output.write(json.dumps(proof, indent=2) + "\n")
     os.environ.update(RUSTUP_TOOLCHAIN=TOOLCHAIN, CARGO_TARGET_DIR=str(target))
