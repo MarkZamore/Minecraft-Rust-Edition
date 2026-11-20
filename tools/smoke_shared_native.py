@@ -36,6 +36,16 @@ def require(value, message):
         raise ValueError(message)
 
 
+def file_access_root(path):
+    """Keep the launch path ordinary while checking long members under the archive SHA."""
+    value = str(path)
+    if os.name != "nt" or value.startswith("\\\\?\\"):
+        return path
+    if value.startswith("\\\\"):
+        return Path("\\\\?\\UNC\\" + value[2:])
+    return Path("\\\\?\\" + value)
+
+
 class LevelNBT:
     """Read only the bounded NBT written by an owned QA world."""
 
@@ -289,6 +299,7 @@ def verify_inputs(args, profiles, launcher_tools):
     common = None
     common_files = None
     bootstrap = None
+    runtime_files = file_access_root(args.runtime)
     for profile in profiles:
         pack = profile["packRoot"]
         descriptor_path = release.checked_file(pack, release.DESCRIPTOR)
@@ -300,8 +311,8 @@ def verify_inputs(args, profiles, launcher_tools):
             common = spec
             common_files = release.validate_runtime(spec)
             for path, record in common_files.items():
-                release.checked_file(args.runtime, path, record)
-            family = release.read(release.checked_file(args.runtime, release.FAMILY, common_files[release.FAMILY]))
+                release.checked_file(runtime_files, path, record)
+            family = release.read(release.checked_file(runtime_files, release.FAMILY, common_files[release.FAMILY]))
             minecraft = release.validate_family(family, common)
             bootstrap = release.checked_file(args.runtime, descriptor["nativeRuntime"]["executable"])
         require(common == spec and release.bind_descriptor(descriptor, common, common_files, minecraft) == descriptor
