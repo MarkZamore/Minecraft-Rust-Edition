@@ -35,7 +35,7 @@ def module_snapshot(pid):
     return json.loads(value.stdout)
 
 
-def exercise(candidate, controller, cache, output, launcher_fonts):
+def exercise(candidate, controller, cache, output, launcher_fonts, shared=None):
     context = execution_context(candidate)
     policy_path = candidate / "native/presentation.json"
     defaults = validate_environment_defaults(read_json(policy_path)["environmentDefaults"])
@@ -54,7 +54,7 @@ def exercise(candidate, controller, cache, output, launcher_fonts):
         for index in range(1, 4):
             qa = output / f"run-{index}"
             qa.mkdir()
-            session = Session(candidate, controller, cache, qa, launcher_fonts)
+            session = Session(candidate, controller, cache, qa, launcher_fonts, shared)
             success = False
             try:
                 parent_before = dict(os.environ)
@@ -79,6 +79,8 @@ def exercise(candidate, controller, cache, output, launcher_fonts):
                                "parentEnvironmentUnchanged": dict(os.environ) == parent_before,
                                "title": page, "observedUnixMs": time.time_ns() // 1_000_000,
                                "presentationHeartbeat": heartbeat}
+                if shared:
+                    observation["sharedBootstrapLaunch"] = shared.observe(session.process, qa / "client.log")
                 success = True
             finally:
                 try:
@@ -115,17 +117,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", required=True, type=Path)
     parser.add_argument("--controller", required=True, type=Path)
-    parser.add_argument("--cache", required=True, type=Path)
+    parser.add_argument("--cache", type=Path)
     parser.add_argument("--launcher-fonts", required=True, type=Path,
                         help="Directory with the launcher's exact packaged Roboto Regular and SemiBold")
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     if os.name != "nt":
         raise ValueError("This test needs the actual Windows x64 client")
+    from edition_shared_qa import SharedLaunch
+    candidate = args.candidate.resolve(strict=True)
+    shared = SharedLaunch.load(candidate)
+    if not shared and args.cache is None:
+        parser.error("--cache is required for a standalone candidate")
     output = registered_output(args.out)
+    if shared:
+        shared.check_output(output)
     output.mkdir(parents=True)
-    exercise(args.candidate.resolve(strict=True), args.controller.resolve(strict=True),
-             args.cache.resolve(strict=True), output, args.launcher_fonts.resolve(strict=True))
+    exercise(candidate, args.controller.resolve(strict=True),
+             args.cache.resolve(strict=True) if args.cache else None,
+             output, args.launcher_fonts.resolve(strict=True), shared)
 
 
 if __name__ == "__main__":

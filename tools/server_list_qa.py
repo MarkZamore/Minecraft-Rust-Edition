@@ -94,9 +94,10 @@ def ui_summary(state):
 class NativeTitleKeys:
     """Send keys to the owned client's real title dispatcher through Agent Control."""
 
-    def __init__(self, control, process, client, title, run):
+    def __init__(self, control, process, client, title, run, native_pid=None):
         self.control, self.process = control, process
         self.client, self.title, self.run = client, title, run
+        self.native_pid = native_pid if native_pid is not None else process.pid
         self.evidence = []
 
     def press(self, key):
@@ -105,7 +106,7 @@ class NativeTitleKeys:
         identifier = f"run-{self.run}-key-{len(self.evidence) + 1}"
         created = time.time_ns() // 1_000_000
         request = {"id": identifier, "key": key,
-                   "processId": self.process.pid, "executable": str(self.client),
+                   "processId": self.native_pid, "executable": str(self.client),
                    "title": self.title, "run": self.run,
                    "createdUnixMs": created, "timeoutMs": TITLE_KEY_TIMEOUT_MS}
         ack = self.control("title-key", key, identifier)
@@ -283,7 +284,7 @@ def check_server_views(control, game, original, native_keys):
 
 
 def ordinary_launch(client, controller, resources, qa, game, index, build_name, visual_check=False,
-                    view_original=None):
+                    view_original=None, shared=None):
     endpoint = qa / f"control-{index}.json"
     log = qa / f"client-{index}.log"
     environment = dict(os.environ)
@@ -295,11 +296,19 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
             del environment[key]
     environment.update(HORIZON_CONTROL=str(endpoint), HORIZON_NO_DISCORD="1",
                        LANMINECRAFT_BUILD_NAME=build_name)
-    from client_environment import direct_client_environment
-    environment = direct_client_environment(client, environment)
     # No --control, --frames, --benchmark, --offscreen or fixture flag: normal startup.
-    arguments = [str(client), "--resources", str(resources), "--game-dir", str(game),
-                 "--home", str(game), "--name", "RustEditionServerListQA"]
+    if shared:
+        cache = qa / "empty-profile" / "native-cache"
+        endpoint = shared.ordinary_endpoint(cache)
+        environment["APPDATA"] = str(qa / "empty-profile")
+        environment.pop("HORIZON_CONTROL")
+        shared.environment(environment, cache)
+        arguments = [str(shared.bootstrap), "--game-dir", str(game)]
+    else:
+        from client_environment import direct_client_environment
+        environment = direct_client_environment(client, environment)
+        arguments = [str(client), "--resources", str(resources), "--game-dir", str(game),
+                     "--home", str(game), "--name", "RustEditionServerListQA"]
     with log.open("wb") as output:
         process = subprocess.Popen(arguments, cwd=game, env=environment, stdout=output, stderr=output)
 
@@ -322,6 +331,7 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
                     raise TimeoutError("Ordinary startup did not open the technical control endpoint")
                 time.sleep(0.25)
             control("wait-for", "screen", "title", "--timeout", "90")
+            launch = shared.observe(process, log) if shared else None
             control("click", widget_id(control("ui"), "multiplayer")["id"])
             multiplayer = control("ui")
             widget_id(multiplayer, STEAM_WIDGET)
@@ -332,18 +342,24 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
                 time.sleep(40)
             servers = control("servers")["servers"]
             views = check_server_views(control, game, view_original,
-                                       NativeTitleKeys(control, process, client, build_name, index)) \
+                                       NativeTitleKeys(control, process, client, build_name, index,
+                                                       launch["nativeProcessId"] if launch else None)) \
                 if view_original is not None else None
             control("quit", timeout=20)
             if process.wait(timeout=45) != 0:
                 raise RuntimeError(f"Client exited with code {process.returncode}; see {log}")
             return {"servers": servers, "arguments": arguments, "exitCode": process.returncode,
                     "firstMultiplayerScreen": ui_summary(multiplayer),
+                    **({"sharedBootstrapLaunch": launch} if launch else {}),
                     **({"serverViews": views} if views is not None else {})}
         finally:
             if process.poll() is None:
-                process.kill()
-                process.wait(timeout=15)
+                if shared:
+                    from edition_shared_qa import stop_owned_tree
+                    stop_owned_tree(process)
+                else:
+                    process.kill()
+                    process.wait(timeout=15)
 
 
 def clean_fixture(game, qa):
@@ -361,17 +377,23 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", required=True, type=Path)
     parser.add_argument("--controller", required=True, type=Path)
-    parser.add_argument("--resources", required=True, type=Path)
+    parser.add_argument("--resources", type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--visual-check", action="store_true",
                         help="Hold the first ordinary title screen for 40 seconds for visual review")
     args = parser.parse_args()
     candidate = args.candidate.resolve(strict=True)
-    client = candidate / "native/horizon-client.exe"
+    from edition_shared_qa import SharedLaunch
+    shared = SharedLaunch.load(candidate)
+    if not shared and args.resources is None:
+        parser.error("--resources is required for a direct client")
+    client = shared.client if shared else candidate / "native/horizon-client.exe"
     build_name = json.loads((candidate / "native/presentation.json").read_text(encoding="utf-8"))["name"]
     controller = args.controller.resolve(strict=True)
-    resources = args.resources.resolve(strict=True)
+    resources = args.resources.resolve(strict=True) if args.resources else None
     qa = args.out.resolve()
+    if shared:
+        shared.check_output(qa)
     if qa.exists():
         raise ValueError("Use a fresh QA output directory in a registered task stand")
     qa.mkdir(parents=True)
@@ -392,7 +414,7 @@ def main():
     try:
         for index in (1, 2):
             run = ordinary_launch(client, controller, resources, qa, game, index,
-                                  build_name, args.visual_check and index == 1)
+                                  build_name, args.visual_check and index == 1, shared=shared)
             report["runs"].append(run)
             if run["servers"]:
                 raise RuntimeError("A clean profile acquired automatic public-server entries")
@@ -418,7 +440,7 @@ def main():
         for name, data in markers.items():
             (game / name).write_bytes(data)
         for index in (3, 4):
-            run = ordinary_launch(client, controller, resources, qa, game, index, build_name)
+            run = ordinary_launch(client, controller, resources, qa, game, index, build_name, shared=shared)
             report["runs"].append(run)
             if run["servers"] != [{"name": MANUAL_NAME, "address": MANUAL_ADDRESS}]:
                 raise RuntimeError("Manual server list changed across ordinary startup")
@@ -442,7 +464,7 @@ def main():
             (game / name).write_bytes(data)
         for index in (5, 6):
             run = ordinary_launch(client, controller, resources, qa, game, index, build_name,
-                                  view_original=original)
+                                  view_original=original, shared=shared)
             report["runs"].append(run)
             if run["servers"] != LEGACY_SERVERS or server_file.read_bytes() != original:
                 raise RuntimeError("Legacy/manual data changed across ordinary view-check startup")
@@ -463,6 +485,9 @@ def main():
         report["error"] = str(error)
         raise
     finally:
+        if shared:
+            from native_notices_qa import remove_fixture
+            remove_fixture(qa / "empty-profile", qa)
         if succeeded:
             clean_fixture(game, qa)
             report["fixtureRemoved"] = True

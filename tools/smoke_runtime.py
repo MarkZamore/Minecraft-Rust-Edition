@@ -33,7 +33,7 @@ def check_window_title(pid, expected):
 
 
 def run_client(executable, controller, resources, qa, index, action, standalone=None,
-               expected_title=None):
+               expected_title=None, shared=None, launches=None):
     game = qa / "game"
     game.mkdir(exist_ok=True)
     endpoint = qa / f"control-{index}.json"
@@ -56,10 +56,20 @@ def run_client(executable, controller, resources, qa, index, action, standalone=
         else:
             environment.pop("JAVA_HOME", None)
         environment["LANMINECRAFT_NATIVE_CACHE"] = str(cache)
+        if shared:
+            if bootstrap != shared.bootstrap:
+                raise ValueError("Use the verified shared bootstrap from the runtime store")
+            shared.environment(environment, cache)
     arguments.extend(["--game-dir", str(game), "--control-socket", str(endpoint)])
     if not standalone:
-        environment = direct_client_environment(executable, environment)
-    with (qa / f"client-{index}.log").open("wb") as output:
+        if shared:
+            if resources != shared.resources:
+                raise ValueError("Use the verified shared resources for direct loopback")
+            shared.environment(environment)
+        environment = direct_client_environment(executable, environment,
+                                                presentation_path=shared.presentation if shared else None)
+    log = qa / f"client-{index}.log"
+    with log.open("wb") as output:
         process = subprocess.Popen(arguments, cwd=game, env=environment, stdout=output, stderr=output)
 
         def control(*args, timeout=120):
@@ -85,6 +95,10 @@ def run_client(executable, controller, resources, qa, index, action, standalone=
             control("wait-for", "screen", "title", "--timeout", "90")
             if expected_title is not None:
                 check_window_title(process.pid, expected_title)
+            if shared and standalone:
+                evidence = shared.observe(process, log)
+                if launches is not None:
+                    launches.append(evidence)
             result = action(control)
             control("quit", timeout=20)
             if process.wait(timeout=45) != 0:
@@ -175,7 +189,7 @@ def set_test_language(game, code):
 
 
 def smoke(executable, controller, resources, qa, standalone=None, expected_title=None,
-          expect_cold=False, reuse_world=False, check_pause=False):
+          expect_cold=False, reuse_world=False, check_pause=False, shared=None):
     from release_acceptance import empty_mods_page_exit, execution_context
     acceptance_context = execution_context(executable.parent.parent)
     suffix = "-update" if reuse_world else ""
@@ -187,6 +201,7 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         raise ValueError("No technical world from the previous smoke run")
     if check_pause:
         set_test_language(qa / "game", "en_us")
+    launches = []
 
     def create(control):
         if control("narration")["status"] != "off":
@@ -214,12 +229,12 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         return worlds, control("state")
 
     (first, mods) = run_client(
-        executable, controller, resources, qa, first_index, create, standalone, expected_title,
+        executable, controller, resources, qa, first_index, create, standalone, expected_title, shared, launches,
     )
-    cache_receipt = standalone[3] / "resources.json" if standalone else None
+    cache_receipt = shared.receipt if shared else standalone[3] / "resources.json" if standalone else None
     first_receipt = file_info(cache_receipt) if cache_receipt else None
     worlds, reopened = run_client(
-        executable, controller, resources, qa, second_index, reopen, standalone, expected_title,
+        executable, controller, resources, qa, second_index, reopen, standalone, expected_title, shared, launches,
     )
     if any(first[key] != reopened[key] for key in ("dimension", "gamemode")) or any(
         abs(a - b) > 1.0 for a, b in zip(first["player"]["position"], reopened["player"]["position"])
@@ -235,6 +250,8 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
         "worldsOnReopen": worlds,
         "reopenedState": reopened,
     }
+    if shared:
+        report["sharedBootstrapLaunches"] = launches
     if standalone:
         marker = "Prepared Horizon native-client resources"
         cold = marker in (qa / f"client-{first_index}.log").read_text(encoding="utf-8", errors="replace")
@@ -273,9 +290,10 @@ def smoke(executable, controller, resources, qa, standalone=None, expected_title
             return result
 
         set_test_language(qa / "game", "ru_ru")
-        prepared = standalone[3] / "resources" if standalone else resources
+        prepared = shared.resources if shared else standalone[3] / "resources" if standalone else resources
         report["pauseMenu"] = run_client(
-            executable, controller, prepared, qa, second_index + 1, check_reopened_pause,
+            shared.client if shared else executable, controller, prepared, qa, second_index + 1, check_reopened_pause,
+            shared=shared,
         )
     if execution_context(executable.parent.parent) != acceptance_context:
         raise RuntimeError("The packaged payload changed during Windows QA")
@@ -334,6 +352,12 @@ def main():
         executable = args.client.resolve(strict=True)
         controller = args.controller.resolve(strict=True)
         resources = args.resources.resolve(strict=True) if args.resources else None
+        from edition_shared_qa import SharedLaunch
+        shared = SharedLaunch.load(executable.parent.parent)
+        if shared and (not standalone or args.expect_cold):
+            raise ValueError("Shared Edition smoke uses the exact bootstrap and verified warm preparation")
+        if shared:
+            shared.check_output(qa)
         if args.refresh_preview:
             report = json.loads((qa / "smoke.json").read_text(encoding="utf-8"))
             if report["client"] != file_info(executable):
@@ -343,11 +367,11 @@ def main():
                 control("open", WORLD)
                 photograph(control, qa / "scenic-preview.png")
 
-            run_client(executable, controller, resources, qa, 3, take_preview, standalone, args.expect_title)
+            run_client(executable, controller, resources, qa, 3, take_preview, standalone, args.expect_title, shared)
         else:
             qa.mkdir(exist_ok=args.reuse_world)
             smoke(executable, controller, resources, qa, standalone, args.expect_title,
-                  args.expect_cold, args.reuse_world, args.check_pause_menu)
+                  args.expect_cold, args.reuse_world, args.check_pause_menu, shared)
     except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
         parser.exit(1, f"{error}\n")
 

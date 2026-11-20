@@ -10,8 +10,8 @@ from bootstrap_contract import validate_environment_defaults
 from stage_runtime import read_json
 
 
-def direct_client_environment(client, environment):
-    presentation = read_json(Path(client).parent / "presentation.json")
+def direct_client_environment(client, environment, *, presentation_path=None):
+    presentation = read_json(presentation_path or Path(client).parent / "presentation.json")
     defaults = validate_environment_defaults(presentation.get("environmentDefaults", {}))
     result = dict(environment)
     inherited = {key.casefold() for key in result}

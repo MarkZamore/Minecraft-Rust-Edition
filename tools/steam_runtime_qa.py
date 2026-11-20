@@ -18,7 +18,7 @@ from client_environment import direct_client_environment
 
 
 @contextlib.contextmanager
-def client(executable, controller, resources, root, name):
+def client(executable, controller, resources, root, name, shared=None):
     root.mkdir()
     game = root / "game"
     set_test_language(game, "en_us")
@@ -30,7 +30,10 @@ def client(executable, controller, resources, root, name):
     for key in ("HORIZON_LAUNCHER_HOME", "XDG_DATA_HOME", "XDG_CONFIG_HOME"):
         environment[key] = str(root / key.lower())
     environment["HORIZON_LAUNCHER_NO_SELF_UPDATE"] = "1"
-    environment = direct_client_environment(executable, environment)
+    if shared:
+        shared.environment(environment)
+    environment = direct_client_environment(executable, environment,
+                                            presentation_path=shared.presentation if shared else None)
     with (root / "client.log").open("wb") as log:
         process = subprocess.Popen(
             [str(executable), "--resources", str(resources), "--home", str(root / "home"),
@@ -89,16 +92,16 @@ def type_chat(control, text):
     control("wait-for", "screen", "playing", "--timeout", "5")
 
 
-def check_pair(executable, controller, resources, output, cheats):
+def check_pair(executable, controller, resources, output, cheats, shared=None):
     folder = output / ("commands-allowed" if cheats else "commands-denied")
     folder.mkdir()
-    with client(executable, controller, resources, folder / "host", "EditionHostQA") as host:
+    with client(executable, controller, resources, folder / "host", "EditionHostQA", shared) as host:
         world = ["GuestCommandsQA", "137248"] + (["creative"] if cheats else [])
         host("open", *world)
         host("wait-for", "loaded", "--timeout", "120")
         pause = check_pause_menu(host)
         port = host("lan", "status")["port"]
-        with client(executable, controller, resources, folder / "guest", "EditionGuestQA") as guest:
+        with client(executable, controller, resources, folder / "guest", "EditionGuestQA", shared) as guest:
             guest("connect", f"127.0.0.1:{port}", "EditionGuestQA")
             guest("wait-for", "loaded", "--timeout", "120")
             if cheats:
@@ -138,23 +141,42 @@ def main():
     executable, controller, resources, output = (
         value.resolve() for value in (args.client, args.controller, args.resources, args.out)
     )
+    from edition_shared_qa import SharedLaunch
+    candidate = executable.parent.parent
+    shared = SharedLaunch.load(candidate)
+    if shared:
+        shared.check_output(output)
+        if resources != shared.resources:
+            raise ValueError("Use the prepared resources observed by the verified shared bootstrap")
+        executable = shared.client
     output.mkdir()
     from release_acceptance import execution_context
-    acceptance_context = execution_context(executable.parent.parent)
+    acceptance_context = execution_context(candidate)
     report = {"schemaVersion": 1, "client": file_info(executable),
               "acceptanceContext": acceptance_context,
               "transport": "Windows loopback; real Horizon server; guest T/type/Enter input",
               "twoAccountSteam": "NOT RUN", "status": "RUNNING"}
+    if shared:
+        report.update(sharedRuntimeArchiveSha256=shared.spec["archive"]["sha256"],
+                      directProfileExecutable=str(executable), sharedResources=str(resources))
     try:
-        report["commandsAllowed"] = check_pair(executable, controller, resources, output, True)
-        report["commandsDenied"] = check_pair(executable, controller, resources, output, False)
-        if execution_context(executable.parent.parent) != acceptance_context:
+        report["commandsAllowed"] = check_pair(executable, controller, resources, output, True, shared)
+        report["commandsDenied"] = check_pair(executable, controller, resources, output, False, shared)
+        if execution_context(candidate) != acceptance_context:
             raise RuntimeError("The packaged payload changed during multiplayer QA")
         report["status"] = "PASS"
     except Exception as error:
         report.update(status="FAIL", error=str(error))
         raise
     finally:
+        if shared:
+            from native_notices_qa import remove_fixture
+            for host in ("commands-allowed", "commands-denied"):
+                for role in ("host", "guest"):
+                    fixture = output / host / role
+                    if (fixture / "game").is_dir():
+                        remove_fixture(fixture / "game", fixture)
+                    (fixture / "control.json").unlink(missing_ok=True)
         (output / "report.json").write_text(
             json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
         )

@@ -268,11 +268,15 @@ class WindowProbe:
 
 
 class Session:
-    def __init__(self, candidate, controller, cache, qa, font_dir):
+    def __init__(self, candidate, controller, cache, qa, font_dir, shared=None):
         self.candidate, self.controller, self.cache, self.qa = candidate, controller, cache, qa
+        self.shared = shared
         self.font_dir = font_dir
         self.client = candidate / "native/horizon-client.exe"
         self.bootstrap = candidate / "native/launch-rust-edition.exe"
+        if shared:
+            self.client, self.bootstrap = shared.client, shared.bootstrap
+            self.cache = qa / "empty-profile" / "native-cache"
         self.game, self.directory = qa / "game", qa / "session"
         self.endpoint = qa / "control.json"
         self.process, self.log = None, None
@@ -303,6 +307,8 @@ class Session:
         environment.update(LANMINECRAFT_NOTICE_DIRECTORY=str(self.directory),
                            LANMINECRAFT_NATIVE_CACHE=str(self.cache),
                            APPDATA=str(self.qa / "empty-profile"))
+        if self.shared:
+            self.shared.environment(environment, self.cache)
         self.arguments = [str(self.bootstrap), "--game-dir", str(self.game),
                           "--control-socket", str(self.endpoint)]
         self.log = (self.qa / "client.log").open("wb")
@@ -640,7 +646,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", required=True, type=Path)
     parser.add_argument("--controller", required=True, type=Path)
-    parser.add_argument("--cache", required=True, type=Path,
+    parser.add_argument("--cache", type=Path,
                         help="Existing verified bootstrap cache; resources are shared read-only inputs")
     parser.add_argument("--launcher-fonts", required=True, type=Path,
                         help="Directory with the launcher's exact packaged Roboto Regular and SemiBold")
@@ -648,12 +654,18 @@ def main():
     args = parser.parse_args()
     if os.name != "nt":
         raise ValueError("This acceptance requires the real Windows x64 client")
-    candidate, controller, cache = (value.resolve(strict=True) for value in
-                                    (args.candidate, args.controller, args.cache))
+    from edition_shared_qa import SharedLaunch
+    candidate, controller = (value.resolve(strict=True) for value in (args.candidate, args.controller))
+    shared = SharedLaunch.load(candidate)
+    if not shared and args.cache is None:
+        parser.error("--cache is required for a standalone candidate")
+    cache = args.cache.resolve(strict=True) if args.cache else None
     qa = registered_output(args.out)
+    if shared:
+        shared.check_output(qa)
     context = execution_context(candidate)
     qa.mkdir(parents=True)
-    session = Session(candidate, controller, cache, qa, args.launcher_fonts.resolve(strict=True))
+    session = Session(candidate, controller, cache, qa, args.launcher_fonts.resolve(strict=True), shared)
     report = {"schemaVersion": 2, "status": "FAIL", "acceptanceContext": context,
               "client": file_info(session.client), "bootstrap": file_info(session.bootstrap),
               "fontMode": NOTICE_FONT_MODE, "fontFiles": NOTICE_FONT_FILES,
@@ -663,6 +675,8 @@ def main():
     try:
         session.start()
         report["arguments"] = session.arguments
+        if shared:
+            report["sharedBootstrapLaunch"] = shared.observe(session.process, qa / "client.log")
         report["nativeProcessId"] = session.renderer_pid
         report["bootstrapProcessId"] = session.process.pid
         exercise(session, report)

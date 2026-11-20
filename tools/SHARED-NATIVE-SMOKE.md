@@ -56,3 +56,49 @@ python -B "$edition/tools/smoke_shared_native.py" @qaArgs --verify-only
 `--verify-only` проверяет общие файлы, дескрипторы и закреплённые DLL профилей. Для игровой приёмки запустите ту же команду без `--verify-only` с разрешением на запуск клиентов. При наличии проверенных серверного JAR, Java или входных данных Minecraft передайте их через `--server-jar`, `--java-home` и `--minecraft-dir`. Эти пути задают источники подготовки, а игровой мир создаётся во временном каталоге своего профиля.
 
 В `report.json` проверяются точный путь и SHA‑256 запущенного EXE, цепочка процессов, заголовки окон, раздельные миры и списки загруженных модов из сохранений. Каждая следующая сборка должна использовать тот же путь к подготовленным ресурсам и ту же квитанцию с сохранённым временем записи. Сценарий удаляет собственные тестовые миры и кеши сессий после завершения.
+
+## Приёмка Edition на общем клиенте
+
+После успешной профильной проверки соберите файловый вид `edition-qa-view` в том же стенде. Он содержит принятый общий инвентарь, файлы Edition и проект `tools/distribution-lock.json` с записями `sharedSdkBuild` и `sharedProfileSmoke` о размере и SHA‑256. Для общего инвентаря можно использовать жёсткие ссылки на неизменяемые проверенные файлы того же стенда. Файлы сборки и библиотеки скопируйте отдельно.
+
+После выделения игрового слота запустите следующие команды из корня LANMinecraft. Сетевые проверки требуют максимум два клиента одновременно. Сохраните уже выбранные `$run`, `$edition` и `$controller`.
+
+```powershell
+$candidate = Join-Path $run 'edition-qa-view'
+$report = Join-Path $run 'shared-smoke-final/report.json'
+$shared = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
+$native = Join-Path $run ("runtime-store/" + $shared.runtime.archiveSha256 + "/native")
+$fonts = Join-Path (Get-Location).Path 'Program/Assets/Fonts'
+$out = Join-Path $run 'edition-release-qa'
+New-Item -ItemType Directory -Path $out -ErrorAction Stop | Out-Null
+$smoke = Join-Path $out 'smoke'
+$env:LANMINECRAFT_QA_SHARED_REPORT = $report
+try {
+    python -B "$edition/tools/smoke_runtime.py" --client "$candidate/native/horizon-client.exe" `
+      --controller $controller --qa $smoke --bootstrap "$native/launch-rust-edition.exe" `
+      --cache "$smoke/empty-profile/native-cache" --expect-title 'Minecraft Rust Edition' --check-pause-menu
+    if ($LASTEXITCODE) { throw 'Edition save/reopen smoke failed' }
+    python -B "$edition/tools/server_list_qa.py" --candidate $candidate --controller $controller --out "$out/servers"
+    if ($LASTEXITCODE) { throw 'Edition server-list QA failed' }
+    python -B "$edition/tools/native_notices_qa.py" --candidate $candidate --controller $controller `
+      --launcher-fonts $fonts --out "$out/notices"
+    if ($LASTEXITCODE) { throw 'Edition notice QA failed' }
+    python -B "$edition/tools/overlay_compatibility_qa.py" --candidate $candidate --controller $controller `
+      --launcher-fonts $fonts --out "$out/compatibility"
+    if ($LASTEXITCODE) { throw 'Edition compatibility QA failed' }
+    python -B "$edition/tools/steam_runtime_qa.py" --client "$candidate/native/horizon-client.exe" `
+      --controller $controller --resources $shared.sharedPreparation.resources --out "$out/pair"
+    if ($LASTEXITCODE) { throw 'Edition guest commands QA failed' }
+} finally {
+    Remove-Item Env:LANMINECRAFT_QA_SHARED_REPORT -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $smoke -PathType Container) {
+        python -B -c 'import sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); from native_notices_qa import remove_fixture; qa=Path(sys.argv[2]); remove_fixture(qa/"game",qa); remove_fixture(qa/"empty-profile",qa)' "$edition/tools" $smoke
+    }
+}
+```
+
+Smoke создаёт `smoke/preview.png` из настоящего технического мира до сохранения. Сверьте его SHA‑256 с полем `preview` в `smoke/smoke.json`, осмотрите кадр и сохраните его как JPEG в `edition-qa-view/library/preview.jpg`. Повторно зафиксируйте размер и SHA‑256 JPEG в проекте lock перед переносом в исходники. Ранее принятое изображение годится для подготовки файлового вида до появления свежего кадра.
+
+В обычных проверках списка серверов bootstrap запускается только с `--game-dir`. Настройка Agent Control находится в техническом профиле, а endpoint Windows открывается в его частном `process-temp`. Проверки гостевых прав и русской публикации из меню подключаются к точному клиенту напрямую, поскольку режим `HORIZON_TEST_LOOPBACK` нужен только для изолированной проверки. Все эти прогоны используют ресурсы из отчёта профилей.
+
+В старой квитанции главным источником привязки был `overlay-receipt.json` монолитного клиента. Для общего клиента отчёты закрепляют ABI SDK, полный инвентарь, отдельный архив и фактический путь к дочернему EXE. Проверка обновления должна закреплять общий ZIP по `nativeRuntime.sharedRuntime.archive.sha256`, пять файлов профиля по манифесту и отдельно сохранить прежние доказательства сохранности личных файлов, отказа от неполной установки и повторного запуска. Старый поиск ZIP по наличию `native/horizon-client.exe` в обычных assets к такому манифесту неприменим.

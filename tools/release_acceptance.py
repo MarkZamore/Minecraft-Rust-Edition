@@ -31,7 +31,19 @@ def context_from_files(files, receipt):
 def execution_context(candidate):
     # Import lazily: the packer also uses this module.
     from generate_manifest import inventory
-    return context_from_files(inventory(candidate), read_json(candidate / "overlay-receipt.json"))
+    files = inventory(candidate)
+    runtime = read_json(candidate / "portable-pack.json")["nativeRuntime"]
+    if "sharedRuntime" in runtime:
+        lock = read_json(candidate / "tools/distribution-lock.json")
+        require(files == lock["files"], "shared Edition payload differs from its proposed distribution lock")
+        return {
+            "upstreamCommit": lock["upstreamCommit"],
+            "sharedRuntimeArchiveSha256": runtime["sharedRuntime"]["archive"]["sha256"],
+            "sharedSdkBuildSha256": lock["sharedSdkBuild"]["sha256"],
+            "sharedProfileSmokeSha256": lock["sharedProfileSmoke"]["sha256"],
+            "payloadInventorySha256": canonical_sha(files),
+        }
+    return context_from_files(files, read_json(candidate / "overlay-receipt.json"))
 
 
 def require(condition, message):
