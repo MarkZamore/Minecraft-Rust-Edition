@@ -22,3 +22,33 @@ its inherited-variable lookup must be adjusted explicitly as well.
 The generic bootstrap contains no pack-specific compatibility names or values;
 those belong to the pack's checked presentation data. Build and test with the
 locked dependencies, Windows x64 and `RUSTFLAGS=-C target-feature=+crt-static`.
+
+## Shared native runtime
+
+The launcher verifies an immutable runtime archive and starts its bootstrap
+under `Launcher/Shared/NativeRuntimes/<archive SHA-256>/native`. It passes two
+absolute directories to the bootstrap:
+
+| Environment variable | Directory |
+| --- | --- |
+| `LANMINECRAFT_NATIVE_PACK_ROOT` | The installed pack containing `portable-pack.json` and the `native/` overlay |
+| `LANMINECRAFT_NATIVE_PREPARED_CACHE` | The `Launcher/Shared/NativePrepared` cache, separate from the runtime and all pack locations |
+
+The bootstrap compares `portable-pack.json`'s `nativeRuntime.sharedRuntime`
+with the shared archive folder and `native/runtime-family.json`. The match
+covers the runtime ID, runtime version, target, Minecraft version and archive
+SHA-256. The launcher checks the contents of the archive against its inventory.
+The pack supplies `presentation.json` and its managed mod packages. The game
+client and preparer run from the shared runtime folder. The client receives
+the validated pack root for managed overlay discovery. `--game-dir`, Steam
+identity and `LANMINECRAFT_NATIVE_CACHE` retain the instance's game directory,
+configuration and session lock.
+
+The shared preparation key hashes the recipe schema, pinned default Java
+archive, preparer, research lock, and every file copied to the preparer's work
+tree. A completed generation stores the verified loose resources and their
+SHA-256 receipt. Initialization, repair and generated archive reconciliation
+take exclusive access. Concurrent clients hold shared leases through exit.
+The old pack-local caches have a different receipt format and are preserved
+for legacy launches. Ordinary standalone launches with neither shared-runtime
+variable continue using the executable-adjacent layout and pack-local cache.

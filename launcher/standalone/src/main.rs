@@ -7,6 +7,7 @@ compile_error!("The portable Windows x64 bootstrap requires the static MSVC runt
 mod environment_defaults;
 mod minecraft_inputs;
 mod prepared_data;
+mod shared_runtime;
 
 use anyhow::{Context, Result, bail, ensure};
 use fs2::FileExt;
@@ -31,6 +32,12 @@ const JAVA_URL: &str = "https://github.com/adoptium/temurin25-binaries/releases/
 const JAVA_HASH: &str = "00c847d804f4a78e9f04f2683faf14fed898535b177b7fc704486cb0284e9283";
 const JAVA_SIZE: u64 = 141_167_264;
 const JAVA_PREFIX: &str = "jdk-25.0.4.1+1";
+const PREPARATION_SOURCES: &[&str] = &[
+    "exporters",
+    "crates/horizon-prepare",
+    "mods/horizon/src/test/java",
+];
+const SHARED_PREPARATION_SCHEMA: u32 = 1;
 
 #[derive(Default)]
 struct Options {
@@ -57,6 +64,47 @@ struct Pins {
 struct Receipt {
     key: String,
     files: BTreeMap<String, String>,
+}
+
+struct Preparation<'a> {
+    native: &'a Path,
+    preparer: PathBuf,
+    research: PathBuf,
+    pins: Pins,
+    key: String,
+}
+
+impl<'a> Preparation<'a> {
+    fn read(native: &'a Path, shared: bool) -> Result<Self> {
+        let preparer = child(native, "horizon-prepare.exe")?;
+        let research = child(native, "research-lock.json")?;
+        let lock: Value = serde_json::from_reader(File::open(&research)?)?;
+        let pins = serde_json::from_value(lock["minecraft"].clone())?;
+        let preparer_sha = hash::<Sha256>(&preparer)?;
+        let research_sha = hash::<Sha256>(&research)?;
+        let key = if shared {
+            let mut files = BTreeMap::from([
+                ("horizon-prepare.exe".to_owned(), preparer_sha),
+                ("research-lock.json".to_owned(), research_sha),
+            ]);
+            for relative in PREPARATION_SOURCES {
+                for file in tree_files(&child(native, relative)?)? {
+                    files.insert(resource_name(native, &file)?, hash::<Sha256>(&file)?);
+                }
+            }
+            let recipe = (SHARED_PREPARATION_SCHEMA, JAVA_HASH, files);
+            format!("{:x}", Sha256::digest(serde_json::to_vec(&recipe)?))
+        } else {
+            format!("{preparer_sha}:{research_sha}")
+        };
+        Ok(Self {
+            native,
+            preparer,
+            research,
+            pins,
+            key,
+        })
+    }
 }
 
 struct Minecraft {
@@ -86,9 +134,15 @@ fn run() -> Result<i32> {
         return Ok(0);
     };
     let exe = env::current_exe()?;
-    let native = exe.parent().context("No installation directory")?;
-    let (presentation, environment_defaults) =
-        environment_defaults::read_presentation(File::open(child(native, "presentation.json")?)?)?;
+    let layout = shared_runtime::Layout::checked(
+        &exe,
+        env::var_os(shared_runtime::PACK_ROOT).map(PathBuf::from),
+        env::var_os(shared_runtime::PREPARED_CACHE).map(PathBuf::from),
+    )?;
+    let native = &layout.runtime_native;
+    let (presentation, environment_defaults) = environment_defaults::read_presentation(
+        File::open(child(&layout.pack_native, "presentation.json")?)?,
+    )?;
     let title = presentation["name"]
         .as_str()
         .context("Missing pack display name")?;
@@ -98,12 +152,13 @@ fn run() -> Result<i32> {
             && !title.chars().any(char::is_control),
         "Invalid pack display name"
     );
-    let pack = native.parent().context("No pack directory")?;
+    let pack = &layout.pack;
     let game = std::path::absolute(options.game.unwrap_or_else(|| pack.join("game")))?;
     let cache = env::var_os("LANMINECRAFT_NATIVE_CACHE")
         .map(PathBuf::from)
         .unwrap_or_else(|| pack.join("cache"));
     let cache = std::path::absolute(cache)?;
+    layout.check_shared_preparation(&cache, &game)?;
     create_unlinked_dir(&cache)?;
     let lock = OpenOptions::new()
         .create(true)
@@ -114,14 +169,26 @@ fn run() -> Result<i32> {
     FileExt::try_lock_exclusive(&lock)
         .context("The same installation is already preparing or running")?;
     fs::create_dir_all(&game)?;
-    let resources = prepare(
-        native,
-        &cache,
-        options.minecraft.map(std::path::absolute).transpose()?,
-        options.server.map(std::path::absolute).transpose()?,
-        options.java.map(std::path::absolute).transpose()?,
-    )?;
-    let mut client = tool(&native.join("horizon-client.exe"), native);
+    let preparation = Preparation::read(native, layout.shared_preparation.is_some())?;
+    let minecraft = options.minecraft.map(std::path::absolute).transpose()?;
+    let server = options.server.map(std::path::absolute).transpose()?;
+    let java = options.java.map(std::path::absolute).transpose()?;
+    let (resources, _shared_lease) = if let Some(shared) = &layout.shared_preparation {
+        let (resources, lease) =
+            shared_runtime::prepare(shared, &preparation.key, |dir, writable| {
+                prepare(&preparation, dir, minecraft, server, java, writable)
+            })?;
+        (resources, Some(lease))
+    } else {
+        (
+            prepare(&preparation, &cache, minecraft, server, java, true)?,
+            None,
+        )
+    };
+    let mut client = tool(&child(native, "horizon-client.exe")?, native);
+    if layout.shared_preparation.is_some() {
+        client.env(shared_runtime::PACK_ROOT, pack);
+    }
     client.env("LANMINECRAFT_BUILD_NAME", title);
     if let Some(config) = presentation.get("instanceConfig") {
         let files = config
@@ -199,7 +266,10 @@ fn options() -> Result<Option<Options>> {
 
 fn tool(exe: &Path, cwd: &Path) -> Command {
     let mut command = Command::new(exe);
-    command.current_dir(cwd);
+    command
+        .current_dir(cwd)
+        .env_remove(shared_runtime::PACK_ROOT)
+        .env_remove(shared_runtime::PREPARED_CACHE);
     for (key, _) in env::vars_os() {
         if key
             .to_string_lossy()
@@ -234,28 +304,27 @@ fn configure_profile(command: &mut Command, home: &Path, temp: &Path) -> Result<
     Ok(())
 }
 fn prepare(
-    native: &Path,
+    preparation: &Preparation<'_>,
     cache: &Path,
     minecraft: Option<PathBuf>,
     server: Option<PathBuf>,
     java: Option<PathBuf>,
+    writable: bool,
 ) -> Result<PathBuf> {
-    let preparer = child(native, "horizon-prepare.exe")?;
-    let research = child(native, "research-lock.json")?;
-    let lock: Value = serde_json::from_reader(File::open(&research)?)?;
-    let pins: Pins = serde_json::from_value(lock["minecraft"].clone())?;
-    let key = format!(
-        "{}:{}",
-        hash::<Sha256>(&preparer)?,
-        hash::<Sha256>(&research)?
-    );
+    let Preparation {
+        native,
+        preparer,
+        research,
+        pins,
+        key,
+    } = preparation;
     let resources = child(cache, "resources")?;
     let receipt = child(cache, "resources.json")?;
     let verify_started = Instant::now();
     if resources.is_dir()
         && let Ok(file) = File::open(&receipt)
         && let Ok(old) = serde_json::from_reader::<_, Receipt>(file)
-        && old.key == key
+        && old.key == *key
         && !old.files.is_empty()
         && verify_inventory(&resources, &old.files)?
     {
@@ -267,7 +336,9 @@ fn prepare(
                 path.display()
             );
         }
-        prepared_data::reconcile(&resources, &old.files)?;
+        if writable {
+            prepared_data::reconcile(&resources, &old.files)?;
+        }
         eprintln!(
             "Verified {} cached Horizon resource files in {:.2}s",
             old.files.len(),
@@ -276,8 +347,12 @@ fn prepare(
         return Ok(resources);
     }
 
-    let input = find_minecraft(&pins, minecraft, cache)?;
-    let server = server_jar(cache, &input.manifest, &pins, server)?;
+    ensure!(
+        writable,
+        "Shared Horizon resources need repair after the running sessions close"
+    );
+    let input = find_minecraft(pins, minecraft, cache)?;
+    let server = server_jar(cache, &input.manifest, pins, server)?;
     let jdk = java_home(cache, java, pins.java_major)?;
     let scratch = child(cache, "preparation")?;
     remove_tree(&scratch)?;
@@ -286,18 +361,14 @@ fn prepare(
         fs::remove_file(&receipt)?;
     }
     let result = (|| {
-        for relative in [
-            "exporters",
-            "crates/horizon-prepare",
-            "mods/horizon/src/test/java",
-        ] {
+        for relative in PREPARATION_SOURCES {
             copy_tree(&child(native, relative)?, &child(&scratch, relative)?)?;
         }
-        fs::copy(&research, scratch.join("research-lock.json"))?;
+        fs::copy(research, scratch.join("research-lock.json"))?;
         let temp = scratch.join("tmp");
         let home = scratch.join("home");
 
-        let mut command = tool(&preparer, &scratch);
+        let mut command = tool(preparer, &scratch);
         command
             .arg("--prepare")
             .arg("--root")
@@ -342,7 +413,13 @@ fn prepare(
         ensure!(!files.is_empty(), "Horizon did not create any resources");
         prepared_data::reconcile(&resources, &files)?;
         let pending = child(cache, "resources.json.part")?;
-        serde_json::to_writer(File::create(&pending)?, &Receipt { key, files })?;
+        serde_json::to_writer(
+            File::create(&pending)?,
+            &Receipt {
+                key: key.clone(),
+                files,
+            },
+        )?;
         fs::rename(pending, &receipt)?;
         Ok(())
     })();
@@ -895,6 +972,39 @@ mod tests {
             Ok(())
         })();
         fs::remove_dir_all(&root)?;
+        result
+    }
+
+    #[test]
+    fn shared_preparation_identity_covers_every_staged_source() -> Result<()> {
+        let root = env::temp_dir().join(format!("lanmc-preparation-key-{}", std::process::id()));
+        fs::create_dir(&root)?;
+        let result = (|| {
+            for source in PREPARATION_SOURCES {
+                fs::create_dir_all(root.join(source))?;
+            }
+            fs::write(root.join("horizon-prepare.exe"), b"preparer fixture")?;
+            let research = serde_json::json!({"minecraft": {
+                "version": "26.3", "manifest_sha1": "manifest", "client_sha1": "client",
+                "server_sha1": "server", "java_major": 25
+            }});
+            fs::write(
+                root.join("research-lock.json"),
+                serde_json::to_vec(&research)?,
+            )?;
+            let legacy = Preparation::read(&root, false)?.key;
+            let original = Preparation::read(&root, true)?.key;
+            for source in PREPARATION_SOURCES {
+                let fixture = root.join(source).join("input.java");
+                fs::write(&fixture, b"different preparation input")?;
+                assert_ne!(Preparation::read(&root, true)?.key, original);
+                assert_eq!(Preparation::read(&root, false)?.key, legacy);
+                fs::remove_file(fixture)?;
+            }
+            assert_eq!(Preparation::read(&root, true)?.key, original);
+            Ok(())
+        })();
+        remove_tree(&root)?;
         result
     }
 }
