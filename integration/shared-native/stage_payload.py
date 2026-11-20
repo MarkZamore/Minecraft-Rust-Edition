@@ -17,6 +17,14 @@ BOOTSTRAP = NATIVE / "launch-rust-edition.exe"
 FAMILY = NATIVE / "runtime-family.json"
 MINGW = ("libgcc_s_seh-1.dll", "libwinpthread-1.dll")
 MINGW_ARCHIVE_SHA256 = "62af32ea58acdea1318ea5dd8eb7017eaee694dd40b269d52a59c769dcfefb82"
+NOTICE_SOURCES = Path(__file__).resolve().parent / "runtime-notices"
+RUST_COPYRIGHT_SHA256 = "5647be074c8edf7339fd863055923a8fc80bc5610a8d4661ec3b767b9d392c27"
+LICENSE_SHA256 = {
+    "Rust-APACHE.txt": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+    "Rust-MIT.txt": "b71bd43a069ca0641a9ecfe585ca7b3c53b5cc1608f8b68321168698e28b5ea1",
+    "GCC-COPYING.RUNTIME": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+    "Winpthreads-COPYING.txt": "63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177",
+}
 
 
 def load(path):
@@ -29,7 +37,18 @@ def identity(path):
     return {"sizeBytes": path.stat().st_size, "sha256": digest(path)}
 
 
-def runtime_binaries(run, sdk, build, receipt):
+def runtime_notices(sysroot):
+    rust_copyright = sysroot / "share/doc/rust/COPYRIGHT-library.html"
+    sources = {NOTICE_SOURCES / name: expected for name, expected in LICENSE_SHA256.items()}
+    sources[rust_copyright] = RUST_COPYRIGHT_SHA256
+    for source, expected in sources.items():
+        if identity(source)["sha256"] != expected:
+            raise ValueError(f"The runtime notice differs from its pinned bytes: {source.name}")
+    winlibs_notice = NOTICE_SOURCES / "WinLibs-runtime-NOTICE.md"
+    return {NATIVE / "LICENSES" / source.name: source for source in (*sources, winlibs_notice)}
+
+
+def runtime_files(run, sdk, build, receipt):
     paths = {CLIENT: sdk / "bin/horizon-client.exe"}
     for name in build["slices"]["runtime"]:
         path = Path(name)
@@ -57,6 +76,8 @@ def runtime_binaries(run, sdk, build, receipt):
         if identity(source)["sha256"] != proof["files"][name]:
             raise ValueError(f"The MinGW runtime differs from its approved bytes: {name}")
         paths[NATIVE / name] = source
+    sysroot = Path(subprocess.check_output([*rust, "--print", "sysroot"], text=True).strip())
+    paths.update(runtime_notices(sysroot))
     return paths
 
 
@@ -83,8 +104,8 @@ def stage(args):
     sdk = run / "shared-sdk"
     receipt = load(run / "shared-sdk-build.json")
     build, _ = verify_sdk(sdk, receipt)
-    binaries = runtime_binaries(run, sdk, build, receipt)
-    expected = {name: identity(path) for name, path in binaries.items()}
+    runtime = runtime_files(run, sdk, build, receipt)
+    expected = {name: identity(path) for name, path in runtime.items()}
     paths = [*common, *expected, FAMILY]
     if len(paths) != len({path.as_posix().casefold() for path in paths}):
         raise ValueError("The shared executable or library overlaps an installed game file")
@@ -95,7 +116,7 @@ def stage(args):
     spec["source"] = {"owner": owner, "repo": repo, "tag": tag}
     created = []
     try:
-        for name, source in binaries.items():
+        for name, source in runtime.items():
             target = candidate / name
             with source.open("rb") as incoming, target.open("xb") as outgoing:
                 created.append(target)

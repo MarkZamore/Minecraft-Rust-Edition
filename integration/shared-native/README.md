@@ -36,6 +36,8 @@ python -B "$launcher/tools/native_runtime_release.py" stage-runtime `
 
 В архив попадают клиент, DLL из проверенного среза SDK, закреплённые DLL Rust и MinGW и точные общие файлы Edition. Манифесты профилей привязывайте к одному архиву через `bind-descriptor`. Порядок игровой приёмки и публикации описан в `tools/NATIVE-RUNTIME-RELEASE.md` репозитория лаунчера.
 
+При упаковке `stage_payload.py` переносит в `native/LICENSES` точные лицензии Rust, GCC и Winpthreads и сверяет их SHA‑256. `COPYRIGHT-library.html` с атрибуцией стандартной библиотеки и её зависимостей берётся из того же GNU toolchain Rust, что и `std-*.dll`. Файлы Rust MIT и Apache взяты из коммита `58cf8f9c35b355199727627d07ae34a4e2846d67`. Текст исключения GCC взят из тега `releases/gcc-16.2.0`, а `Winpthreads-COPYING.txt` из тега `v14.0.0` MinGW-w64. При обновлении toolchain сверяйте новые тексты вместе с DLL. Исходные архивы и закреплённые рецепты WinLibs перечислены в [WinLibs-runtime-NOTICE.md](runtime-notices/WinLibs-runtime-NOTICE.md).
+
 ## Профили и совместимость
 
 `profile.py` берёт квитанцию точного SDK и DLL, собранные с его динамическими библиотеками и идентичностью, записанной в `*.identity.json`. Передайте каждую DLL через `--library` в порядке зависимостей. При наличии `horizon_patch.dll` инструмент ставит его после модов. Для Edition достаточно подготовленной папки `native/` без аргументов `--library`.
