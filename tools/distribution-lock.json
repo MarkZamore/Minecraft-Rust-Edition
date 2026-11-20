@@ -2,16 +2,20 @@
   "schemaVersion": 1,
   "upstreamCommit": "f00125f61f794aaa3d4e950d301f353b35b6ee3d",
   "preview": {
-    "sizeBytes": 512398,
-    "sha256": "2b66a9a151df14166e32b0bb2a16a41552bb4bc261f0e34d120db332e4695c48"
+    "sizeBytes": 853676,
+    "sha256": "0842b3dbbfa908c5536933378f5b245574074d03a4325e9018642c71bcabee37"
   },
   "library/loaded-mods.json": {
-    "sizeBytes": 83127,
-    "sha256": "ba5173f104fd7364cef043e45e6a5e6622deea053e47a5b8232e729ca85f9b96"
+    "sizeBytes": 215739,
+    "sha256": "ff01a722cdbf638f86464147e3806f7d5b2b5921366503ccf860c7565959c49c"
   },
-  "tools/overlay-receipt.json": {
-    "sizeBytes": 7699,
-    "sha256": "192522d76ae927cca2c27e097297a54a8158855e19a754c0d68dd87082a965ea"
+  "sharedSdkBuild": {
+    "sizeBytes": 17407,
+    "sha256": "59a0db6d6ee997f1d0b52b638a93222cb9bbacf464f82cb32fc2a2bc8bd99deb"
+  },
+  "sharedProfileSmoke": {
+    "sizeBytes": 9895,
+    "sha256": "6e6bac8aa76c5d5556bc8efb61cd9f8f2571e9059d42fb4338c4c6b29fd5e030"
   },
   "files": {
     "configureddefaults/options.txt": {
@@ -38,6 +42,14 @@
       "sizeBytes": 7817,
       "sha256": "7d3a95e5e06978064ed3f8e2b7c8f845e7fd8a405294727cc708f94cb83b8059"
     },
+    "native/LICENSES/COPYRIGHT-library.html": {
+      "sizeBytes": 1499465,
+      "sha256": "5647be074c8edf7339fd863055923a8fc80bc5610a8d4661ec3b767b9d392c27"
+    },
+    "native/LICENSES/GCC-COPYING.RUNTIME": {
+      "sizeBytes": 3324,
+      "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74"
+    },
     "native/LICENSES/GPL-3.0.txt": {
       "sizeBytes": 35149,
       "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
@@ -45,6 +57,22 @@
     "native/LICENSES/MIT.txt": {
       "sizeBytes": 1255,
       "sha256": "0b60b28d153796544720e9d68df0997b6289ca2db67359102d2b8e61e57f455e"
+    },
+    "native/LICENSES/Rust-APACHE.txt": {
+      "sizeBytes": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+    },
+    "native/LICENSES/Rust-MIT.txt": {
+      "sizeBytes": 1068,
+      "sha256": "b71bd43a069ca0641a9ecfe585ca7b3c53b5cc1608f8b68321168698e28b5ea1"
+    },
+    "native/LICENSES/WinLibs-runtime-NOTICE.md": {
+      "sizeBytes": 1737,
+      "sha256": "34a1bd1e2e52a88f6a6a803f8eeb90c27ba6a2c2fa9c8d5a65b7637178937afd"
+    },
+    "native/LICENSES/Winpthreads-COPYING.txt": {
+      "sizeBytes": 2883,
+      "sha256": "63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177"
     },
     "native/THIRD_PARTY_NOTICES.md": {
       "sizeBytes": 26928,
@@ -435,8 +463,8 @@
       "sha256": "d2cc6c600e0e25428b3cdc1249abbb935792798c929a222de121a8e3727504d6"
     },
     "native/horizon-client.exe": {
-      "sizeBytes": 161064960,
-      "sha256": "22fbc476b9f4dafc9d1dda789d3954bd2c9abc742417baffe7c8c94a873add36"
+      "sizeBytes": 53116,
+      "sha256": "5bc739ad57d615d1009eff6f2c47413a7305eb49c43ae0a764960bca56b7d60a"
     },
     "native/horizon-prepare.exe": {
       "sizeBytes": 2347520,
@@ -446,9 +474,49 @@
       "sizeBytes": 652958,
       "sha256": "3c647d91c7c943ffb65a31ec406392de328daa7a6d2779e44e71c3561068b7dc"
     },
+    "native/horizon_core.dll": {
+      "sizeBytes": 5529943,
+      "sha256": "e64fbfcca13b26eb85c658148283eb8bba16a24bd666648c7becc7bf99a888ce"
+    },
+    "native/horizon_engine_slots.dll": {
+      "sizeBytes": 33744914,
+      "sha256": "56f46bd0d9d33769a2213540c4bf890b9b080612375cbf309c725eaa5d99845b"
+    },
+    "native/horizon_mod_host.dll": {
+      "sizeBytes": 138070797,
+      "sha256": "eb42db039ebb0a5b4a880e6f14b42b6f7fc8501becd494e170755fe1d0712830"
+    },
+    "native/horizon_mod_runtime.dll": {
+      "sizeBytes": 1074063,
+      "sha256": "fa703bbde12bdd8107d7a941e7c7e12f27de0bb835eb62a313c13b8ae1b54b16"
+    },
+    "native/horizon_mod_wasm.dll": {
+      "sizeBytes": 49495040,
+      "sha256": "4e96134902f8126e6f6bbdfb842b181bf13eba7d3f50c83ca9e069e8a00f349e"
+    },
     "native/launch-rust-edition.exe": {
-      "sizeBytes": 2924544,
-      "sha256": "9ad41d8b96070c55a04487f6e015d4431b0110e1b6b949ee0a871a963c6969c9"
+      "sizeBytes": 2987008,
+      "sha256": "809fc2706f779246c621220cfe5f8c27d9d9532b7247c89efe242298a6c15e67"
+    },
+    "native/libgcc_s_seh-1.dll": {
+      "sizeBytes": 927027,
+      "sha256": "368488a9089e3d89b32a3609816fa40dd02fa4cdf480a2bc86e19c7bebdc8bda"
+    },
+    "native/libwinpthread-1.dll": {
+      "sizeBytes": 73549,
+      "sha256": "1b801c9280f6cad8cb2a026bfa48be8c4bea07a0dc78a820d1591f900ee76f0b"
+    },
+    "native/mod_api.dll": {
+      "sizeBytes": 5144869,
+      "sha256": "d5b934a78ede61a84e2479e1dd1c3b19418eb278e1be0fbd1dedf9357dcbaa0f"
+    },
+    "native/mod_points.dll": {
+      "sizeBytes": 36363978,
+      "sha256": "8d501d071dd916cde6d8c584af74d234a9d64da83f49aba720b2c60e50397aac"
+    },
+    "native/mod_vocab.dll": {
+      "sizeBytes": 48446052,
+      "sha256": "dde601e777470a2b76cad03d4e3a7e54999b8b1e5381bafdff6747551ab988a8"
     },
     "native/mods/horizon/src/test/java/dev/horizonlab/parity/AllayDanceTranscript.java": {
       "sizeBytes": 4072,
@@ -2074,6 +2142,10 @@
       "sizeBytes": 3424,
       "sha256": "9e79e2305ec1f420e2657a2670296dfb8457400ad844658acb41847e6ffd5da1"
     },
+    "native/native-mods.json": {
+      "sizeBytes": 259,
+      "sha256": "59e33ede862bc540534e212201e53edcbc0a0d80cf5753e3390064586479e8d3"
+    },
     "native/presentation.json": {
       "sizeBytes": 114,
       "sha256": "6ead1b8261631f83f58f690427bb3e44ecd4ec25ebb5666f0c492bf242024c0b"
@@ -2081,6 +2153,14 @@
     "native/research-lock.json": {
       "sizeBytes": 3619,
       "sha256": "cd3be807506f2c06c9c1e3ae099189d1c0ce5a4ead5c6e60ef199305bf100da3"
+    },
+    "native/runtime-family.json": {
+      "sizeBytes": 165,
+      "sha256": "3b425db673ab9e69aad5f419d6dc1139b58ccfd2ff146a5f4171a724ba565a8e"
+    },
+    "native/std-f903e3d16df36da5.dll": {
+      "sizeBytes": 5282430,
+      "sha256": "d0ad56bc27113cc091fa75f4a73824c9a5d92f64adb0083c8eb1e21c60c33324"
     },
     "native/steam_api64.dll": {
       "sizeBytes": 317080,
@@ -2135,8 +2215,12 @@
       "sha256": "dc0d97139e8205818c703741c7be7cb3b96888bd5917b8d6fc6133731e403c21"
     },
     "portable-pack.json": {
-      "sizeBytes": 242,
-      "sha256": "cdc40ec6beee8b4b05c0c93bca0ad826b39b3eec451cf2ea317a2c9af7de3d3b"
+      "sizeBytes": 130870,
+      "sha256": "a64f8b870c0be2d495667ef1259ea5f348f37d57d45422599628308caf291a77"
     }
+  },
+  "sharedEditionAcceptance": {
+    "sizeBytes": 3398,
+    "sha256": "f13ba6811e9acd34d19a53841916507dc6585973f10878ccd0c2d84a87c59ae4"
   }
 }
