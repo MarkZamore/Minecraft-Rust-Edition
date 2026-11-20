@@ -10,7 +10,6 @@ import hashlib
 import json
 import os
 from pathlib import Path, PureWindowsPath
-import shutil
 import struct
 import subprocess
 import time
@@ -363,14 +362,10 @@ def ordinary_launch(client, controller, resources, qa, game, index, build_name, 
 
 
 def clean_fixture(game, qa):
-    if game.resolve().parent != qa.resolve() or game.name != "game":
+    from native_notices_qa import remove_fixture
+    if game.name != "game":
         raise ValueError("Refusing cleanup outside the exact technical game directory")
-    for folder, directories, files in os.walk(game, followlinks=False):
-        for name in [*directories, *files]:
-            path = Path(folder) / name
-            if path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction()):
-                raise ValueError("Refusing to follow a link in the technical fixture")
-    shutil.rmtree(game)
+    remove_fixture(game, qa)
 
 
 def main():
@@ -485,17 +480,23 @@ def main():
         report["error"] = str(error)
         raise
     finally:
-        if shared:
-            from native_notices_qa import remove_fixture
-            remove_fixture(qa / "empty-profile", qa)
-        if succeeded:
-            clean_fixture(game, qa)
-            report["fixtureRemoved"] = True
-            for index in (1, 2, 3, 4, 5, 6):
-                (qa / f"client-{index}.log").unlink(missing_ok=True)
-                (qa / f"control-{index}.json").unlink(missing_ok=True)
-        (qa / "server-list-qa.json").write_text(
-            json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        try:
+            if shared:
+                from native_notices_qa import remove_fixture
+                remove_fixture(qa / "empty-profile", qa)
+            if succeeded or shared:
+                clean_fixture(game, qa)
+                report["fixtureRemoved"] = True
+            if succeeded:
+                for index in (1, 2, 3, 4, 5, 6):
+                    (qa / f"client-{index}.log").unlink(missing_ok=True)
+                    (qa / f"control-{index}.json").unlink(missing_ok=True)
+        except (OSError, ValueError) as error:
+            report.update(status="FAIL", cleanupError=str(error), fixtureRemoved=False)
+            raise
+        finally:
+            (qa / "server-list-qa.json").write_text(
+                json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
