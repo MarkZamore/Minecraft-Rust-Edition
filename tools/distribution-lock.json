@@ -7,15 +7,11 @@
   },
   "library/loaded-mods.json": {
     "sizeBytes": 215739,
-    "sha256": "ff01a722cdbf638f86464147e3806f7d5b2b5921366503ccf860c7565959c49c"
+    "sha256": "098ba74abd26da24231da239c2b159e685109d302ffdafbc792be153634c277c"
   },
   "sharedSdkBuild": {
     "sizeBytes": 17407,
     "sha256": "59a0db6d6ee997f1d0b52b638a93222cb9bbacf464f82cb32fc2a2bc8bd99deb"
-  },
-  "sharedProfileSmoke": {
-    "sizeBytes": 9895,
-    "sha256": "6e6bac8aa76c5d5556bc8efb61cd9f8f2571e9059d42fb4338c4c6b29fd5e030"
   },
   "files": {
     "configureddefaults/options.txt": {
@@ -495,8 +491,8 @@
       "sha256": "4e96134902f8126e6f6bbdfb842b181bf13eba7d3f50c83ca9e069e8a00f349e"
     },
     "native/launch-rust-edition.exe": {
-      "sizeBytes": 2987008,
-      "sha256": "809fc2706f779246c621220cfe5f8c27d9d9532b7247c89efe242298a6c15e67"
+      "sizeBytes": 2996224,
+      "sha256": "7e6859fd39ef296482e532c775dead8d1212eff813a3289cf41dcd0f4d7a8688"
     },
     "native/libgcc_s_seh-1.dll": {
       "sizeBytes": 927027,
@@ -2216,11 +2212,15 @@
     },
     "portable-pack.json": {
       "sizeBytes": 130870,
-      "sha256": "a64f8b870c0be2d495667ef1259ea5f348f37d57d45422599628308caf291a77"
+      "sha256": "6d13cb33654d4514c249f33201aa647e171fcfde45972c37b80480912ebdf584"
     }
   },
+  "sharedProfileSmoke": {
+    "sizeBytes": 7027,
+    "sha256": "ac84df813058d769f28a64fdd2384918cc0858562459f84a2abb10c618f85fcc"
+  },
   "sharedEditionAcceptance": {
-    "sizeBytes": 3398,
-    "sha256": "f13ba6811e9acd34d19a53841916507dc6585973f10878ccd0c2d84a87c59ae4"
+    "sizeBytes": 4033,
+    "sha256": "92f767c9f2eb0eb6c4d20959b29a8829dd40883ff9a1153f722c03e78554f07d"
   }
 }

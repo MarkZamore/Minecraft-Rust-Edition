@@ -1,97 +1,117 @@
 {
   "schemaVersion": 1,
   "status": "PASS",
-  "scope": "Edition profile on published shared runtime",
+  "scope": "Edition profile with the published diagnostic bootstrap",
   "publisher": {
     "source": {
       "owner": "MarkZamore",
       "repo": "Minecraft-Rust-Edition",
-      "tag": "shared-runtime-f00125f-r1"
+      "tag": "shared-runtime-f00125f-r2"
     },
-    "buildCommit": "802e351fcb553f51e3df56633aa5d51c4b2cb4ba",
+    "buildCommit": "8e622d824899a61cb1560dc15bbb017dc0b59a72",
     "archive": {
-      "name": "native-runtime-84ceb9ff7ead347990bd747e0a19aaaf3aa38ba4cd2083380422f6ad3d0f64a1.zip",
-      "sizeBytes": 117941328,
-      "sha256": "84ceb9ff7ead347990bd747e0a19aaaf3aa38ba4cd2083380422f6ad3d0f64a1"
+      "name": "native-runtime-7a7aab05774b7df30338092228fb51e131709fa2a117621622e0e376b2629996.zip",
+      "sizeBytes": 117944246,
+      "sha256": "7a7aab05774b7df30338092228fb51e131709fa2a117621622e0e376b2629996"
     },
     "verifiedFiles": 545,
     "readback": {
-      "sizeBytes": 741,
-      "sha256": "c16eacdd77d6413f06b88c5751b0e123aef76be536a1b5e031f7130b7fb9be2e"
+      "sizeBytes": 709,
+      "sha256": "dfb76830f8e674f20ccf729e6d1aa97f420b2372601671e007089c7eb60c560f"
     }
   },
   "executionContext": {
     "upstreamCommit": "f00125f61f794aaa3d4e950d301f353b35b6ee3d",
-    "sharedRuntimeArchiveSha256": "84ceb9ff7ead347990bd747e0a19aaaf3aa38ba4cd2083380422f6ad3d0f64a1",
+    "sharedRuntimeArchiveSha256": "7a7aab05774b7df30338092228fb51e131709fa2a117621622e0e376b2629996",
     "sharedSdkBuildSha256": "59a0db6d6ee997f1d0b52b638a93222cb9bbacf464f82cb32fc2a2bc8bd99deb",
-    "sharedProfileSmokeSha256": "6e6bac8aa76c5d5556bc8efb61cd9f8f2571e9059d42fb4338c4c6b29fd5e030",
-    "payloadInventorySha256": "db2bdd03560e104abfe7f3ca88f7574d2402a2d71e3b6fe076449210de41d5b1"
+    "sharedProfileSmokeSha256": "ac84df813058d769f28a64fdd2384918cc0858562459f84a2abb10c618f85fcc",
+    "payloadInventorySha256": "53c7691861b9fa6e86063ab4e6cebd1334e0bc36dd43991626bfbc11523483f1"
   },
   "client": {
     "sizeBytes": 53116,
     "sha256": "5bc739ad57d615d1009eff6f2c47413a7305eb49c43ae0a764960bca56b7d60a"
   },
   "bootstrap": {
-    "sizeBytes": 2987008,
-    "sha256": "809fc2706f779246c621220cfe5f8c27d9d9532b7247c89efe242298a6c15e67"
+    "sizeBytes": 2996224,
+    "sha256": "7e6859fd39ef296482e532c775dead8d1212eff813a3289cf41dcd0f4d7a8688"
   },
   "editionPayloadFiles": 550,
   "profileDescriptor": {
     "sizeBytes": 130870,
-    "sha256": "a64f8b870c0be2d495667ef1259ea5f348f37d57d45422599628308caf291a77"
+    "sha256": "6d13cb33654d4514c249f33201aa647e171fcfde45972c37b80480912ebdf584"
   },
   "inventory": {
     "sizeBytes": 215739,
-    "sha256": "ff01a722cdbf638f86464147e3806f7d5b2b5921366503ccf860c7565959c49c"
+    "sha256": "098ba74abd26da24231da239c2b159e685109d302ffdafbc792be153634c277c"
   },
   "checks": {
+    "javaDiagnosticFailurePaths": {
+      "status": "PASS",
+      "sourceEvidence": {
+        "sizeBytes": 1170,
+        "sha256": "3f08056893f9bd1f31ee56395f49688b1f6365722033f9e61d7a54bb1498a716"
+      }
+    },
+    "appliedBothProfiles": {
+      "status": "PASS",
+      "report": {
+        "sizeBytes": 7027,
+        "sha256": "ac84df813058d769f28a64fdd2384918cc0858562459f84a2abb10c618f85fcc"
+      },
+      "sharedResourceFiles": 28182,
+      "sameUnmodifiedReceipt": "98ec55a0d2c6f70a9d5580fd200cbb57ba00503d278285d4220b9c934dfbe10c"
+    },
     "sharedBootstrapReopenAndPause": {
       "status": "PASS",
       "report": {
-        "sizeBytes": 9731,
-        "sha256": "d84a3a5fe44a5ace106153486c6f8748fb8a1bab18830d4a1a0c7c7c3ebbfdb3"
+        "sizeBytes": 9721,
+        "sha256": "4577d92d879a8019b0566684ae686d195d31af4b3aa0dcff7950ddb3d60b2841"
       }
     },
-    "currentWorldPreview": {
+    "currentWorldCapture": {
       "status": "PASS",
-      "jpeg": {
+      "dimensions": [
+        2560,
+        1440
+      ],
+      "png": {
+        "sizeBytes": 5673711,
+        "sha256": "3cecd30784c2aa79330918213f2dcd5248a3aa9b3dfa47cd7ff2d63e834e85f4"
+      },
+      "retainedLibraryPreview": {
         "sizeBytes": 853676,
         "sha256": "0842b3dbbfa908c5536933378f5b245574074d03a4325e9018642c71bcabee37"
-      },
-      "report": {
-        "sizeBytes": 970,
-        "sha256": "e580dc2e23405e81560bf53d9230e8bcede24aea3c814f8afb5d5660db7749af"
       }
     },
     "ordinaryServerList": {
       "status": "PASS",
       "starts": 6,
       "report": {
-        "sizeBytes": 44071,
-        "sha256": "b2b0121083b9e9916b0f45991dcca5afa5c215ca09022c67995124348a70225c"
+        "sizeBytes": 44019,
+        "sha256": "8ef65a6e98a004665511242a9cb2bf3f76b77d860de6f51c588658446c637df2"
       }
     },
     "nativeNoticeInputAndPresentation": {
       "status": "PASS",
       "presentedCaptures": 13,
       "report": {
-        "sizeBytes": 40905,
-        "sha256": "6fed5b6bbcd94b71973c61cc8f76bfc052beaaec5f46772f919800fe6ad04f7f"
+        "sizeBytes": 40863,
+        "sha256": "dcf184067bbd941d3630f447254a929585721fa50ec745f4948bdffdd7f4ab7e"
       }
     },
     "warmVulkanCompatibility": {
       "status": "PASS",
       "starts": 3,
       "report": {
-        "sizeBytes": 68944,
-        "sha256": "b1e479c8a0f210b34c9ca2cbe5422a533751faccb3a2c0c7f739fb09b323a3a7"
+        "sizeBytes": 68504,
+        "sha256": "67c44535d73baafe5f362f92552426711640cfac60ca5bad174bb58a8c913529"
       }
     },
     "guestCommandPermissions": {
       "status": "PASS",
       "report": {
-        "sizeBytes": 2388,
-        "sha256": "9461eccd770ab93b33b55ab920c221a88a1b701e5badf8b877785c9d178dc03c"
+        "sizeBytes": 2386,
+        "sha256": "f98bc8a13259f905d3648f4f3dbcb1c111a6d49c497e58d26ab9d99a51867b73"
       },
       "transport": "Windows loopback; real Horizon server; guest T/type/Enter input",
       "commandsAllowed": "creative",
