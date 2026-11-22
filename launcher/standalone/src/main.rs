@@ -20,10 +20,10 @@ use std::{
     env,
     ffi::OsString,
     fs::{self, File, OpenOptions},
-    io::{self, Read},
+    io::{self, Read, Write},
     os::windows::fs::MetadataExt,
     path::{Path, PathBuf},
-    process::{Command, ExitCode},
+    process::{Command, ExitCode, Output},
     time::{Duration, Instant},
 };
 
@@ -551,10 +551,8 @@ fn java_home(cache: &Path, explicit: Option<PathBuf>, major: u32) -> Result<Path
     let profile = child(cache, "java-tool-home")?;
     let temp = child(cache, "java-tool-temp")?;
     if let Some(home) = explicit {
-        ensure!(
-            is_java(&home, major, &profile, &temp),
-            "--java-home does not point to Java {major}"
-        );
+        probe_java(&home, major, &profile, &temp)
+            .with_context(|| format!("--java-home does not point to Java {major}"))?;
         return Ok(home);
     }
     let shared = env::var_os("LANMINECRAFT_SHARED_MINECRAFT").and_then(|path| {
@@ -573,8 +571,18 @@ fn java_home(cache: &Path, explicit: Option<PathBuf>, major: u32) -> Result<Path
     .into_iter()
     .flatten()
     {
-        if is_java(&candidate, major, &profile, &temp) {
-            return Ok(candidate);
+        match probe_java(&candidate, major, &profile, &temp) {
+            Ok(()) => return Ok(candidate),
+            Err(error)
+                if error
+                    .downcast_ref::<io::Error>()
+                    .is_some_and(|error| error.kind() == io::ErrorKind::NotFound) => {}
+            Err(error) => {
+                let _ = writeln!(
+                    io::stderr().lock(),
+                    "Java {major} candidate rejected: {error:#}"
+                );
+            }
         }
     }
     let archive = child(cache, "java-25.zip")?;
@@ -603,25 +611,30 @@ fn java_home(cache: &Path, explicit: Option<PathBuf>, major: u32) -> Result<Path
                 io::copy(&mut file, &mut File::create(target)?)?;
             }
         }
-        ensure!(
-            is_java(&staging, major, &profile, &temp),
-            "Java archive does not run as Java {major}"
-        );
+        probe_java(&staging, major, &profile, &temp)
+            .with_context(|| format!("Java archive does not run as Java {major}"))?;
         remove_tree(&cached)?;
         fs::rename(&staging, &cached)?;
         fs::remove_file(&archive)?;
         Ok(cached)
     })();
-    remove_tree(&staging)?;
+    remove_tree(&staging).with_context(|| {
+        let operation = format!("removing Java staging directory {}", staging.display());
+        match &result {
+            Ok(_) => operation,
+            Err(error) => format!("{operation} after {error:#}"),
+        }
+    })?;
     result
 }
 
-fn is_java(home: &Path, major: u32, profile: &Path, temp: &Path) -> bool {
+fn probe_java(home: &Path, major: u32, profile: &Path, temp: &Path) -> Result<()> {
     let java = home.join("bin/java.exe");
-    if !java.is_file() {
-        return false;
-    }
-    let mut command = Command::new(java);
+    let metadata = java
+        .metadata()
+        .with_context(|| format!("checking Java executable {}", java.display()))?;
+    ensure!(metadata.is_file(), "{} is not a file", java.display());
+    let mut command = Command::new(&java);
     for key in [
         "JAVA_TOOL_OPTIONS",
         "JDK_JAVA_OPTIONS",
@@ -630,18 +643,29 @@ fn is_java(home: &Path, major: u32, profile: &Path, temp: &Path) -> bool {
     ] {
         command.env_remove(key);
     }
-    if configure_profile(&mut command, profile, temp).is_err() {
-        return false;
-    }
-    command
-        .arg(format!("-Duser.home={}", profile.display()))
-        .arg(format!("-Djava.io.tmpdir={}", temp.display()))
-        .arg("-version")
-        .output()
-        .is_ok_and(|result| {
-            result.status.success()
-                && String::from_utf8_lossy(&result.stderr).contains(&format!("version \"{major}."))
-        })
+    let context = || format!("running {} -version", java.display());
+    (|| {
+        configure_profile(&mut command, profile, temp)
+            .context("setting up the private Java probe profile")?;
+        let output = command
+            .arg(format!("-Duser.home={}", profile.display()))
+            .arg(format!("-Djava.io.tmpdir={}", temp.display()))
+            .arg("-version")
+            .output()?;
+        check_java_version(&output, major)
+    })()
+    .with_context(context)
+}
+
+fn check_java_version(output: &Output, major: u32) -> Result<()> {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    ensure!(
+        output.status.success() && stderr.contains(&format!("version \"{major}.")),
+        "expected Java {major}, {}\njava.exe -version stdout:\n{}\njava.exe -version stderr:\n{stderr}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout)
+    );
+    Ok(())
 }
 
 fn verified_file<D: Digest>(path: &Path, size: u64, expected: &str) -> Result<bool> {
@@ -866,8 +890,58 @@ fn remove_tree(path: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{os::windows::process::ExitStatusExt, process::ExitStatus};
 
     const SERVER_BYTES: &[u8] = b"verified server";
+
+    #[test]
+    fn java_probe_diagnostics_keep_exit_code_and_both_streams() {
+        let mut output = Output {
+            status: ExitStatus::from_raw(7),
+            stdout: b"first stdout line\r\nsecond stdout line\r\n".to_vec(),
+            stderr: b"openjdk version \"25.0.4.1\"\r\nVM startup failed\r\n".to_vec(),
+        };
+        let message = check_java_version(&output, 25).unwrap_err().to_string();
+        assert!(message.contains(&output.status.to_string()));
+        assert!(message.contains("stdout:\nfirst stdout line\r\nsecond stdout line\r\n"));
+        assert!(message.contains("stderr:\nopenjdk version \"25.0.4.1\"\r\nVM startup failed\r\n"));
+
+        output.status = ExitStatus::from_raw(0);
+        assert!(check_java_version(&output, 25).is_ok());
+        std::mem::swap(&mut output.stdout, &mut output.stderr);
+        assert!(check_java_version(&output, 25).is_err());
+    }
+
+    #[test]
+    fn java_probe_diagnostics_keep_windows_process_error() -> Result<()> {
+        let root = env::temp_dir().join(format!("lanmc-java-probe-{}", std::process::id()));
+        fs::create_dir(&root)?;
+        let result = (|| {
+            let bin = root.join("bin");
+            fs::create_dir(&bin)?;
+            let java = root.join("bin/java.exe");
+            fs::write(&java, b"not a Windows executable")?;
+            let windows_error = Command::new(&java)
+                .arg("-version")
+                .output()
+                .expect_err("Windows must reject the fixture executable");
+            assert!(windows_error.raw_os_error().is_some());
+            let error = probe_java(&root, 25, &root.join("home"), &root.join("temp"))
+                .expect_err("Windows must reject an invalid Java executable");
+            assert_eq!(
+                error
+                    .downcast_ref::<io::Error>()
+                    .and_then(io::Error::raw_os_error),
+                windows_error.raw_os_error()
+            );
+            let message = format!("{error:#}");
+            assert!(message.contains(&format!("{} -version", java.display())));
+            assert!(message.contains(&windows_error.to_string()));
+            Ok(())
+        })();
+        fs::remove_dir_all(root)?;
+        result
+    }
 
     fn with_server_fixture(
         name: &str,
