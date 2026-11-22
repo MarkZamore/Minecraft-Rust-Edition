@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS",
+  "sourceCommit": "3e16312a099c80879b79ef20e9f8b5db5465d947",
+  "bootstrap": {
+    "sizeBytes": 2996224,
+    "sha256": "7e6859fd39ef296482e532c775dead8d1212eff813a3289cf41dcd0f4d7a8688"
+  },
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "windowsBootstrapUnitTests": 25,
+  "bootstrapContractTests": 13,
+  "coldFailureFixtures": {
+    "count": 2,
+    "windowsErrorCode": 216,
+    "javaExitCode": 7,
+    "stdoutAndStderrVerified": true,
+    "proofSha256": "3472b97e1f966e8753bfa97c6d03fafed87e2a99621e2036ebcb8e8765422663"
+  },
+  "launcherRelease": {
+    "sourceCommit": "8f882b9e5e7d0113ecdf4a83abf693b570a3dbd6",
+    "cases": {
+      "total": 757,
+      "passed": 757,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    "trxSha256": "e5e5107267073dd98189423b991eb2f8cf9296bc4611ad3ee9c373e2b661ffe8"
+  },
+  "reportAttachment": {
+    "cases": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    "trxSha256": "f5962cd65f84064c0e8cc90f70a7bfb48d6d8061037e8260001cde084592efa7"
+  },
+  "commonFilesUnchanged": 544,
+  "changedCommonFiles": [
+    "native/launch-rust-edition.exe"
+  ]
+}
